@@ -6,7 +6,6 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <title>ClassQuiz</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
 :root{
@@ -23,19 +22,14 @@ body{font-family:var(--fb);background:var(--bg);color:var(--txt);min-height:100v
 .screen.active{display:flex}
 .center{align-items:center;padding:28px 16px 60px}
 .mw{width:100%;max-width:540px}
-.mw-lg{width:100%;max-width:860px}
-
-/* typography */
+.mw-lg{width:100%;max-width:880px}
 h1{font-family:var(--fh);font-size:clamp(22px,5vw,36px);font-weight:800;letter-spacing:-1px}
-h2{font-family:var(--fh);font-size:13px;font-weight:600;letter-spacing:.8px;color:var(--m);text-transform:uppercase;margin-bottom:14px}
+h2{font-family:var(--fh);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--m);text-transform:uppercase;margin-bottom:12px}
 h3{font-family:var(--fh);font-size:17px;font-weight:700}
-
-/* cards */
 .card{background:var(--s1);border:1px solid var(--b);border-radius:var(--r);padding:18px;margin-bottom:14px}
 .card-acc{border-color:rgba(108,99,255,.4);background:rgba(108,99,255,.05)}
-
-/* form */
-label{display:block;font-size:12px;color:var(--m);margin-bottom:5px;margin-top:13px;letter-spacing:.2px}
+.card-grn{border-color:rgba(62,207,142,.3);background:rgba(62,207,142,.04)}
+label{display:block;font-size:12px;color:var(--m);margin-bottom:5px;margin-top:12px;letter-spacing:.2px}
 label:first-child{margin-top:0}
 input[type=text],input[type=email],input[type=number],input[type=password],select,textarea{
   width:100%;background:var(--s2);border:1px solid var(--b);border-radius:8px;
@@ -43,8 +37,6 @@ input[type=text],input[type=email],input[type=number],input[type=password],selec
 input:focus,select:focus,textarea:focus{border-color:var(--acc)}
 select option{background:var(--s2)}
 textarea{resize:vertical;min-height:76px;line-height:1.6}
-
-/* buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;
   font-family:var(--fh);font-size:13px;font-weight:700;padding:11px 18px;
   border-radius:10px;border:none;cursor:pointer;transition:transform .12s,opacity .18s;letter-spacing:.2px}
@@ -59,8 +51,6 @@ textarea{resize:vertical;min-height:76px;line-height:1.6}
 .w100{width:100%}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .col{display:flex;flex-direction:column;gap:10px}
-
-/* chips */
 .chip{display:inline-block;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px}
 .chip-mcq{background:rgba(108,99,255,.2);color:#b0aaff}
 .chip-tf{background:rgba(245,158,11,.2);color:#fcd34d}
@@ -68,14 +58,10 @@ textarea{resize:vertical;min-height:76px;line-height:1.6}
 .chip-easy{background:rgba(62,207,142,.15);color:#6ee7b7}
 .chip-medium{background:rgba(245,158,11,.15);color:#fcd34d}
 .chip-hard{background:rgba(239,68,68,.15);color:#fca5a5}
-
-/* status */
 .st{font-size:12px;padding:9px 13px;border-radius:8px;margin-top:10px;display:none}
 .st.ok{background:rgba(62,207,142,.1);color:var(--grn);border:1px solid rgba(62,207,142,.2);display:block}
 .st.err{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2);display:block}
 .st.info{background:rgba(108,99,255,.1);color:#a5a0ff;border:1px solid rgba(108,99,255,.2);display:block}
-
-/* question items */
 .qi{background:var(--s1);border:1px solid var(--b);border-radius:10px;padding:14px;margin-bottom:9px;transition:border-color .15s}
 .qi:hover{border-color:var(--b2)}
 .qi.sel{border-color:var(--acc);background:rgba(108,99,255,.07)}
@@ -91,14 +77,10 @@ textarea{resize:vertical;min-height:76px;line-height:1.6}
 .btn-icon{padding:7px;border-radius:7px;background:var(--s2);border:1px solid var(--b);
   color:var(--m);cursor:pointer;font-size:13px;transition:background .15s}
 .btn-icon:hover{background:var(--b);color:var(--txt)}
-
-/* filter */
 .fil-bar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
 .fil{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;
   border:1px solid var(--b);background:transparent;color:var(--m);cursor:pointer;transition:all .13s}
 .fil.on{background:var(--acc);border-color:var(--acc);color:#fff}
-
-/* quiz header */
 .qhdr{background:var(--s1);border-bottom:1px solid var(--b);padding:10px 16px;
   display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
   position:sticky;top:0;z-index:10}
@@ -111,8 +93,6 @@ textarea{resize:vertical;min-height:76px;line-height:1.6}
 .hc-s{background:rgba(62,207,142,.1);color:var(--grn)}
 .hc-v{background:rgba(245,158,11,.15);color:#fbbf24}
 @keyframes bl{0%,100%{opacity:1}50%{opacity:.5}}
-
-/* quiz body */
 .qbody{flex:1;padding:20px 16px;max-width:620px;margin:0 auto;width:100%}
 .qnum{font-size:11px;color:var(--m);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
 .qtxt{font-family:var(--fh);font-size:clamp(15px,3.5vw,20px);font-weight:600;line-height:1.55;margin-bottom:22px}
@@ -127,8 +107,6 @@ textarea{resize:vertical;min-height:76px;line-height:1.6}
   font-family:var(--fh);transition:background .13s,border-color .13s,color .13s}
 .opt.sel .oltr{background:var(--acc);border-color:var(--acc);color:#fff}
 .qnav{display:flex;gap:9px;padding:12px 16px 36px;max-width:620px;margin:0 auto;width:100%}
-
-/* overlay */
 .ov{position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;
   align-items:center;justify-content:center;z-index:999;padding:16px}
 .ov.on{display:flex}
@@ -137,8 +115,6 @@ textarea{resize:vertical;min-height:76px;line-height:1.6}
 .ovt{font-family:var(--fh);font-size:18px;font-weight:700;margin-bottom:7px}
 .ovb{font-size:13px;color:var(--m);line-height:1.65;margin-bottom:16px}
 .ovc-n{font-size:36px;font-weight:800;font-family:var(--fh);color:var(--warn);margin:6px 0}
-
-/* result */
 .sring{width:116px;height:116px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;position:relative}
 .sring::before{content:'';position:absolute;inset:10px;border-radius:50%;background:var(--bg)}
 .sinn{position:relative;z-index:1;text-align:center}
@@ -149,99 +125,93 @@ textarea{resize:vertical;min-height:76px;line-height:1.6}
 .sv{font-family:var(--fh);font-size:23px;font-weight:700;margin-bottom:3px}
 .sl{font-size:10px;color:var(--m);text-transform:uppercase;letter-spacing:.6px}
 .ca{color:var(--acc)}.cg{color:var(--grn)}.ce{color:var(--err)}.cw{color:var(--warn)}
-
-/* table */
 .twrap{width:100%;overflow-x:auto;margin-bottom:14px}
 table{width:100%;border-collapse:collapse;font-size:12px;min-width:580px}
 th{background:var(--s2);padding:9px 10px;text-align:left;font-family:var(--fh);font-size:10px;
   text-transform:uppercase;letter-spacing:1px;color:var(--m);border-bottom:1px solid var(--b)}
 td{padding:9px 10px;border-bottom:1px solid var(--b)}
 tr:hover td{background:var(--s2)}
-
-/* logo */
-.logo{text-align:center;margin-bottom:26px}
+.logo{text-align:center;margin-bottom:24px}
 .logo-t{font-family:var(--fh);font-size:clamp(26px,6vw,40px);font-weight:800;letter-spacing:-1.5px;
   background:linear-gradient(135deg,#6c63ff,#ff6584);-webkit-background-clip:text;
   -webkit-text-fill-color:transparent;background-clip:text}
 .logo-s{font-size:11px;color:var(--m);letter-spacing:2px;text-transform:uppercase;margin-top:3px}
-
-/* tab nav */
 .tabs{display:flex;gap:3px;background:var(--s2);border-radius:10px;padding:3px;margin-bottom:18px}
 .tab{flex:1;padding:8px;text-align:center;font-family:var(--fh);font-size:11px;font-weight:700;
   border-radius:7px;cursor:pointer;color:var(--m);transition:all .15s;letter-spacing:.3px;text-transform:uppercase}
 .tab.on{background:var(--s1);color:var(--txt);border:1px solid var(--b)}
-
-/* empty */
 .empty{text-align:center;padding:36px 16px;color:var(--m)}
 .empty-i{font-size:36px;margin-bottom:10px;display:block;opacity:.5}
-
-/* live dot */
 .live{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--grn)}
 .live-dot{width:7px;height:7px;border-radius:50%;background:var(--grn);animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
-
-/* QR wrap */
-#qr-wrap{background:#fff;padding:10px;border-radius:10px;display:inline-block;margin:0 auto}
-
 .spin{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;
   border-radius:50%;animation:rot .7s linear infinite;display:inline-block}
 @keyframes rot{to{transform:rotate(360deg)}}
-
+.step-row{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
+.step-num{width:24px;height:24px;min-width:24px;border-radius:50%;background:var(--acc);
+  color:#fff;font-family:var(--fh);font-size:12px;font-weight:700;
+  display:flex;align-items:center;justify-content:center}
+.step-txt{font-size:13px;color:var(--m);line-height:1.7}
+.step-txt strong{color:var(--txt)}
+.step-txt code{background:var(--s2);padding:1px 5px;border-radius:4px;font-size:11px;color:#a5a0ff}
+.qr-box{background:#fff;padding:12px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center}
 @media(max-width:400px){.sgrid{grid-template-columns:1fr 1fr}.qhdr{padding:8px 12px}}
 </style>
 </head>
 <body>
 
-<!-- ══════════════════ SCREEN: SETUP ══════════════════ -->
+<!-- ══ SETUP ══ -->
 <div id="s-setup" class="screen active center">
 <div class="mw">
   <div class="logo"><div class="logo-t">ClassQuiz</div><div class="logo-s">Secure Classroom Testing</div></div>
-
   <div class="tabs">
     <div class="tab on" onclick="switchTab('tc','te')">Quiz Settings</div>
-    <div class="tab" onclick="switchTab('te','tc')">Firebase &amp; Email</div>
+    <div class="tab" onclick="switchTab('te','tc')">Firebase Setup</div>
   </div>
-
   <div id="tc">
     <div class="card">
       <h2>Quiz Settings</h2>
-      <label>Quiz Title</label>
-      <input type="text" id="cfg-title" placeholder="e.g. Chapter 5 — Science" value="Classroom Quiz"/>
+      <label>Quiz / Subject Title</label>
+      <input type="text" id="cfg-title" value="Classroom Quiz"/>
       <label>Time Limit (minutes)</label>
       <input type="number" id="cfg-time" value="15" min="1" max="180"/>
-      <label>Questions to show per student (0 = all selected)</label>
+      <label>Questions per student (0 = all selected)</label>
       <input type="number" id="cfg-count" value="0" min="0"/>
-      <label>Teacher Password (to access dashboard)</label>
-      <input type="password" id="cfg-pass" placeholder="Set a password"/>
+      <label>Teacher Password (protects dashboard)</label>
+      <input type="password" id="cfg-pass" placeholder="Optional but recommended"/>
     </div>
-  </div>
-
-  <div id="te" style="display:none">
     <div class="card">
       <h2>Teacher Email</h2>
-      <label>Your Email (for CSV results)</label>
+      <label>Your email (CSV results sent here)</label>
       <input type="email" id="cfg-email" placeholder="teacher@school.com"/>
-    </div>
-    <div class="card card-acc">
-      <h2>Firebase Config</h2>
-      <div style="font-size:12px;color:var(--m);line-height:1.8;margin-bottom:14px">
-        Free at <strong style="color:#a5a0ff">firebase.google.com</strong> → New Project → Firestore Database → Web App → copy values below
-      </div>
-      <label>API Key</label><input type="text" id="fb-apikey" placeholder="AIzaSy..."/>
-      <label>Project ID</label><input type="text" id="fb-pid" placeholder="your-project-id"/>
-      <label>App ID</label><input type="text" id="fb-appid" placeholder="1:123:web:abc"/>
-      <div class="st info" style="display:block;margin-top:12px">
-        ℹ Without Firebase, results save on each student's device only. You can still download CSV from each phone.
-      </div>
-    </div>
-    <div class="card">
-      <h2>EmailJS (optional)</h2>
-      <label>Public Key</label><input type="text" id="ejs-key" placeholder="user_xxx"/>
-      <label>Service ID</label><input type="text" id="ejs-svc" placeholder="service_xxx"/>
-      <label>Template ID</label><input type="text" id="ejs-tpl" placeholder="template_xxx"/>
+      <label>EmailJS Public Key (optional)</label>
+      <input type="text" id="ejs-key" placeholder="user_xxx"/>
+      <label>EmailJS Service ID</label>
+      <input type="text" id="ejs-svc" placeholder="service_xxx"/>
+      <label>EmailJS Template ID</label>
+      <input type="text" id="ejs-tpl" placeholder="template_xxx"/>
     </div>
   </div>
-
+  <div id="te" style="display:none">
+    <div class="card card-acc">
+      <h2>Firebase Config</h2>
+      <div style="font-size:12px;color:var(--m);line-height:1.8;margin-bottom:16px">
+        Paste your 3 Firebase values below. See the <strong style="color:#a5a0ff">Setup Guide</strong> button if you haven't done this yet.
+      </div>
+      <label>API Key</label>
+      <input type="text" id="fb-key" placeholder="AIzaSy..."/>
+      <label>Project ID</label>
+      <input type="text" id="fb-pid" placeholder="my-project-12345"/>
+      <label>App ID</label>
+      <input type="text" id="fb-appid" placeholder="1:123456789:web:abcdef"/>
+      <div style="margin-top:14px" class="col">
+        <button class="btn btn-ghost btn-sm w100" onclick="show('s-fbguide')">📖 Show Firebase Setup Guide</button>
+        <button class="btn btn-pri btn-sm w100" onclick="testFirebase()">Test Firebase Connection</button>
+      </div>
+      <div class="st" id="fb-st"></div>
+    </div>
+  </div>
   <div class="col">
     <button class="btn btn-pri w100" onclick="goBank()">Manage Question Bank →</button>
     <button class="btn btn-grn w100" onclick="goCurate()">Curate &amp; Launch Quiz →</button>
@@ -249,10 +219,39 @@ tr:hover td{background:var(--s2)}
 </div>
 </div>
 
-<!-- ══════════════════ SCREEN: BANK ══════════════════ -->
+<!-- ══ FIREBASE GUIDE ══ -->
+<div id="s-fbguide" class="screen center">
+<div class="mw">
+  <div class="row" style="margin-bottom:20px">
+    <button class="btn btn-ghost btn-sm" onclick="show('s-setup');switchTab(\'te\',\'tc\')">← Back</button>
+    <h3 style="flex:1">Firebase Setup Guide</h3>
+  </div>
+  <div class="card">
+    <h2>Step 1 — Create Firebase Project</h2>
+    <div class="step-row"><div class="step-num">1</div><div class="step-txt">Go to <strong>firebase.google.com</strong> and sign in with your Google account</div></div>
+    <div class="step-row"><div class="step-num">2</div><div class="step-txt">Click <strong>Add project</strong> → name it <strong>classquiz</strong> → click through (disable Analytics is fine) → <strong>Create project</strong></div></div>
+    <div class="step-row"><div class="step-num">3</div><div class="step-txt">Once created, click the <strong>Web icon &lt;/&gt;</strong> → give app nickname <strong>classquiz</strong> → click <strong>Register app</strong></div></div>
+    <div class="step-row"><div class="step-num">4</div><div class="step-txt">You will see a code block. Find and copy these 3 values:<br><code>apiKey</code>, <code>projectId</code>, <code>appId</code> → paste into Setup → Firebase tab</div></div>
+  </div>
+  <div class="card">
+    <h2>Step 2 — Create Firestore Database</h2>
+    <div class="step-row"><div class="step-num">5</div><div class="step-txt">In Firebase left menu → <strong>Build → Firestore Database</strong> → <strong>Create database</strong></div></div>
+    <div class="step-row"><div class="step-num">6</div><div class="step-txt">Choose <strong>Start in test mode</strong> → Next → select any location → <strong>Enable</strong></div></div>
+    <div class="step-row"><div class="step-num">7</div><div class="step-txt">That's it — no further config needed. Test mode allows reading and writing for 30 days (enough to evaluate the app). You can extend it later.</div></div>
+  </div>
+  <div class="card card-grn">
+    <h2>Step 3 — Paste values &amp; test</h2>
+    <div class="step-row"><div class="step-num">8</div><div class="step-txt">Go back to <strong>Setup → Firebase tab</strong> → paste the 3 values → click <strong>Test Firebase Connection</strong> → should show green ✅</div></div>
+    <div class="step-row"><div class="step-num">9</div><div class="step-txt">Done! All student results will now flow into Firebase automatically. QR codes will be short and scannable.</div></div>
+  </div>
+  <button class="btn btn-pri w100" onclick="show('s-setup');switchTab('te','tc')">← Back to Firebase Setup</button>
+</div>
+</div>
+
+<!-- ══ BANK ══ -->
 <div id="s-bank" class="screen center">
 <div class="mw-lg">
-  <div class="row" style="margin-bottom:18px">
+  <div class="row" style="margin-bottom:16px">
     <button class="btn btn-ghost btn-sm" onclick="show('s-setup')">← Back</button>
     <h3 style="flex:1">Question Bank</h3>
     <span id="bank-total" style="font-size:12px;color:var(--m)"></span>
@@ -272,10 +271,10 @@ tr:hover td{background:var(--s2)}
 </div>
 </div>
 
-<!-- ══════════════════ SCREEN: ADD/EDIT Q ══════════════════ -->
+<!-- ══ ADD/EDIT Q ══ -->
 <div id="s-addq" class="screen center">
 <div class="mw">
-  <div class="row" style="margin-bottom:18px">
+  <div class="row" style="margin-bottom:16px">
     <button class="btn btn-ghost btn-sm" onclick="show('s-bank')">← Back</button>
     <h3 id="addq-h" style="flex:1">Add Question</h3>
   </div>
@@ -287,8 +286,8 @@ tr:hover td{background:var(--s2)}
       <option value="fitb">Fill in the Blank</option>
     </select>
     <label>Question Text</label>
-    <textarea id="aq-text" placeholder="Type your question. For fill-in-blank, use ___ for the blank." rows="3"></textarea>
-    <label>Topic / Section (optional tag)</label>
+    <textarea id="aq-text" placeholder="Type your question here. For fill-in-blank use ___ for the blank." rows="3"></textarea>
+    <label>Topic / Section (optional)</label>
     <input type="text" id="aq-topic" placeholder="e.g. Chapter 3, Forces"/>
     <label>Difficulty</label>
     <select id="aq-diff">
@@ -306,10 +305,10 @@ tr:hover td{background:var(--s2)}
 </div>
 </div>
 
-<!-- ══════════════════ SCREEN: CURATE ══════════════════ -->
+<!-- ══ CURATE ══ -->
 <div id="s-curate" class="screen center">
 <div class="mw-lg">
-  <div class="row" style="margin-bottom:18px">
+  <div class="row" style="margin-bottom:16px">
     <button class="btn btn-ghost btn-sm" onclick="show('s-setup')">← Back</button>
     <h3 style="flex:1">Curate Quiz</h3>
     <span id="cur-hdr" style="font-size:12px;color:var(--m)">0 selected</span>
@@ -333,22 +332,26 @@ tr:hover td{background:var(--s2)}
 </div>
 </div>
 
-<!-- ══════════════════ SCREEN: LAUNCH (QR) ══════════════════ -->
+<!-- ══ LAUNCH (QR) ══ -->
 <div id="s-launch" class="screen center">
 <div class="mw" style="text-align:center">
-  <div class="logo-s" style="margin-bottom:8px">Ready to start</div>
-  <h1 id="launch-title" style="margin-bottom:6px"></h1>
+  <div class="logo-s" style="margin-bottom:6px">Ready to Start</div>
+  <h1 id="launch-title" style="margin-bottom:6px;font-size:24px"></h1>
   <p id="launch-meta" style="font-size:13px;color:var(--m);margin-bottom:24px"></p>
 
   <div class="card" style="text-align:center">
-    <p style="font-size:13px;color:var(--m);margin-bottom:16px">Students scan this QR code or open the link below on their phones</p>
-    <div id="qr-wrap" style="background:#fff;padding:10px;border-radius:10px;display:inline-block;margin-bottom:14px"></div>
-    <div id="launch-url" style="font-size:11px;color:var(--m);word-break:break-all;margin-bottom:10px"></div>
+    <p style="font-size:13px;color:var(--m);margin-bottom:16px">Students scan this QR code or open the link on their phones</p>
+    <div style="display:flex;justify-content:center;margin-bottom:14px">
+      <div class="qr-box" id="qr-wrap"></div>
+    </div>
+    <div id="launch-url" style="font-size:11px;color:var(--m);word-break:break-all;margin-bottom:10px;padding:8px;background:var(--s2);border-radius:6px"></div>
     <button class="btn btn-ghost btn-sm w100" onclick="copyUrl()">Copy Link</button>
   </div>
 
-  <div class="card">
-    <p style="font-size:13px;color:var(--m);margin-bottom:12px">When students are ready, open the teacher dashboard to watch results live</p>
+  <div class="card card-grn">
+    <p style="font-size:13px;color:var(--m);margin-bottom:12px">
+      Open the teacher dashboard to watch results arrive live as students submit
+    </p>
     <button class="btn btn-pri w100" onclick="goDash()">Open Teacher Dashboard →</button>
   </div>
 
@@ -356,7 +359,7 @@ tr:hover td{background:var(--s2)}
 </div>
 </div>
 
-<!-- ══════════════════ SCREEN: STUDENT LOGIN ══════════════════ -->
+<!-- ══ STUDENT LOGIN ══ -->
 <div id="s-login" class="screen" style="align-items:center;justify-content:center;padding:40px 16px">
 <div class="mw" style="max-width:360px">
   <div style="text-align:center;margin-bottom:24px">
@@ -377,7 +380,7 @@ tr:hover td{background:var(--s2)}
 </div>
 </div>
 
-<!-- ══════════════════ SCREEN: QUIZ ══════════════════ -->
+<!-- ══ QUIZ ══ -->
 <div id="s-quiz" class="screen">
   <div class="pgbar"><div class="pgfill" id="qpg"></div></div>
   <div class="qhdr">
@@ -398,7 +401,7 @@ tr:hover td{background:var(--s2)}
   </div>
 </div>
 
-<!-- ══════════════════ SCREEN: RESULT ══════════════════ -->
+<!-- ══ RESULT ══ -->
 <div id="s-result" class="screen center">
 <div class="mw" style="align-items:center;display:flex;flex-direction:column">
   <div style="font-size:10px;color:var(--m);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px">Quiz Complete</div>
@@ -417,28 +420,25 @@ tr:hover td{background:var(--s2)}
     border-radius:10px;padding:12px;font-size:12px;color:#fbbf24;width:100%;margin-bottom:12px;line-height:1.65"></div>
   <div class="col w100">
     <button class="btn btn-pri w100" onclick="shareRes()">📤 Share Result</button>
-    <button class="btn btn-ghost w100" onclick="nextStu()">Next Student →</button>
+    <button class="btn btn-ghost w100" id="btn-next-stu" onclick="nextStu()">Next Student →</button>
   </div>
 </div>
 </div>
 
-<!-- ══════════════════ SCREEN: DASHBOARD ══════════════════ -->
+<!-- ══ DASHBOARD ══ -->
 <div id="s-dash" class="screen center">
 <div class="mw-lg">
-  <div class="row" style="margin-bottom:18px;flex-wrap:wrap;gap:10px">
+  <div class="row" style="margin-bottom:16px;flex-wrap:wrap;gap:10px">
     <button class="btn btn-ghost btn-sm" onclick="show('s-launch')">← Back</button>
     <h3 style="flex:1" id="dash-title">Live Dashboard</h3>
-    <div class="live"><div class="live-dot"></div><span id="dash-live-txt">Waiting for students…</span></div>
+    <div class="live"><div class="live-dot"></div><span id="dash-live">Waiting…</span></div>
   </div>
-
-  <!-- summary cards -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:16px">
-    <div class="sbox"><div class="sv ca" id="d-total">0</div><div class="sl">Students</div></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:16px">
+    <div class="sbox"><div class="sv ca" id="d-tot">0</div><div class="sl">Students</div></div>
     <div class="sbox"><div class="sv cg" id="d-avg">—</div><div class="sl">Avg Score</div></div>
-    <div class="sbox"><div class="sv cw" id="d-high">—</div><div class="sl">Highest</div></div>
-    <div class="sbox"><div class="sv ce" id="d-low">—</div><div class="sl">Lowest</div></div>
+    <div class="sbox"><div class="sv cw" id="d-hi">—</div><div class="sl">Highest</div></div>
+    <div class="sbox"><div class="sv ce" id="d-lo">—</div><div class="sl">Lowest</div></div>
   </div>
-
   <div class="twrap">
     <table>
       <thead><tr>
@@ -448,23 +448,21 @@ tr:hover td{background:var(--s2)}
       <tbody id="dash-tbody"></tbody>
     </table>
   </div>
-
-  <div class="card card-acc" id="email-card">
-    <h2>Email Results to Teacher</h2>
-    <p style="font-size:12px;color:var(--m);margin-bottom:12px">Sends full CSV to <strong id="dash-email" style="color:#a5a0ff"></strong></p>
+  <div class="card card-acc">
+    <h2>Email Results</h2>
+    <p style="font-size:12px;color:var(--m);margin-bottom:10px">Send full CSV to <strong id="dash-email" style="color:#a5a0ff"></strong></p>
     <button class="btn btn-pri w100" id="btn-email" onclick="sendEmail()">Send via EmailJS</button>
     <div class="st" id="email-st"></div>
   </div>
-
-  <div class="row" style="flex-wrap:wrap">
-    <button class="btn btn-ghost" style="flex:1;min-width:120px" onclick="dlCSV()">⬇ Download CSV</button>
-    <button class="btn btn-ghost" style="flex:1;min-width:120px" onclick="refreshDash()">↻ Refresh</button>
-    <button class="btn btn-ghost" style="flex:1;min-width:120px" onclick="show('s-setup')">⚙ Setup</button>
+  <div class="row" style="flex-wrap:wrap;gap:8px">
+    <button class="btn btn-ghost" style="flex:1;min-width:110px" onclick="dlCSV()">⬇ Download CSV</button>
+    <button class="btn btn-ghost" style="flex:1;min-width:110px" onclick="refreshDash()">↻ Refresh</button>
+    <button class="btn btn-ghost" style="flex:1;min-width:110px" onclick="show('s-setup')">⚙ Setup</button>
   </div>
 </div>
 </div>
 
-<!-- ══════════════════ OVERLAYS ══════════════════ -->
+<!-- ══ OVERLAYS ══ -->
 <div class="ov" id="ov-vio">
   <div class="ovc" style="border:1px solid var(--err)">
     <span class="ovi">⚠️</span>
@@ -474,7 +472,6 @@ tr:hover td{background:var(--s2)}
     <button class="btn btn-err w100" id="ov-vbtn" onclick="retVio()">Return to Quiz</button>
   </div>
 </div>
-
 <div class="ov" id="ov-sub">
   <div class="ovc" style="border:1px solid var(--acc)">
     <span class="ovi">📝</span>
@@ -486,12 +483,11 @@ tr:hover td{background:var(--s2)}
     </div>
   </div>
 </div>
-
 <div class="ov" id="ov-pass">
   <div class="ovc" style="border:1px solid var(--acc)">
     <span class="ovi">🔐</span>
     <div class="ovt">Teacher Dashboard</div>
-    <div class="ovb">Enter teacher password to view results</div>
+    <div class="ovb">Enter your teacher password</div>
     <input type="password" id="pass-inp" placeholder="Password" style="margin-bottom:12px"/>
     <div class="row" style="gap:9px">
       <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-pass')">Cancel</button>
@@ -501,99 +497,126 @@ tr:hover td{background:var(--s2)}
   </div>
 </div>
 
-<script>
-/* ═══════════ FIREBASE SDK (loaded only if configured) ═══════════ */
+<script type="module">
+/* ══════════════════════════════════════
+   FIREBASE
+══════════════════════════════════════ */
 let db = null;
-let fbApp = null;
+let _fb = {};
 
-async function initFirebase(){
-  const apiKey = g('fb-apikey'), pid = g('fb-pid'), appId = g('fb-appid');
-  if(!apiKey || !pid || !appId) return false;
+async function initFB(){
+  const key=gv('fb-key'), pid=gv('fb-pid'), appid=gv('fb-appid');
+  if(!key||!pid||!appid){ return false; }
   try{
-    const {initializeApp} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
-    const {getFirestore, collection, addDoc, getDocs, query, orderBy} =
-      await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    fbApp = initializeApp({apiKey, authDomain:`${pid}.firebaseapp.com`,
-      projectId:pid, storageBucket:`${pid}.appspot.com`, appId});
-    db = getFirestore(fbApp);
-    window._fbFS = {collection, addDoc, getDocs, query, orderBy};
+    const {initializeApp,getApps,deleteApp} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+    const {getFirestore,collection,addDoc,getDocs,query,orderBy,doc,setDoc,getDoc,onSnapshot}
+      = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    // avoid duplicate init
+    getApps().forEach(a=>{ try{ deleteApp(a); }catch(e){} });
+    const app = initializeApp({apiKey:key, authDomain:`${pid}.firebaseapp.com`,
+      projectId:pid, storageBucket:`${pid}.appspot.com`, appId:appid});
+    db = getFirestore(app);
+    _fb = {collection,addDoc,getDocs,query,orderBy,doc,setDoc,getDoc,onSnapshot};
     return true;
-  }catch(e){ console.warn('Firebase init failed:',e); return false; }
+  }catch(e){ console.warn('FB init:',e); return false; }
 }
 
-/* ═══════════ STATE ═══════════ */
+window.testFirebase = async function(){
+  setSt('fb-st','info','Testing…');
+  saveCfg();
+  const ok = await initFB();
+  if(!ok){ setSt('fb-st','err','❌ Could not initialise — check your values.'); return; }
+  try{
+    const {collection,addDoc,getDocs} = _fb;
+    await addDoc(collection(db,'_ping'),{ts:Date.now()});
+    setSt('fb-st','ok','✅ Firebase connected successfully!');
+  }catch(e){ setSt('fb-st','err','❌ Connected but write failed. Make sure Firestore is in Test Mode. Error: '+e.message); }
+};
+
+/* ══════════════════════════════════════
+   STATE
+══════════════════════════════════════ */
 let bank=[], curSel=[], quizQs=[], answers={};
 let curQ=0, timeLeft=0, timerInt=null, quizStart=null;
 let stuName='', vioCount=0, offSecs=0, offStart=null;
 let vioTimer=null, vioCd=10, firstVio=true, quizActive=false;
 let records=[], editId=null, bankFil='all', curFil='all';
+let sessionId=null, qParams=null;
 
-/* ═══════════ HELPERS ═══════════ */
-function g(id){ return (document.getElementById(id)?.value||'').trim() }
+/* ══════════════════════════════════════
+   UTILS
+══════════════════════════════════════ */
+function gv(id){ return (document.getElementById(id)?.value||'').trim() }
 function el(id){ return document.getElementById(id) }
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
-function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); el(id).classList.add('active'); window.scrollTo(0,0) }
+window.show = function(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); el(id).classList.add('active'); window.scrollTo(0,0); }
 function closeOv(id){ el(id).classList.remove('on') }
-function setSt(id,t,m){ const e=el(id); e.className='st '+t; e.textContent=m }
+window.closeOv = closeOv;
+function setSt(id,t,m){ const e=el(id); if(!e) return; e.className='st '+t; e.textContent=m; }
 function fmtT(s){ return `${Math.floor(s/60)}m ${s%60}s` }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6) }
 
-/* ═══════════ PERSIST ═══════════ */
-function saveBank(){ try{ localStorage.setItem('cq_bank2',JSON.stringify(bank)) }catch(e){} }
-function loadBank(){ try{ const d=localStorage.getItem('cq_bank2'); if(d) bank=JSON.parse(d) }catch(e){} }
-function saveRec(){ try{ localStorage.setItem('cq_rec_'+g('cfg-title'),JSON.stringify(records)) }catch(e){} }
-function loadRec(){ try{ const d=localStorage.getItem('cq_rec_'+g('cfg-title')); if(d) records=JSON.parse(d) }catch(e){} }
+/* ══════════════════════════════════════
+   PERSIST
+══════════════════════════════════════ */
+function saveBank(){ try{ localStorage.setItem('cq3_bank',JSON.stringify(bank)) }catch(e){} }
+function loadBank(){ try{ const d=localStorage.getItem('cq3_bank'); if(d) bank=JSON.parse(d); }catch(e){} }
+function saveRec(){ try{ localStorage.setItem('cq3_rec_'+gv('cfg-title'),JSON.stringify(records)) }catch(e){} }
+function loadRec(){ try{ const d=localStorage.getItem('cq3_rec_'+gv('cfg-title')); if(d) records=JSON.parse(d); }catch(e){} }
 function saveCfg(){
   try{
-    localStorage.setItem('cq_cfg2',JSON.stringify({
-      title:g('cfg-title'),time:g('cfg-time'),count:g('cfg-count'),
-      email:g('cfg-email'),pass:g('cfg-pass'),
-      fbKey:g('fb-apikey'),fbPid:g('fb-pid'),fbApp:g('fb-appid'),
-      ejsKey:g('ejs-key'),ejsSvc:g('ejs-svc'),ejsTpl:g('ejs-tpl')
+    localStorage.setItem('cq3_cfg',JSON.stringify({
+      title:gv('cfg-title'),time:gv('cfg-time'),count:gv('cfg-count'),
+      email:gv('cfg-email'),pass:gv('cfg-pass'),
+      fbKey:gv('fb-key'),fbPid:gv('fb-pid'),fbAppid:gv('fb-appid'),
+      ejsKey:gv('ejs-key'),ejsSvc:gv('ejs-svc'),ejsTpl:gv('ejs-tpl')
     }));
   }catch(e){}
 }
 function loadCfg(){
   try{
-    const d=localStorage.getItem('cq_cfg2'); if(!d) return;
+    const d=localStorage.getItem('cq3_cfg'); if(!d) return;
     const c=JSON.parse(d);
-    const map={'cfg-title':'title','cfg-time':'time','cfg-count':'count',
-      'cfg-email':'email','cfg-pass':'pass',
-      'fb-apikey':'fbKey','fb-pid':'fbPid','fb-appid':'fbApp',
+    const m={'cfg-title':'title','cfg-time':'time','cfg-count':'count','cfg-email':'email',
+      'cfg-pass':'pass','fb-key':'fbKey','fb-pid':'fbPid','fb-appid':'fbAppid',
       'ejs-key':'ejsKey','ejs-svc':'ejsSvc','ejs-tpl':'ejsTpl'};
-    Object.entries(map).forEach(([id,k])=>{ if(c[k] && el(id)) el(id).value=c[k]; });
+    Object.entries(m).forEach(([id,k])=>{ if(c[k]&&el(id)) el(id).value=c[k]; });
   }catch(e){}
 }
 
-/* ═══════════ TAB ═══════════ */
-function switchTab(show,hide){
+/* ══════════════════════════════════════
+   TAB SWITCH
+══════════════════════════════════════ */
+window.switchTab = function(show,hide){
   el(show).style.display=''; el(hide).style.display='none';
   document.querySelectorAll('.tab').forEach((t,i)=>{
     t.classList.toggle('on',(i===0&&show==='tc')||(i===1&&show==='te'));
   });
-}
+};
 
-/* ═══════════ BANK ═══════════ */
-function goBank(){ saveCfg(); renderBank(); show('s-bank') }
+/* ══════════════════════════════════════
+   QUESTION BANK
+══════════════════════════════════════ */
+window.goBank = function(){ saveCfg(); renderBank(); show('s-bank'); };
 
-function setFil(ctx,f,btn){
+window.setFil = function(ctx,f,btn){
   if(ctx==='bank') bankFil=f; else curFil=f;
-  const bar = el(ctx==='bank'?'bank-fil':'cur-fil');
-  bar.querySelectorAll('.fil').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll(`#${ctx==='bank'?'bank':'cur'}-fil .fil`).forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
   ctx==='bank'?renderBank():renderCur();
-}
+};
 
-function matchFil(q,f){
+function mFil(q,f){
   if(f==='all') return true;
   if(['mcq','tf','fitb'].includes(f)) return q.type===f;
   return q.diff===f;
 }
 
 function renderBank(){
-  const qs=bank.filter(q=>matchFil(q,bankFil));
+  const qs=bank.filter(q=>mFil(q,bankFil));
   el('bank-total').textContent=`${bank.length} total`;
   const list=el('bank-list');
-  if(!qs.length){ list.innerHTML=`<div class="empty"><span class="empty-i">${bank.length?'🔍':'📭'}</span>${bank.length?'No match.':'No questions yet. Add your first one.'}</div>`; return; }
+  if(!qs.length){ list.innerHTML=`<div class="empty"><span class="empty-i">${bank.length?'🔍':'📭'}</span>${bank.length?'No match.':'No questions yet. Add your first one!'}</div>`; return; }
   list.innerHTML=qs.map(q=>`
     <div class="qi">
       <div class="qi-row">
@@ -604,8 +627,8 @@ function renderBank(){
             <span class="chip chip-${q.diff}">${q.diff}</span>
             ${q.topic?`<span class="qi-topic">${esc(q.topic)}</span>`:''}
           </div>
-          ${q.type==='mcq'?`<div style="font-size:11px;color:var(--m);margin-top:5px">${q.options.map((o,i)=>`<span style="${i===q.ci?'color:var(--grn);font-weight:500':''}">${'ABCD'[i]}. ${esc(o)}</span>`).join(' &nbsp;')}</div>`
-          :`<div style="font-size:11px;color:var(--m);margin-top:5px">Answer: <span style="color:var(--grn);font-weight:500">${esc(q.answer)}</span></div>`}
+          ${q.type==='mcq'?`<div style="font-size:11px;color:var(--m);margin-top:5px">${q.options.map((o,i)=>`<span style="${i===q.ci?'color:var(--grn);font-weight:600':''}">${'ABCD'[i]}. ${esc(o)}</span>`).join(' &nbsp;')}</div>`
+          :`<div style="font-size:11px;color:var(--m);margin-top:4px">Answer: <span style="color:var(--grn);font-weight:600">${esc(q.answer)}</span></div>`}
         </div>
         <div style="display:flex;flex-direction:column;gap:5px">
           <button class="btn-icon" onclick="openEdit('${q.id}')">✏️</button>
@@ -615,14 +638,14 @@ function renderBank(){
     </div>`).join('');
 }
 
-function openAdd(){
+window.openAdd = function(){
   editId=null; el('addq-h').textContent='Add Question';
   el('aq-type').value='mcq'; el('aq-text').value='';
   el('aq-topic').value=''; el('aq-diff').value='medium';
   el('addq-st').className='st'; renderAns(); show('s-addq');
-}
+};
 
-function openEdit(id){
+window.openEdit = function(id){
   const q=bank.find(x=>x.id===id); if(!q) return;
   editId=id; el('addq-h').textContent='Edit Question';
   el('aq-type').value=q.type; el('aq-text').value=q.text;
@@ -635,19 +658,18 @@ function openEdit(id){
     document.querySelectorAll('input[name="atf"]').forEach(r=>{ if(r.value===q.answer) r.checked=true; });
   } else { const inp=el('afb'); if(inp) inp.value=q.answer||''; }
   show('s-addq');
-}
+};
 
-function renderAns(){
+window.renderAns = function(){
   const t=el('aq-type').value, w=el('aq-ans');
   if(t==='mcq'){
-    w.innerHTML=`<label style="margin-top:14px">Options (tick correct answer)</label>`+
+    w.innerHTML=`<label style="margin-top:14px">Options — tick the correct answer</label>`+
     ['A','B','C','D'].map((_,i)=>`
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
         <input type="radio" name="acr" value="${i}" ${i===0?'checked':''} style="width:auto;accent-color:var(--acc)"/>
         <span style="font-size:12px;color:var(--m);min-width:14px">${'ABCD'[i]}.</span>
         <input type="text" id="ao${i}" placeholder="Option ${'ABCD'[i]}" style="flex:1"/>
-      </div>`).join('')+
-    `<div style="font-size:11px;color:var(--m);margin-top:3px">Radio button = correct answer</div>`;
+      </div>`).join('')+`<div style="font-size:11px;color:var(--m);margin-top:2px">Radio = correct answer</div>`;
   } else if(t==='tf'){
     w.innerHTML=`<label style="margin-top:14px">Correct Answer</label>
       <div style="display:flex;gap:16px;margin-top:8px">
@@ -658,16 +680,15 @@ function renderAns(){
       </div>`;
   } else {
     w.innerHTML=`<label style="margin-top:14px">Correct Answer</label>
-      <input type="text" id="afb" placeholder="Expected answer (case-insensitive match)"/>
+      <input type="text" id="afb" placeholder="Expected answer (case-insensitive)"/>
       <div style="font-size:11px;color:var(--m);margin-top:4px">Students type their answer; matched automatically</div>`;
   }
-}
+};
 
-function saveQ(){
+window.saveQ = function(){
   const type=el('aq-type').value, text=el('aq-text').value.trim();
   if(!text){ setSt('addq-st','err','Please enter question text.'); return; }
-  const q={id:editId||(Date.now().toString(36)+Math.random().toString(36).slice(2,5)),
-    type, text, topic:el('aq-topic').value.trim(), diff:el('aq-diff').value};
+  const q={id:editId||uid(), type, text, topic:el('aq-topic').value.trim(), diff:el('aq-diff').value};
   if(type==='mcq'){
     const opts=['A','B','C','D'].map((_,i)=>(el('ao'+i)?.value||'').trim());
     if(!opts[0]||!opts[1]){ setSt('addq-st','err','Fill in at least options A and B.'); return; }
@@ -684,25 +705,27 @@ function saveQ(){
   else bank.push(q);
   saveBank();
   setSt('addq-st','ok',editId?'✅ Updated!':'✅ Question added!');
-  setTimeout(()=>{ show('s-bank'); renderBank(); }, 700);
-}
+  setTimeout(()=>{ show('s-bank'); renderBank(); },700);
+};
 
-function delQ(id){
+window.delQ = function(id){
   if(!confirm('Delete this question?')) return;
   bank=bank.filter(q=>q.id!==id); saveBank(); renderBank();
-}
+};
 
-/* ═══════════ CURATE ═══════════ */
-function goCurate(){
+/* ══════════════════════════════════════
+   CURATE
+══════════════════════════════════════ */
+window.goCurate = function(){
   saveCfg();
   if(!bank.length){ alert('Question bank is empty. Add questions first.'); goBank(); return; }
   if(!curSel.length) curSel=bank.map(q=>q.id);
   renderCur(); show('s-curate');
-}
+};
 
 function visCur(){
-  const srch=(el('cur-srch')?.value||'').toLowerCase();
-  return bank.filter(q=>matchFil(q,curFil)&&(!srch||q.text.toLowerCase().includes(srch)||(q.topic||'').toLowerCase().includes(srch)));
+  const s=(el('cur-srch')?.value||'').toLowerCase();
+  return bank.filter(q=>mFil(q,curFil)&&(!s||q.text.toLowerCase().includes(s)||(q.topic||'').toLowerCase().includes(s)));
 }
 
 function renderCur(){
@@ -727,184 +750,157 @@ function renderCur(){
   }).join('');
 }
 
-function togCur(id){
+window.togCur = function(id){
   curSel=curSel.includes(id)?curSel.filter(x=>x!==id):[...curSel,id];
   el('cur-hdr').textContent=`${curSel.length} selected`;
   const item=document.querySelector(`.qi[onclick="togCur('${id}')"]`);
   const cc=el('cc-'+id);
   if(item) item.classList.toggle('sel',curSel.includes(id));
   if(cc) cc.classList.toggle('on',curSel.includes(id));
-}
-function selAll(){ visCur().forEach(q=>{ if(!curSel.includes(q.id)) curSel.push(q.id); }); renderCur(); }
-function deselAll(){ curSel=[]; renderCur(); }
+};
+window.selAll = function(){ visCur().forEach(q=>{ if(!curSel.includes(q.id)) curSel.push(q.id); }); renderCur(); };
+window.deselAll = function(){ curSel=[]; renderCur(); };
 
-/* ═══════════ LAUNCH / QR ═══════════ */
-function goLaunch(){
+/* ══════════════════════════════════════
+   LAUNCH — Firebase session or fallback
+══════════════════════════════════════ */
+window.goLaunch = async function(){
   saveCfg();
   if(!curSel.length){ alert('Select at least one question.'); return; }
-  const c={title:g('cfg-title'),time:g('cfg-time'),count:g('cfg-count')};
-  el('launch-title').textContent=c.title;
-  el('launch-meta').textContent=`${curSel.length} questions curated • ${c.time} minutes`;
 
-  // Embed FULL question objects so student phones need no local bank
-  const selectedQs = bank.filter(q=>curSel.includes(q.id));
-  const payload = {
-    title: c.title,
-    time: parseInt(c.time)||15,
-    count: parseInt(c.count)||0,
-    qs: selectedQs   // full question data, not just IDs
-  };
+  const title=gv('cfg-title'), time=parseInt(gv('cfg-time'))||15, count=parseInt(gv('cfg-count'))||0;
+  el('launch-title').textContent=title;
+  el('launch-meta').textContent=`${curSel.length} questions • ${time} minutes`;
 
-  // Use encodeURIComponent(JSON) — btoa breaks on non-ASCII (Urdu, Arabic etc.)
-  const baseUrl = window.location.href.split('?')[0].split('#')[0];
-  const params = encodeURIComponent(JSON.stringify(payload));
-  const url = baseUrl + '?quiz=' + params;
+  const base=window.location.href.split('?')[0].split('#')[0];
+  let url='';
+
+  const fbOk = await initFB();
+
+  if(fbOk){
+    // Firebase path: store session in Firestore, share tiny ?s=ID url
+    sessionId = uid();
+    const selectedQs = bank.filter(q=>curSel.includes(q.id));
+    try{
+      await _fb.setDoc(_fb.doc(db,'sessions',sessionId),{
+        title, time, count,
+        qs: selectedQs,
+        created: Date.now()
+      });
+      url = base + '?s=' + sessionId;
+      setSt('fb-st','ok','');
+    }catch(e){
+      console.warn('FB session write failed, falling back',e);
+      url = makeFallbackUrl(base, title, time, count, curSel);
+    }
+  } else {
+    // No Firebase — use compact fallback URL (IDs only, questions from local bank)
+    url = makeFallbackUrl(base, title, time, count, curSel);
+  }
+
   el('launch-url').textContent = url;
 
-  el('qr-wrap').innerHTML = '';
-  // Try QRCode library, fallback to a fetch-based QR if unavailable
-  if(typeof QRCode !== 'undefined'){
-    try{
-      new QRCode(el('qr-wrap'), {text:url, width:180, height:180, colorDark:'#000000', colorLight:'#ffffff'});
-    }catch(e){ showQrFallback(url); }
-  } else {
-    // Fallback: use Google Charts QR API
-    showQrFallback(url);
-  }
+  // Generate QR using Google Charts API — always works, no library needed
+  el('qr-wrap').innerHTML='';
+  const img = document.createElement('img');
+  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data=${encodeURIComponent(url)}`;
+  img.width=200; img.height=200; img.alt='QR Code';
+  img.style.cssText='display:block;border-radius:4px';
+  el('qr-wrap').appendChild(img);
 
   show('s-launch');
+};
+
+function makeFallbackUrl(base, title, time, count, ids){
+  // Compact: only IDs — only works on same device (teacher testing)
+  const p = btoa(JSON.stringify({title,time,count,qids:ids}));
+  return base+'?s=local_'+p;
 }
 
-function showQrFallback(url){
-  const img = document.createElement('img');
-  img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(url);
-  img.width = 180; img.height = 180; img.style.borderRadius = '6px';
-  el('qr-wrap').appendChild(img);
-}
-
-function copyUrl(){
+window.copyUrl = function(){
   const url=el('launch-url').textContent;
-  navigator.clipboard?.writeText(url).catch(()=>{});
-  const btn=event.target; btn.textContent='Copied!';
-  setTimeout(()=>btn.textContent='Copy Link',2000);
-}
+  navigator.clipboard?.writeText(url).then(()=>{
+    const btn=event.target; btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy Link',2000);
+  }).catch(()=>{ alert(url); });
+};
 
-/* ═══════════ TEACHER DASHBOARD ═══════════ */
-function goDash(){
-  const pass=g('cfg-pass');
-  if(pass){ el('ov-pass').classList.add('on'); el('pass-inp').value=''; el('pass-st').className='st'; }
-  else openDash();
-}
-function checkPass(){
-  if(el('pass-inp').value===g('cfg-pass')){ closeOv('ov-pass'); openDash(); }
-  else setSt('pass-st','err','Incorrect password.');
-}
-async function openDash(){
-  saveCfg(); loadRec();
-  el('dash-title').textContent=(g('cfg-title')||'Quiz')+' — Dashboard';
-  el('dash-email').textContent=g('cfg-email')||'(no email set)';
-  await refreshDash();
-  show('s-dash');
-}
+/* ══════════════════════════════════════
+   PARSE STUDENT URL
+══════════════════════════════════════ */
+async function parseStudentUrl(){
+  const p=new URLSearchParams(window.location.search);
+  const s=p.get('s'); if(!s) return null;
 
-async function refreshDash(){
-  // try firebase first
-  let firebaseRecs = [];
-  if(db){
-    try{
-      const {collection,getDocs,query,orderBy}=window._fbFS;
-      const snap=await getDocs(query(collection(db,'results_'+(g('cfg-title')||'quiz').replace(/\s/g,'_')),orderBy('ts','desc')));
-      firebaseRecs=snap.docs.map(d=>d.data());
-    }catch(e){}
+  if(s.startsWith('local_')){
+    // fallback local mode
+    try{ return JSON.parse(atob(s.slice(6))); }catch(e){ return null; }
   }
-  // merge firebase + local (deduplicate by name+time)
-  const merged=[...records];
-  firebaseRecs.forEach(r=>{
-    if(!merged.find(x=>x.name===r.name&&x.time===r.time)) merged.push(r);
-  });
-  records=merged;
 
-  renderDashTable(records);
-  updateDashSummary(records);
-  el('dash-live-txt').textContent=records.length?`${records.length} result${records.length>1?'s':''} collected`:'Waiting for students…';
+  // Firebase session
+  const fbOk = await initFBFromMeta(s);
+  if(fbOk){
+    try{
+      const snap = await _fb.getDoc(_fb.doc(db,'sessions',s));
+      if(snap.exists()){ const d=snap.data(); d.sessionId=s; return d; }
+    }catch(e){ console.warn('Session fetch failed',e); }
+  }
+  return null;
 }
 
-function renderDashTable(recs){
-  const tbody=el('dash-tbody');
-  if(!recs.length){ tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;color:var(--m);padding:24px">No results yet</td></tr>`; return; }
-  tbody.innerHTML=recs.map((r,i)=>`
-    <tr>
-      <td>${i+1}</td>
-      <td><strong>${esc(r.name)}</strong></td>
-      <td>${r.attempted}/${r.total}</td>
-      <td style="color:var(--grn)">${r.correct}</td>
-      <td style="color:${r.pct>=70?'var(--grn)':r.pct>=50?'var(--warn)':'var(--err)'};font-weight:700">${r.pct}%</td>
-      <td>${r.time}</td>
-      <td style="color:${r.violations>0?'var(--warn)':'var(--m)'}">${r.violations}</td>
-      <td>${r.offSecs}s</td>
-    </tr>`).join('');
-}
-
-function updateDashSummary(recs){
-  el('d-total').textContent=recs.length;
-  if(!recs.length){ el('d-avg').textContent=el('d-high').textContent=el('d-low').textContent='—'; return; }
-  const pcts=recs.map(r=>r.pct);
-  el('d-avg').textContent=Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length)+'%';
-  el('d-high').textContent=Math.max(...pcts)+'%';
-  el('d-low').textContent=Math.min(...pcts)+'%';
-}
-
-/* ═══════════ QUIZ PARAMS FROM URL ═══════════ */
-function parseQuizParams(){
+async function initFBFromMeta(sid){
+  // Try to get firebase config from session meta stored in URL hash or from cached config
+  // First try local saved config
   try{
-    const p=new URLSearchParams(window.location.search);
-    const raw=p.get('quiz'); if(!raw) return null;
-    // Support both old btoa format and new encodeURIComponent format
-    try{ return JSON.parse(decodeURIComponent(raw)); }catch(e){}
-    try{ return JSON.parse(atob(raw)); }catch(e){}
-    return null;
-  }catch(e){ return null; }
+    const cfg=JSON.parse(localStorage.getItem('cq3_cfg')||'{}');
+    if(cfg.fbKey&&cfg.fbPid&&cfg.fbAppid){
+      if(el('fb-key')) el('fb-key').value=cfg.fbKey;
+      if(el('fb-pid')) el('fb-pid').value=cfg.fbPid;
+      if(el('fb-appid')) el('fb-appid').value=cfg.fbAppid;
+      return await initFB();
+    }
+  }catch(e){}
+  return false;
 }
 
-let qParams=null; // set if student mode
-
-/* ═══════════ STUDENT LOGIN ═══════════ */
-function initStudentMode(params){
+/* ══════════════════════════════════════
+   STUDENT LOGIN
+══════════════════════════════════════ */
+async function initStudentMode(){
+  const params = await parseStudentUrl();
+  if(!params){ show('s-setup'); return; }
   qParams=params;
   el('lg-title').textContent=params.title||'Quiz';
-  el('lg-meta').textContent=`${(params.qs||params.qids||[]).length} questions • ${params.time||15} minutes`;
+  const qCount=(params.qs||params.qids||[]).length;
+  el('lg-meta').textContent=`${qCount} questions • ${params.time||15} minutes`;
   el('stu-name').value='';
   show('s-login');
 }
 
-function startQuiz(){
+window.startQuiz = function(){
   const name=el('stu-name').value.trim();
   if(!name){ alert('Please enter your name.'); return; }
   stuName=name;
 
-  // build quiz from params or local curSel
-  let pool;
+  let pool = [];
   if(qParams){
-    // Full question objects are embedded in the URL — no local bank needed
-    pool = (qParams.qs || []);
-    // Fallback: try matching by ID from local bank (teacher mode)
+    pool = qParams.qs || [];
     if(!pool.length){
-      const ids = qParams.qids || [];
-      pool = bank.filter(q=>ids.includes(q.id));
+      const ids=qParams.qids||[];
+      pool=bank.filter(q=>ids.includes(q.id));
     }
   } else {
     pool=bank.filter(q=>curSel.includes(q.id));
   }
 
+  if(!pool.length){ alert('No questions available. Ask your teacher to check the setup.'); return; }
+
   // shuffle
   for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]; }
-  const cnt=qParams?(qParams.count||0):(parseInt(g('cfg-count'))||0);
+  const cnt=qParams?(qParams.count||0):parseInt(gv('cfg-count'))||0;
   quizQs=cnt>0?pool.slice(0,cnt):pool;
 
-  if(!quizQs.length){ alert('No questions available. Contact your teacher.'); return; }
-
   answers={}; curQ=0; vioCount=0; offSecs=0; firstVio=true; quizActive=true;
-  timeLeft=(qParams?qParams.time:parseInt(g('cfg-time'))||15)*60;
+  timeLeft=(qParams?qParams.time:parseInt(gv('cfg-time'))||15)*60;
   quizStart=Date.now();
 
   el('hstu').textContent='👤 '+stuName;
@@ -915,9 +911,11 @@ function startQuiz(){
   document.addEventListener('visibilitychange',onVis);
   document.addEventListener('fullscreenchange',onFS);
   document.addEventListener('webkitfullscreenchange',onFS);
-}
+};
 
-/* ═══════════ FULLSCREEN & VIOLATIONS ═══════════ */
+/* ══════════════════════════════════════
+   FULLSCREEN + VIOLATIONS
+══════════════════════════════════════ */
 function reqFS(){ const e=document.documentElement; (e.requestFullscreen||e.webkitRequestFullscreen||function(){}).call(e); }
 function exitFS(){ (document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document); }
 function onFS(){ if(!quizActive) return; if(!(document.fullscreenElement||document.webkitFullscreenElement)) trigVio(); }
@@ -929,10 +927,8 @@ function trigVio(){
   el('hvio').style.display='';
   el('hvio').textContent=`⚠ ${vioCount} violation${vioCount>1?'s':''}`;
   const sec=!firstVio;
-  el('ov-vt').textContent=sec?'🚨 Second Violation — Restarting!':'⚠ Screen Left — Warning!';
-  el('ov-vb').textContent=sec
-    ?'Second violation. Quiz restarts with remaining time. Recorded.'
-    :'You left the screen. Return in 10 seconds or the quiz will restart.';
+  el('ov-vt').textContent=sec?'🚨 Second Violation!':'⚠ Screen Left — Warning!';
+  el('ov-vb').textContent=sec?'Quiz restarts with remaining time. Violation recorded.':'Return within 10 seconds or the quiz will restart.';
   el('ov-vbtn').textContent=sec?'Restart Quiz':'Return to Quiz';
   el('ov-vbtn').onclick=sec?restartVio:retVio;
   vioCd=10; el('ov-vc').textContent='10';
@@ -941,17 +937,16 @@ function trigVio(){
   vioTimer=setInterval(()=>{ vioCd--; el('ov-vc').textContent=vioCd; if(vioCd<=0){ clearInterval(vioTimer); restartVio(); } },1000);
   firstVio=false;
 }
-
-function retVio(){ clearInterval(vioTimer); closeOv('ov-vio'); reqFS(); }
+window.retVio = function(){ clearInterval(vioTimer); closeOv('ov-vio'); reqFS(); };
 function restartVio(){
-  clearInterval(vioTimer); closeOv('ov-vio');
-  answers={}; curQ=0; firstVio=true;
-  let pool=quizQs; // same questions, reshuffle
-  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]; }
+  clearInterval(vioTimer); closeOv('ov-vio'); answers={}; curQ=0; firstVio=true;
+  for(let i=quizQs.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1));[quizQs[i],quizQs[j]]=[quizQs[j],quizQs[i]]; }
   renderQ(); reqFS();
 }
 
-/* ═══════════ TIMER ═══════════ */
+/* ══════════════════════════════════════
+   TIMER
+══════════════════════════════════════ */
 function startTmr(){
   clearInterval(timerInt);
   timerInt=setInterval(()=>{ timeLeft--; updTmr(); if(timeLeft<=0){ clearInterval(timerInt); finishQuiz(); } },1000);
@@ -962,7 +957,9 @@ function updTmr(){
   const t=el('htmr'); t.textContent=`⏱ ${m}:${s}`; t.classList.toggle('warn',timeLeft<=60);
 }
 
-/* ═══════════ RENDER QUESTION ═══════════ */
+/* ══════════════════════════════════════
+   RENDER QUESTION
+══════════════════════════════════════ */
 function renderQ(){
   const q=quizQs[curQ];
   el('qpg').style.width=((curQ+1)/quizQs.length*100)+'%';
@@ -973,9 +970,8 @@ function renderQ(){
   el('btn-sub').style.display=last?'':'none';
 
   const tl=q.type==='mcq'?'Multiple Choice':q.type==='tf'?'True / False':'Fill in the Blank';
-  const tc=`chip-${q.type}`;
   let html=`<div class="qnum">Question ${curQ+1} of ${quizQs.length}</div>
-    <span class="chip ${tc}" style="margin-bottom:10px;display:inline-block">${tl}</span>
+    <span class="chip chip-${q.type}" style="margin-bottom:10px;display:inline-block">${tl}</span>
     <div class="qtxt">${esc(q.text)}</div>`;
 
   if(q.type==='mcq'||q.type==='tf'){
@@ -986,31 +982,31 @@ function renderQ(){
     });
     html+=`</div>`;
   } else {
-    html+=`<input type="text" style="font-size:15px;padding:12px 14px" placeholder="Type your answer…"
+    html+=`<input type="text" style="font-size:15px;padding:12px" placeholder="Type your answer…"
       value="${esc(answers[curQ]||'')}" oninput="answers[curQ]=this.value"
       autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>`;
   }
   el('qbody').innerHTML=html;
 }
+window.pickOpt = function(i){ answers[curQ]=String(i); renderQ(); };
+window.navQ = function(d){ curQ=Math.max(0,Math.min(quizQs.length-1,curQ+d)); renderQ(); };
 
-function pickOpt(i){ answers[curQ]=String(i); renderQ(); }
-function navQ(d){ curQ=Math.max(0,Math.min(quizQs.length-1,curQ+d)); renderQ(); }
-
-/* ═══════════ SUBMIT ═══════════ */
-function confSub(){
-  el('ov-sm').textContent=`Answered ${Object.keys(answers).length} of ${quizQs.length}. Submit now?`;
+/* ══════════════════════════════════════
+   SUBMIT
+══════════════════════════════════════ */
+window.confSub = function(){
+  el('ov-sm').textContent=`Answered ${Object.keys(answers).length} of ${quizQs.length}. Submit?`;
   el('ov-sub').classList.add('on');
-}
+};
 
-async function finishQuiz(){
-  closeOv('ov-sub');
-  quizActive=false; clearInterval(timerInt); clearInterval(vioTimer);
+window.finishQuiz = async function(){
+  closeOv('ov-sub'); quizActive=false; clearInterval(timerInt); clearInterval(vioTimer);
   document.removeEventListener('visibilitychange',onVis);
   document.removeEventListener('fullscreenchange',onFS);
   document.removeEventListener('webkitfullscreenchange',onFS);
   exitFS();
 
-  const timeTaken=(qParams?qParams.time*60:parseInt(g('cfg-time'))*60)-timeLeft;
+  const timeTaken=((qParams?qParams.time:parseInt(gv('cfg-time'))||15)*60)-timeLeft;
   let correct=0, attempted=0;
   quizQs.forEach((q,i)=>{
     const ua=answers[i];
@@ -1023,24 +1019,25 @@ async function finishQuiz(){
 
   const pct=quizQs.length?Math.round(correct/quizQs.length*100):0;
   const rec={name:stuName,total:quizQs.length,attempted,correct,wrong:attempted-correct,
-    pct,time:fmtT(timeTaken),violations:vioCount,offSecs,ts:Date.now()};
+    pct,time:fmtT(timeTaken),violations:vioCount,offSecs,ts:Date.now(),
+    session:qParams?.sessionId||sessionId||'local'};
 
-  // save locally
   records.push(rec); saveRec();
 
-  // push to Firebase if available
+  // Push to Firebase
   if(db){
     try{
-      const {collection,addDoc}=window._fbFS;
-      const col='results_'+(qParams?.title||g('cfg-title')||'quiz').replace(/\s/g,'_');
-      await addDoc(collection(db,col),rec);
-    }catch(e){ console.warn('Firebase save failed',e); }
+      const col='results_'+(qParams?.title||gv('cfg-title')||'quiz').replace(/\W/g,'_');
+      await _fb.addDoc(_fb.collection(db,col),rec);
+    }catch(e){ console.warn('FB save:',e); }
   }
 
   showResult(rec);
-}
+};
 
-/* ═══════════ RESULT ═══════════ */
+/* ══════════════════════════════════════
+   RESULT
+══════════════════════════════════════ */
 function showResult(r){
   const color=r.pct>=70?'#6c63ff':r.pct>=50?'#f59e0b':'#ef4444';
   el('sring').style.background=`conic-gradient(${color} ${r.pct*3.6}deg,var(--s2) 0%)`;
@@ -1052,65 +1049,117 @@ function showResult(r){
   el('rwrg').textContent=r.wrong;
   el('rtim').textContent=r.time;
   const vb=el('rvio');
-  if(r.violations>0){ vb.style.display=''; vb.textContent=`⚠ ${r.violations} violation(s). Off-screen: ${r.offSecs}s.`; }
-  else vb.style.display='none';
+  vb.style.display=r.violations>0?'':'none';
+  if(r.violations>0) vb.textContent=`⚠ ${r.violations} violation(s) recorded. Off-screen time: ${r.offSecs}s.`;
+  // hide next-student on student devices
+  el('btn-next-stu').style.display=qParams?'none':'';
   show('s-result');
 }
 
-function shareRes(){
+window.shareRes = function(){
   const r=records[records.length-1]; if(!r) return;
-  const t=`📝 ${qParams?.title||g('cfg-title')}\n👤 ${r.name}\n✅ ${r.correct}/${r.total} correct\n📊 ${r.pct}%\n⏱ ${r.time}`;
+  const t=`📝 ${qParams?.title||gv('cfg-title')}\n👤 ${r.name}\n✅ ${r.correct}/${r.total} correct\n📊 ${r.pct}%\n⏱ ${r.time}`;
   if(navigator.share) navigator.share({title:'Quiz Result',text:t}).catch(()=>{});
-  else { const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('Copied!'); }
-}
+  else { const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('Result copied!'); }
+};
 
-function nextStu(){
+window.nextStu = function(){
   answers={}; curQ=0; vioCount=0; offSecs=0; firstVio=true;
-  el('stu-name').value='';
-  if(qParams) show('s-login');
-  else { renderCur(); show('s-curate'); }
+  el('stu-name').value=''; renderCur(); show('s-curate');
+};
+
+/* ══════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════ */
+window.goDash = function(){
+  const pass=gv('cfg-pass');
+  if(pass){ el('ov-pass').classList.add('on'); el('pass-inp').value=''; el('pass-st').className='st'; }
+  else openDash();
+};
+window.checkPass = function(){
+  if(el('pass-inp').value===gv('cfg-pass')){ closeOv('ov-pass'); openDash(); }
+  else setSt('pass-st','err','Incorrect password.');
+};
+
+async function openDash(){
+  saveCfg(); loadRec();
+  el('dash-title').textContent=(gv('cfg-title')||'Quiz')+' — Dashboard';
+  el('dash-email').textContent=gv('cfg-email')||'(no email set)';
+  await refreshDash();
+  show('s-dash');
 }
 
-/* ═══════════ CSV & EMAIL ═══════════ */
+window.refreshDash = async function(){
+  if(db){
+    try{
+      const col='results_'+(gv('cfg-title')||'quiz').replace(/\W/g,'_');
+      const snap=await _fb.getDocs(_fb.query(_fb.collection(db,col),_fb.orderBy('ts','asc')));
+      const fbRecs=snap.docs.map(d=>d.data());
+      fbRecs.forEach(r=>{ if(!records.find(x=>x.name===r.name&&x.ts===r.ts)) records.push(r); });
+    }catch(e){ console.warn('FB fetch:',e); }
+  }
+  renderDash(records);
+};
+
+function renderDash(recs){
+  const tbody=el('dash-tbody');
+  el('d-tot').textContent=recs.length;
+  el('dash-live').textContent=recs.length?`${recs.length} result${recs.length>1?'s':''} collected`:'Waiting for students…';
+  if(!recs.length){ tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;color:var(--m);padding:24px">No results yet</td></tr>`; return; }
+  const pcts=recs.map(r=>r.pct);
+  el('d-avg').textContent=Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length)+'%';
+  el('d-hi').textContent=Math.max(...pcts)+'%';
+  el('d-lo').textContent=Math.min(...pcts)+'%';
+  tbody.innerHTML=recs.map((r,i)=>`
+    <tr>
+      <td>${i+1}</td><td><strong>${esc(r.name)}</strong></td>
+      <td>${r.attempted}/${r.total}</td>
+      <td style="color:var(--grn)">${r.correct}</td>
+      <td style="color:${r.pct>=70?'var(--grn)':r.pct>=50?'var(--warn)':'var(--err)'};font-weight:700">${r.pct}%</td>
+      <td>${r.time}</td>
+      <td style="color:${r.violations>0?'var(--warn)':'var(--m)'}">${r.violations}</td>
+      <td>${r.offSecs}s</td>
+    </tr>`).join('');
+}
+
+/* ══════════════════════════════════════
+   CSV + EMAIL
+══════════════════════════════════════ */
 function buildCSV(){
-  const hdr=['#','Name','Total','Attempted','Correct','Wrong','Score %','Time','Violations','Off-Screen(s)'];
-  const rows=records.map((r,i)=>[i+1,r.name,r.total,r.attempted,r.correct,r.wrong,r.pct+'%',r.time,r.violations,r.offSecs]);
-  return [hdr,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const h=['#','Name','Total','Attempted','Correct','Wrong','Score %','Time','Violations','Off-Screen(s)'];
+  const r=records.map((r,i)=>[i+1,r.name,r.total,r.attempted,r.correct,r.wrong,r.pct+'%',r.time,r.violations,r.offSecs]);
+  return [h,...r].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
 }
-
-function dlCSV(){
+window.dlCSV = function(){
   const blob=new Blob([buildCSV()],{type:'text/csv'});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download=(g('cfg-title')||'quiz')+'_results.csv';a.click();
+  const a=document.createElement('a'); a.href=url; a.download=(gv('cfg-title')||'quiz')+'_results.csv'; a.click();
   URL.revokeObjectURL(url);
-}
-
-async function sendEmail(){
-  const key=g('ejs-key'),svc=g('ejs-svc'),tpl=g('ejs-tpl'),email=g('cfg-email');
+};
+window.sendEmail = async function(){
+  const key=gv('ejs-key'),svc=gv('ejs-svc'),tpl=gv('ejs-tpl'),email=gv('cfg-email');
   if(!key||!svc||!tpl){ setSt('email-st','err','EmailJS credentials missing.'); return; }
-  if(!records.length){ setSt('email-st','err','No results to send yet.'); return; }
+  if(!records.length){ setSt('email-st','err','No results to send.'); return; }
   const btn=el('btn-email'); btn.innerHTML='<span class="spin"></span> Sending…'; btn.disabled=true;
   try{
-    const ejsModule=await import('https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.esm.js');
-    const ejs=ejsModule.default||ejsModule;
+    const m=await import('https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.esm.js');
+    const ejs=m.default||m;
     ejs.init(key);
-    await ejs.send(svc,tpl,{teacher_email:email,quiz_title:g('cfg-title'),csv_data:buildCSV(),student_count:records.length,date:new Date().toLocaleDateString()});
+    await ejs.send(svc,tpl,{teacher_email:email,quiz_title:gv('cfg-title'),csv_data:buildCSV(),student_count:records.length,date:new Date().toLocaleDateString()});
     setSt('email-st','ok','✅ Sent to '+email);
-  }catch(e){ setSt('email-st','err','❌ '+(e.text||e.message||JSON.stringify(e))); }
+  }catch(e){ setSt('email-st','err','❌ '+(e.text||e.message||String(e))); }
   btn.innerHTML='Send via EmailJS'; btn.disabled=false;
-}
+};
 
-/* ═══════════ INIT ═══════════ */
+/* ══════════════════════════════════════
+   INIT
+══════════════════════════════════════ */
 loadBank(); loadCfg();
-
-// check if opened as student (has ?quiz= param)
-const _qp=parseQuizParams();
-if(_qp){
-  // student mode — load bank from localStorage if available, then show login
-  initStudentMode(_qp);
+const _sp=new URLSearchParams(window.location.search);
+if(_sp.get('s')){
+  initStudentMode();
 } else {
-  // teacher mode — init Firebase if configured
-  initFirebase();
+  initFB(); // pre-warm firebase if configured
 }
 </script>
 </body>
