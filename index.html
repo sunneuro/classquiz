@@ -4,7 +4,6 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
-<meta name="mobile-web-app-capable" content="yes"/>
 <title>ClassQuiz</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
@@ -12,7 +11,7 @@
   --bg:#08080f;--s1:#111118;--s2:#18181f;--s3:#22222c;
   --b:#2a2a38;--b2:#3a3a50;
   --acc:#6c63ff;--acc2:#ff6584;--grn:#3ecf8e;
-  --warn:#f59e0b;--err:#ef4444;
+  --warn:#f59e0b;--err:#ef4444;--info:#3b82f6;
   --txt:#f0f0f8;--m:#7070a0;--m2:#4a4a6a;
   --r:12px;--fh:'Syne',sans-serif;--fb:'DM Sans',sans-serif;
 }
@@ -20,23 +19,36 @@
 body{font-family:var(--fb);background:var(--bg);color:var(--txt);min-height:100vh;overflow-x:hidden}
 .screen{display:none;min-height:100vh;flex-direction:column}
 .screen.active{display:flex}
-.center{align-items:center;padding:28px 16px 60px}
+.center{align-items:center;padding:24px 16px 60px}
 .mw{width:100%;max-width:540px}
-.mw-lg{width:100%;max-width:880px}
-h1{font-family:var(--fh);font-size:clamp(22px,5vw,36px);font-weight:800;letter-spacing:-1px}
+.mw-lg{width:100%;max-width:920px}
+h1{font-family:var(--fh);font-size:clamp(20px,5vw,34px);font-weight:800;letter-spacing:-1px}
 h2{font-family:var(--fh);font-size:12px;font-weight:700;letter-spacing:1px;color:var(--m);text-transform:uppercase;margin-bottom:12px}
-h3{font-family:var(--fh);font-size:17px;font-weight:700}
+h3{font-family:var(--fh);font-size:16px;font-weight:700}
+h4{font-family:var(--fh);font-size:13px;font-weight:600;color:var(--m)}
 .card{background:var(--s1);border:1px solid var(--b);border-radius:var(--r);padding:18px;margin-bottom:14px}
 .card-acc{border-color:rgba(108,99,255,.4);background:rgba(108,99,255,.05)}
 .card-grn{border-color:rgba(62,207,142,.3);background:rgba(62,207,142,.04)}
+.card-warn{border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.04)}
+.card-err{border-color:rgba(239,68,68,.3);background:rgba(239,68,68,.04)}
 label{display:block;font-size:12px;color:var(--m);margin-bottom:5px;margin-top:12px;letter-spacing:.2px}
 label:first-child{margin-top:0}
+label .req{color:var(--err);margin-left:2px}
 input[type=text],input[type=email],input[type=number],input[type=password],select,textarea{
   width:100%;background:var(--s2);border:1px solid var(--b);border-radius:8px;
   color:var(--txt);font-family:var(--fb);font-size:14px;padding:10px 12px;outline:none;transition:border-color .2s}
 input:focus,select:focus,textarea:focus{border-color:var(--acc)}
 select option{background:var(--s2)}
-textarea{resize:vertical;min-height:76px;line-height:1.6}
+textarea{resize:vertical;min-height:80px;line-height:1.6}
+/* autocomplete wrapper */
+.ac-wrap{position:relative}
+.ac-drop{position:absolute;top:100%;left:0;right:0;background:var(--s2);border:1px solid var(--acc);
+  border-radius:8px;margin-top:2px;z-index:100;max-height:180px;overflow-y:auto;display:none}
+.ac-drop.show{display:block}
+.ac-item{padding:9px 12px;font-size:13px;cursor:pointer;transition:background .12s}
+.ac-item:hover{background:var(--s3)}
+.ac-item.new{color:var(--acc);font-style:italic}
+/* buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;
   font-family:var(--fh);font-size:13px;font-weight:700;padding:11px 18px;
   border-radius:10px;border:none;cursor:pointer;transition:transform .12s,opacity .18s;letter-spacing:.2px}
@@ -45,42 +57,52 @@ textarea{resize:vertical;min-height:76px;line-height:1.6}
 .btn-pri{background:linear-gradient(135deg,var(--acc),#8b5cf6);color:#fff}
 .btn-grn{background:linear-gradient(135deg,var(--grn),#059669);color:#fff}
 .btn-err{background:linear-gradient(135deg,var(--err),#b91c1c);color:#fff}
+.btn-warn{background:linear-gradient(135deg,var(--warn),#d97706);color:#fff}
+.btn-info{background:linear-gradient(135deg,var(--info),#1d4ed8);color:#fff}
 .btn-ghost{background:transparent;border:1px solid var(--b);color:var(--txt)}
 .btn-ghost:hover{border-color:var(--acc);color:var(--acc)}
 .btn-sm{padding:7px 13px;font-size:12px;border-radius:8px}
 .w100{width:100%}
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .col{display:flex;flex-direction:column;gap:10px}
+/* chips */
 .chip{display:inline-block;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px}
 .chip-mcq{background:rgba(108,99,255,.2);color:#b0aaff}
 .chip-tf{background:rgba(245,158,11,.2);color:#fcd34d}
-.chip-fitb{background:rgba(255,101,132,.2);color:#ffa0b4}
 .chip-easy{background:rgba(62,207,142,.15);color:#6ee7b7}
 .chip-medium{background:rgba(245,158,11,.15);color:#fcd34d}
 .chip-hard{background:rgba(239,68,68,.15);color:#fca5a5}
+.chip-joined{background:rgba(62,207,142,.15);color:#6ee7b7}
+.chip-started{background:rgba(59,130,246,.15);color:#93c5fd}
+.chip-submitted{background:rgba(108,99,255,.15);color:#a5a0ff}
+/* status */
 .st{font-size:12px;padding:9px 13px;border-radius:8px;margin-top:10px;display:none}
 .st.ok{background:rgba(62,207,142,.1);color:var(--grn);border:1px solid rgba(62,207,142,.2);display:block}
 .st.err{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2);display:block}
 .st.info{background:rgba(108,99,255,.1);color:#a5a0ff;border:1px solid rgba(108,99,255,.2);display:block}
+.st.warn{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.2);display:block}
+/* question items */
 .qi{background:var(--s1);border:1px solid var(--b);border-radius:10px;padding:14px;margin-bottom:9px;transition:border-color .15s}
 .qi:hover{border-color:var(--b2)}
 .qi.sel{border-color:var(--acc);background:rgba(108,99,255,.07)}
 .qi-row{display:flex;gap:10px;align-items:flex-start}
-.qi-body{flex:1}
+.qi-body{flex:1;min-width:0}
 .qi-text{font-size:14px;color:var(--txt);line-height:1.5;margin-bottom:6px}
-.qi-meta{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
-.qi-topic{font-size:10px;color:var(--m);background:var(--s2);padding:2px 6px;border-radius:4px}
+.qi-meta{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:4px}
+.qi-tag{font-size:10px;color:var(--m);background:var(--s2);padding:2px 6px;border-radius:4px;white-space:nowrap}
 .chk{width:22px;height:22px;min-width:22px;border-radius:50%;border:2px solid var(--b2);
   display:flex;align-items:center;justify-content:center;cursor:pointer;
   transition:background .15s,border-color .15s;font-size:11px;color:transparent}
 .chk.on{background:var(--acc);border-color:var(--acc);color:#fff}
 .btn-icon{padding:7px;border-radius:7px;background:var(--s2);border:1px solid var(--b);
-  color:var(--m);cursor:pointer;font-size:13px;transition:background .15s}
+  color:var(--m);cursor:pointer;font-size:13px;transition:background .15s;line-height:1}
 .btn-icon:hover{background:var(--b);color:var(--txt)}
+/* filter bar */
 .fil-bar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:14px}
 .fil{padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;
   border:1px solid var(--b);background:transparent;color:var(--m);cursor:pointer;transition:all .13s}
 .fil.on{background:var(--acc);border-color:var(--acc);color:#fff}
+/* quiz */
 .qhdr{background:var(--s1);border-bottom:1px solid var(--b);padding:10px 16px;
   display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
   position:sticky;top:0;z-index:10}
@@ -93,291 +115,480 @@ textarea{resize:vertical;min-height:76px;line-height:1.6}
 .hc-s{background:rgba(62,207,142,.1);color:var(--grn)}
 .hc-v{background:rgba(245,158,11,.15);color:#fbbf24}
 @keyframes bl{0%,100%{opacity:1}50%{opacity:.5}}
-.qbody{flex:1;padding:20px 16px;max-width:620px;margin:0 auto;width:100%}
+.qbody{flex:1;padding:20px 16px;max-width:640px;margin:0 auto;width:100%}
 .qnum{font-size:11px;color:var(--m);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px}
 .qtxt{font-family:var(--fh);font-size:clamp(15px,3.5vw,20px);font-weight:600;line-height:1.55;margin-bottom:22px}
 .opts{display:flex;flex-direction:column;gap:8px}
 .opt{background:var(--s1);border:1px solid var(--b);border-radius:10px;padding:12px 15px;
-  color:var(--txt);font-family:var(--fb);font-size:14px;text-align:left;cursor:pointer;
+  color:var(--txt);font-family:var(--fb);font-size:14px;text-align:left;
   display:flex;align-items:center;gap:11px;transition:border-color .13s,background .13s}
-.opt:hover{border-color:var(--acc);background:rgba(108,99,255,.06)}
+.opt.clickable{cursor:pointer}
+.opt.clickable:hover{border-color:var(--acc);background:rgba(108,99,255,.06)}
 .opt.sel{border-color:var(--acc);background:rgba(108,99,255,.14)}
+.opt.correct{border-color:var(--grn)!important;background:rgba(62,207,142,.12)!important}
+.opt.incorrect{border-color:var(--err)!important;background:rgba(239,68,68,.10)!important}
+.opt.reveal{border-color:var(--grn)!important;background:rgba(62,207,142,.08)!important}
 .oltr{width:25px;height:25px;min-width:25px;border-radius:50%;background:var(--s2);border:1px solid var(--b);
   display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;
-  font-family:var(--fh);transition:background .13s,border-color .13s,color .13s}
+  font-family:var(--fh);transition:all .13s}
 .opt.sel .oltr{background:var(--acc);border-color:var(--acc);color:#fff}
-.qnav{display:flex;gap:9px;padding:12px 16px 36px;max-width:620px;margin:0 auto;width:100%}
-.ov{position:fixed;inset:0;background:rgba(0,0,0,.9);display:none;
+.opt.correct .oltr{background:var(--grn);border-color:var(--grn);color:#fff}
+.opt.incorrect .oltr{background:var(--err);border-color:var(--err);color:#fff}
+.opt.reveal .oltr{background:var(--grn);border-color:var(--grn);color:#fff}
+.qnav{display:flex;gap:9px;padding:8px 16px 20px;max-width:640px;margin:0 auto;width:100%}
+.q-dots{display:flex;flex-wrap:wrap;gap:5px;padding:8px 16px;max-width:640px;margin:0 auto;width:100%}
+.qdot{width:28px;height:28px;border-radius:6px;border:1px solid var(--b);background:var(--s2);
+  display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;
+  font-family:var(--fh);color:var(--m);cursor:pointer;transition:all .13s}
+.qdot.answered{background:rgba(108,99,255,.2);border-color:var(--acc);color:#a5a0ff}
+.qdot.current{background:var(--acc);border-color:var(--acc);color:#fff}
+/* overlays */
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.92);display:none;
   align-items:center;justify-content:center;z-index:999;padding:16px}
 .ov.on{display:flex}
-.ovc{background:var(--s1);border-radius:var(--r);padding:26px 22px;max-width:340px;width:100%;text-align:center}
+.ovc{background:var(--s1);border-radius:var(--r);padding:26px 22px;max-width:380px;width:100%;text-align:center}
 .ovi{font-size:36px;margin-bottom:12px;display:block}
 .ovt{font-family:var(--fh);font-size:18px;font-weight:700;margin-bottom:7px}
 .ovb{font-size:13px;color:var(--m);line-height:1.65;margin-bottom:16px}
 .ovc-n{font-size:36px;font-weight:800;font-family:var(--fh);color:var(--warn);margin:6px 0}
-.sring{width:116px;height:116px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;position:relative}
+/* result */
+.sring{width:120px;height:120px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;position:relative}
 .sring::before{content:'';position:absolute;inset:10px;border-radius:50%;background:var(--bg)}
 .sinn{position:relative;z-index:1;text-align:center}
-.spct{font-family:var(--fh);font-size:25px;font-weight:800;display:block}
+.spct{font-family:var(--fh);font-size:26px;font-weight:800;display:block}
 .slbl{font-size:10px;color:var(--m);text-transform:uppercase;letter-spacing:1px}
-.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:500px;margin-bottom:14px}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:520px;margin-bottom:14px}
 .sbox{background:var(--s1);border:1px solid var(--b);border-radius:10px;padding:14px;text-align:center}
-.sv{font-family:var(--fh);font-size:23px;font-weight:700;margin-bottom:3px}
+.sv{font-family:var(--fh);font-size:22px;font-weight:700;margin-bottom:3px}
 .sl{font-size:10px;color:var(--m);text-transform:uppercase;letter-spacing:.6px}
 .ca{color:var(--acc)}.cg{color:var(--grn)}.ce{color:var(--err)}.cw{color:var(--warn)}
+/* answer review */
+.ans-item{background:var(--s1);border:1px solid var(--b);border-radius:10px;padding:12px;margin-bottom:8px}
+.ans-item.ans-ok{border-color:rgba(62,207,142,.4)}
+.ans-item.ans-ng{border-color:rgba(239,68,68,.35)}
+.ans-item.ans-skip{border-color:rgba(108,99,255,.25)}
+.ans-q{font-size:13px;color:var(--txt);margin-bottom:6px;line-height:1.5;font-weight:500}
+.ans-row{display:flex;gap:8px;font-size:12px;flex-wrap:wrap;align-items:center}
+/* table */
 .twrap{width:100%;overflow-x:auto;margin-bottom:14px}
-table{width:100%;border-collapse:collapse;font-size:12px;min-width:580px}
+table{width:100%;border-collapse:collapse;font-size:12px;min-width:700px}
 th{background:var(--s2);padding:9px 10px;text-align:left;font-family:var(--fh);font-size:10px;
   text-transform:uppercase;letter-spacing:1px;color:var(--m);border-bottom:1px solid var(--b)}
-td{padding:9px 10px;border-bottom:1px solid var(--b)}
+td{padding:9px 10px;border-bottom:1px solid var(--b);vertical-align:middle}
 tr:hover td{background:var(--s2)}
-.logo{text-align:center;margin-bottom:24px}
-.logo-t{font-family:var(--fh);font-size:clamp(26px,6vw,40px);font-weight:800;letter-spacing:-1.5px;
+/* logo */
+.logo{text-align:center;margin-bottom:20px}
+.logo-t{font-family:var(--fh);font-size:clamp(24px,6vw,38px);font-weight:800;letter-spacing:-1.5px;
   background:linear-gradient(135deg,#6c63ff,#ff6584);-webkit-background-clip:text;
   -webkit-text-fill-color:transparent;background-clip:text}
 .logo-s{font-size:11px;color:var(--m);letter-spacing:2px;text-transform:uppercase;margin-top:3px}
-.tabs{display:flex;gap:3px;background:var(--s2);border-radius:10px;padding:3px;margin-bottom:18px}
+/* tabs */
+.tabs{display:flex;gap:3px;background:var(--s2);border-radius:10px;padding:3px;margin-bottom:16px}
 .tab{flex:1;padding:8px;text-align:center;font-family:var(--fh);font-size:11px;font-weight:700;
   border-radius:7px;cursor:pointer;color:var(--m);transition:all .15s;letter-spacing:.3px;text-transform:uppercase}
 .tab.on{background:var(--s1);color:var(--txt);border:1px solid var(--b)}
+/* home cards */
+.subj-card{background:var(--s1);border:1px solid var(--b);border-radius:var(--r);padding:16px;
+  cursor:pointer;transition:border-color .15s,background .15s}
+.subj-card:hover{border-color:var(--acc);background:rgba(108,99,255,.04)}
+.subj-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-bottom:16px}
+/* wizard steps */
+.wiz-step{display:none}
+.wiz-step.active{display:block}
+.step-indicator{display:flex;gap:0;margin-bottom:20px}
+.step-pip{flex:1;height:3px;background:var(--b);transition:background .3s}
+.step-pip.done{background:var(--grn)}
+.step-pip.active{background:var(--acc)}
+/* lobby */
+.lobby-row{display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:var(--s2);border-radius:8px;margin-bottom:7px}
+.lobby-name{flex:1;font-size:14px;font-weight:500}
+.lobby-roll{font-size:12px;color:var(--m)}
+/* misc */
 .empty{text-align:center;padding:36px 16px;color:var(--m)}
 .empty-i{font-size:36px;margin-bottom:10px;display:block;opacity:.5}
-.live{display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--grn)}
-.live-dot{width:7px;height:7px;border-radius:50%;background:var(--grn);animation:pulse 1.5s infinite}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--grn);animation:pulse 1.5s infinite;display:inline-block;margin-right:4px}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
 .spin{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;
   border-radius:50%;animation:rot .7s linear infinite;display:inline-block}
 @keyframes rot{to{transform:rotate(360deg)}}
-.step-row{display:flex;gap:12px;align-items:flex-start;margin-bottom:14px}
-.step-num{width:24px;height:24px;min-width:24px;border-radius:50%;background:var(--acc);
-  color:#fff;font-family:var(--fh);font-size:12px;font-weight:700;
-  display:flex;align-items:center;justify-content:center}
-.step-txt{font-size:13px;color:var(--m);line-height:1.7}
-.step-txt strong{color:var(--txt)}
-.step-txt code{background:var(--s2);padding:1px 5px;border-radius:4px;font-size:11px;color:#a5a0ff}
-.qr-box{background:#fff;padding:12px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center}
-@media(max-width:400px){.sgrid{grid-template-columns:1fr 1fr}.qhdr{padding:8px 12px}}
+.divider{height:1px;background:var(--b);margin:16px 0}
+.badge-admin{background:linear-gradient(135deg,#6c63ff,#ff6584);color:#fff;font-size:10px;
+  padding:2px 8px;border-radius:20px;font-weight:700;font-family:var(--fh)}
+.recent-item{display:flex;align-items:center;gap:10px;padding:10px 12px;
+  background:var(--s2);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:background .15s}
+.recent-item:hover{background:var(--s3)}
+@media(max-width:420px){.sgrid{grid-template-columns:1fr 1fr}.qhdr{padding:8px 12px}.subj-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 
-<!-- ══ SETUP ══ -->
-<div id="s-loading" style="display:flex;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;gap:16px">
-  <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;background:linear-gradient(135deg,#6c63ff,#ff6584);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">ClassQuiz</div>
-  <div id="loading-msg" style="font-size:13px;color:#7070a0">Loading…</div>
+<!-- SPLASH -->
+<div id="s-splash" style="display:flex;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;gap:16px">
+  <div style="font-family:'Syne',sans-serif;font-size:34px;font-weight:800;background:linear-gradient(135deg,#6c63ff,#ff6584);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Self Assessment</div>
+  <div id="splash-msg" style="font-size:13px;color:#7070a0">Loading…</div>
   <div style="width:32px;height:32px;border:3px solid rgba(108,99,255,.2);border-top-color:#6c63ff;border-radius:50%;animation:rot .7s linear infinite"></div>
 </div>
 
-<div id="s-setup" class="screen center">
+<!-- FIRST TIME SETUP -->
+<div id="s-firstrun" class="screen center">
 <div class="mw">
-  <div class="logo"><div class="logo-t">ClassQuiz</div><div class="logo-s">Secure Classroom Testing</div></div>
-  <div class="tabs">
-    <div class="tab on" onclick="switchTab('tc','te')">Quiz Settings</div>
-    <div class="tab" onclick="switchTab('te','tc')">Firebase Setup</div>
-  </div>
-  <div id="tc">
-    <div class="card">
-      <h2>Quiz Settings</h2>
-      <label>Quiz / Subject Title</label>
-      <input type="text" id="cfg-title" value="Classroom Quiz"/>
-      <label>Time Limit (minutes)</label>
-      <input type="number" id="cfg-time" value="15" min="1" max="180"/>
-      <label>Questions per student (0 = all selected)</label>
-      <input type="number" id="cfg-count" value="0" min="0"/>
-      <label>Teacher Password (protects dashboard)</label>
-      <input type="password" id="cfg-pass" placeholder="Optional but recommended"/>
-    </div>
-    <div class="card">
-      <h2>Teacher Email</h2>
-      <label>Your email (CSV results sent here)</label>
-      <input type="email" id="cfg-email" placeholder="teacher@school.com"/>
-      <label>EmailJS Public Key (optional)</label>
-      <input type="text" id="ejs-key" placeholder="user_xxx"/>
-      <label>EmailJS Service ID</label>
-      <input type="text" id="ejs-svc" placeholder="service_xxx"/>
-      <label>EmailJS Template ID</label>
-      <input type="text" id="ejs-tpl" placeholder="template_xxx"/>
-    </div>
-  </div>
-  <div id="te" style="display:none">
-    <div class="card card-acc">
-      <h2>Firebase Config</h2>
-      <div style="font-size:12px;color:var(--m);line-height:1.8;margin-bottom:16px">
-        Paste your 3 Firebase values below. See the <strong style="color:#a5a0ff">Setup Guide</strong> button if you haven't done this yet.
-      </div>
-      <label>API Key</label>
-      <input type="text" id="fb-key" placeholder="AIzaSy..."/>
-      <label>Project ID</label>
-      <input type="text" id="fb-pid" placeholder="my-project-12345"/>
-      <label>App ID</label>
-      <input type="text" id="fb-appid" placeholder="1:123456789:web:abcdef"/>
-      <div style="margin-top:14px" class="col">
-        <button class="btn btn-ghost btn-sm w100" onclick="show('s-fbguide')">📖 Show Firebase Setup Guide</button>
-        <button class="btn btn-pri btn-sm w100" onclick="testFirebase()">Test Firebase Connection</button>
-      </div>
-      <div class="st" id="fb-st"></div>
-    </div>
+  <div class="logo"><div class="logo-t">Self Assessment</div><div class="logo-s">First Time Setup</div></div>
+  <div class="card card-acc">
+    <h2>Welcome — Create Admin Account</h2>
+    <p style="font-size:13px;color:var(--m);margin-bottom:16px;line-height:1.7">This is a one-time setup. You are creating the admin account. Keep your credentials safe.</p>
+    <label>Institution / App Name <span class="req">*</span></label>
+    <input type="text" id="fr-appname" placeholder="e.g. Aga Khan University"/>
+    <label>Admin Full Name <span class="req">*</span></label>
+    <input type="text" id="fr-name" placeholder="Your full name"/>
+    <label>Admin Email <span class="req">*</span></label>
+    <input type="email" id="fr-email" placeholder="your@gmail.com"/>
+    <label>Admin Password <span class="req">*</span></label>
+    <input type="password" id="fr-adminpw" placeholder="Choose a strong password"/>
+    <label>Teacher Password <span class="req">*</span></label>
+    <input type="password" id="fr-teachpw" placeholder="Shared with all other teachers"/>
+    <p style="font-size:11px;color:var(--m);margin-top:8px">Teacher password is shared with all other teachers. Admin password is yours alone.</p>
   </div>
   <div class="col">
-    <button class="btn btn-pri w100" onclick="goBank()">Manage Question Bank →</button>
-    <button class="btn btn-grn w100" onclick="goCurate()">Curate &amp; Launch Quiz →</button>
+    <button class="btn btn-pri w100" onclick="doFirstRun()">Create Admin Account →</button>
+  </div>
+  <div class="st" id="fr-st"></div>
+</div>
+</div>
+
+<!-- LOGIN -->
+<div id="s-login-teacher" class="screen center">
+<div class="mw" style="max-width:420px">
+  <div class="logo"><div class="logo-t" id="login-appname">Self Assessment</div><div class="logo-s">Teacher Login</div></div>
+  <div class="card">
+    <label>Your Full Name <span class="req">*</span></label>
+    <input type="text" id="tl-name" placeholder="e.g. Dr Ahmed Khan" autocomplete="name"/>
+    <label>Your Email <span class="req">*</span></label>
+    <input type="email" id="tl-email" placeholder="your@email.com" autocomplete="email"/>
+    <label>Password <span class="req">*</span></label>
+    <input type="password" id="tl-pw" placeholder="Teacher or Admin password" autocomplete="current-password"/>
+    <div style="margin-top:16px" class="col">
+      <button class="btn btn-pri w100" onclick="doLogin()">Login →</button>
+      <button class="btn btn-ghost btn-sm w100" onclick="showForgot()">Forgot Password?</button>
+    </div>
+  </div>
+  <div class="st" id="tl-st"></div>
+</div>
+</div>
+
+<!-- HOME -->
+<div id="s-home" class="screen center">
+<div class="mw-lg">
+  <div class="row" style="margin-bottom:20px;flex-wrap:wrap;gap:10px">
+    <div style="flex:1">
+      <div style="font-size:12px;color:var(--m);margin-bottom:2px" id="home-appname"></div>
+      <h1 id="home-welcome" style="font-size:20px"></h1>
+    </div>
+    <div class="row" style="gap:8px">
+      <span id="home-role-badge"></span>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+  <!-- Quick actions -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px">
+    <button class="btn btn-pri" onclick="goAddQ()" style="flex-direction:column;padding:16px 10px;gap:6px;border-radius:var(--r)">
+      <span style="font-size:22px">✏️</span><span>Add Questions</span></button>
+    <button class="btn btn-ghost" onclick="goBank()" style="flex-direction:column;padding:16px 10px;gap:6px;border-radius:var(--r)">
+      <span style="font-size:22px">📚</span><span>Question Bank</span></button>
+    <button class="btn btn-grn" onclick="goCurate()" style="flex-direction:column;padding:16px 10px;gap:6px;border-radius:var(--r)">
+      <span style="font-size:22px">🚀</span><span>Launch Quiz</span></button>
+    <button class="btn btn-info" onclick="goResults()" style="flex-direction:column;padding:16px 10px;gap:6px;border-radius:var(--r)">
+      <span style="font-size:22px">📊</span><span>All Results</span></button>
+  </div>
+  <!-- Subject cards -->
+  <h2>Your Subjects</h2>
+  <div class="subj-grid" id="home-subjects">
+    <div class="empty"><span class="empty-i">📭</span>No subjects yet. Add your first question to create one.</div>
+  </div>
+  <!-- Recent sessions -->
+  <h2>Recent Sessions</h2>
+  <div id="home-recent">
+    <div style="font-size:13px;color:var(--m)">No sessions yet.</div>
   </div>
 </div>
 </div>
 
-<!-- ══ FIREBASE GUIDE ══ -->
-<div id="s-fbguide" class="screen center">
+<!-- ADD QUESTIONS WIZARD -->
+<div id="s-addq" class="screen center">
 <div class="mw">
-  <div class="row" style="margin-bottom:20px">
-    <button class="btn btn-ghost btn-sm" onclick="show('s-setup');switchTab(\'te\',\'tc\')">← Back</button>
-    <h3 style="flex:1">Firebase Setup Guide</h3>
+  <div class="row" style="margin-bottom:16px">
+    <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
+    <h3 style="flex:1">Add Questions</h3>
+    <span id="addq-count-badge" style="font-size:12px;color:var(--grn)"></span>
   </div>
-  <div class="card">
-    <h2>Step 1 — Create Firebase Project</h2>
-    <div class="step-row"><div class="step-num">1</div><div class="step-txt">Go to <strong>firebase.google.com</strong> and sign in with your Google account</div></div>
-    <div class="step-row"><div class="step-num">2</div><div class="step-txt">Click <strong>Add project</strong> → name it <strong>classquiz</strong> → click through (disable Analytics is fine) → <strong>Create project</strong></div></div>
-    <div class="step-row"><div class="step-num">3</div><div class="step-txt">Once created, click the <strong>Web icon &lt;/&gt;</strong> → give app nickname <strong>classquiz</strong> → click <strong>Register app</strong></div></div>
-    <div class="step-row"><div class="step-num">4</div><div class="step-txt">You will see a code block. Find and copy these 3 values:<br><code>apiKey</code>, <code>projectId</code>, <code>appId</code> → paste into Setup → Firebase tab</div></div>
+  <!-- Step indicator -->
+  <div class="step-indicator" id="step-ind">
+    <div class="step-pip active" id="pip-0"></div>
+    <div class="step-pip" id="pip-1"></div>
+    <div class="step-pip" id="pip-2"></div>
   </div>
-  <div class="card">
-    <h2>Step 2 — Create Firestore Database</h2>
-    <div class="step-row"><div class="step-num">5</div><div class="step-txt">In Firebase left menu → <strong>Build → Firestore Database</strong> → <strong>Create database</strong></div></div>
-    <div class="step-row"><div class="step-num">6</div><div class="step-txt">Choose <strong>Start in test mode</strong> → Next → select any location → <strong>Enable</strong></div></div>
-    <div class="step-row"><div class="step-num">7</div><div class="step-txt">That's it — no further config needed. Test mode allows reading and writing for 30 days (enough to evaluate the app). You can extend it later.</div></div>
+  <!-- STEP 1: Location -->
+  <div class="wiz-step active" id="wiz-0">
+    <div class="card">
+      <h2>Step 1 — Where does this question belong?</h2>
+      <label>Programme <span class="req">*</span></label>
+      <div class="ac-wrap">
+        <input type="text" id="aq-prog" placeholder="e.g. MBBS Year 1" autocomplete="off" oninput="acFilter('prog')" onfocus="acShow('prog')" onblur="acHide('prog',300)"/>
+        <div class="ac-drop" id="ac-prog"></div>
+      </div>
+      <label>Course ID <span class="req">*</span></label>
+      <div class="ac-wrap">
+        <input type="text" id="aq-cid" placeholder="e.g. ANAT-101" autocomplete="off" oninput="acFilter('cid')" onfocus="acShow('cid')" onblur="acHide('cid',300)"/>
+        <div class="ac-drop" id="ac-cid"></div>
+      </div>
+      <label>Subject Name <span class="req">*</span></label>
+      <div class="ac-wrap">
+        <input type="text" id="aq-subj" placeholder="e.g. Anatomy" autocomplete="off" oninput="acFilter('subj')" onfocus="acShow('subj')" onblur="acHide('subj',300)"/>
+        <div class="ac-drop" id="ac-subj"></div>
+      </div>
+      <label>Unit / Topic <span class="req">*</span></label>
+      <div class="ac-wrap">
+        <input type="text" id="aq-topic" placeholder="e.g. Upper Limb" autocomplete="off" oninput="acFilter('topic')" onfocus="acShow('topic')" onblur="acHide('topic',300)"/>
+        <div class="ac-drop" id="ac-topic"></div>
+      </div>
+      <label>Test ID <span class="req">*</span></label>
+      <div class="ac-wrap">
+        <input type="text" id="aq-testid" placeholder="e.g. DrAhmed_Oct2025" autocomplete="off" oninput="acFilter('testid')" onfocus="acShow('testid')" onblur="acHide('testid',300)"/>
+        <div class="ac-drop" id="ac-testid"></div>
+      </div>
+    </div>
+    <button class="btn btn-pri w100" onclick="wizNext(1)">Next: Write Question →</button>
+    <div class="st" id="wiz0-st"></div>
   </div>
-  <div class="card card-grn">
-    <h2>Step 3 — Paste values &amp; test</h2>
-    <div class="step-row"><div class="step-num">8</div><div class="step-txt">Go back to <strong>Setup → Firebase tab</strong> → paste the 3 values → click <strong>Test Firebase Connection</strong> → should show green ✅</div></div>
-    <div class="step-row"><div class="step-num">9</div><div class="step-txt">Done! All student results will now flow into Firebase automatically. QR codes will be short and scannable.</div></div>
+  <!-- STEP 2: Question -->
+  <div class="wiz-step" id="wiz-1">
+    <div class="card">
+      <h2>Step 2 — Write Question</h2>
+      <div id="wiz-loc-summary" style="font-size:12px;color:var(--m);margin-bottom:14px;line-height:1.7;padding:8px 10px;background:var(--s2);border-radius:8px"></div>
+      <label>Question Type</label>
+      <div style="display:flex;gap:10px;margin-bottom:14px">
+        <button class="btn w100" id="qtype-mcq" onclick="setQType('mcq')" style="background:var(--acc);color:#fff;border:none">Multiple Choice</button>
+        <button class="btn w100 btn-ghost" id="qtype-tf" onclick="setQType('tf')">True / False</button>
+      </div>
+      <label>Question Text <span class="req">*</span></label>
+      <textarea id="aq-text" placeholder="Type your question here…" rows="3"></textarea>
+      <div id="aq-answer-fields"></div>
+    </div>
+    <div class="row" style="gap:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="wizBack(0)">← Back</button>
+      <button class="btn btn-pri" style="flex:1" onclick="wizNext(2)">Next: Properties →</button>
+    </div>
+    <div class="st" id="wiz1-st"></div>
   </div>
-  <button class="btn btn-pri w100" onclick="show('s-setup');switchTab('te','tc')">← Back to Firebase Setup</button>
+  <!-- STEP 3: Properties + Save -->
+  <div class="wiz-step" id="wiz-2">
+    <div class="card">
+      <h2>Step 3 — Properties &amp; Preview</h2>
+      <label>Difficulty</label>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-sm w100 btn-ghost" id="diff-easy" onclick="setDiff('easy')">Easy</button>
+        <button class="btn btn-sm w100" id="diff-medium" onclick="setDiff('medium')" style="background:var(--warn);color:#fff;border:none">Medium</button>
+        <button class="btn btn-sm w100 btn-ghost" id="diff-hard" onclick="setDiff('hard')">Hard</button>
+      </div>
+      <div style="margin-top:16px" id="preview-card"></div>
+    </div>
+    <div class="row" style="gap:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="wizBack(1)">← Back</button>
+      <button class="btn btn-grn" style="flex:1" id="btn-save-q" onclick="saveQuestion()">Save &amp; Add Another</button>
+    </div>
+    <div class="st" id="wiz2-st"></div>
+  </div>
 </div>
 </div>
 
-<!-- ══ BANK ══ -->
+<!-- QUESTION BANK -->
 <div id="s-bank" class="screen center">
 <div class="mw-lg">
-  <div class="row" style="margin-bottom:16px">
-    <button class="btn btn-ghost btn-sm" onclick="show('s-setup')">← Back</button>
+  <div class="row" style="margin-bottom:14px">
+    <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
     <h3 style="flex:1">Question Bank</h3>
     <span id="bank-total" style="font-size:12px;color:var(--m)"></span>
-    <button class="btn btn-pri btn-sm" onclick="openAdd()">+ Add Question</button>
   </div>
-  <div class="fil-bar" id="bank-fil">
-    <button class="fil on" onclick="setFil('bank','all',this)">All</button>
-    <button class="fil" onclick="setFil('bank','mcq',this)">MCQ</button>
-    <button class="fil" onclick="setFil('bank','tf',this)">True/False</button>
-    <button class="fil" onclick="setFil('bank','fitb',this)">Fill Blank</button>
-    <button class="fil" onclick="setFil('bank','easy',this)">Easy</button>
-    <button class="fil" onclick="setFil('bank','medium',this)">Medium</button>
-    <button class="fil" onclick="setFil('bank','hard',this)">Hard</button>
+  <!-- Hierarchy filters -->
+  <div class="card" style="padding:14px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+      <div>
+        <label style="margin-top:0">Programme</label>
+        <select id="bf-prog" onchange="renderBank()"><option value="">All</option></select>
+      </div>
+      <div>
+        <label style="margin-top:0">Subject</label>
+        <select id="bf-subj" onchange="renderBank()"><option value="">All</option></select>
+      </div>
+      <div>
+        <label style="margin-top:0">Topic</label>
+        <select id="bf-topic" onchange="renderBank()"><option value="">All</option></select>
+      </div>
+      <div>
+        <label style="margin-top:0">Test ID</label>
+        <select id="bf-testid" onchange="renderBank()"><option value="">All</option></select>
+      </div>
+      <div>
+        <label style="margin-top:0">Type</label>
+        <select id="bf-type" onchange="renderBank()">
+          <option value="">All</option>
+          <option value="mcq">MCQ</option>
+          <option value="tf">True/False</option>
+        </select>
+      </div>
+      <div>
+        <label style="margin-top:0">Difficulty</label>
+        <select id="bf-diff" onchange="renderBank()">
+          <option value="">All</option>
+          <option value="easy">Easy</option>
+          <option value="medium">Medium</option>
+          <option value="hard">Hard</option>
+        </select>
+      </div>
+    </div>
+    <input type="text" id="bf-search" placeholder="Search question text…" style="margin-top:10px" oninput="renderBank()"/>
   </div>
   <div id="bank-list"></div>
   <button class="btn btn-grn w100" style="margin-top:8px" onclick="goCurate()">Curate &amp; Launch Quiz →</button>
 </div>
 </div>
 
-<!-- ══ ADD/EDIT Q ══ -->
-<div id="s-addq" class="screen center">
-<div class="mw">
-  <div class="row" style="margin-bottom:16px">
-    <button class="btn btn-ghost btn-sm" onclick="show('s-bank')">← Back</button>
-    <h3 id="addq-h" style="flex:1">Add Question</h3>
-  </div>
-  <div class="card">
-    <label>Question Type</label>
-    <select id="aq-type" onchange="renderAns()">
-      <option value="mcq">Multiple Choice (A/B/C/D)</option>
-      <option value="tf">True / False</option>
-      <option value="fitb">Fill in the Blank</option>
-    </select>
-    <label>Question Text</label>
-    <textarea id="aq-text" placeholder="Type your question here. For fill-in-blank use ___ for the blank." rows="3"></textarea>
-    <label>Topic / Section (optional)</label>
-    <input type="text" id="aq-topic" placeholder="e.g. Chapter 3, Forces"/>
-    <label>Difficulty</label>
-    <select id="aq-diff">
-      <option value="easy">Easy</option>
-      <option value="medium" selected>Medium</option>
-      <option value="hard">Hard</option>
-    </select>
-    <div id="aq-ans"></div>
-  </div>
-  <div class="col">
-    <button class="btn btn-pri w100" onclick="saveQ()">Save Question</button>
-    <button class="btn btn-ghost w100" onclick="show('s-bank')">Cancel</button>
-  </div>
-  <div class="st" id="addq-st"></div>
-</div>
-</div>
-
-<!-- ══ CURATE ══ -->
+<!-- CURATE -->
 <div id="s-curate" class="screen center">
 <div class="mw-lg">
-  <div class="row" style="margin-bottom:16px">
-    <button class="btn btn-ghost btn-sm" onclick="show('s-setup')">← Back</button>
+  <div class="row" style="margin-bottom:14px">
+    <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
     <h3 style="flex:1">Curate Quiz</h3>
-    <span id="cur-hdr" style="font-size:12px;color:var(--m)">0 selected</span>
+    <span id="cur-sel-count" style="font-size:12px;color:var(--acc);font-weight:600"></span>
   </div>
-  <div class="fil-bar" id="cur-fil">
-    <button class="fil on" onclick="setFil('cur','all',this)">All</button>
-    <button class="fil" onclick="setFil('cur','mcq',this)">MCQ</button>
-    <button class="fil" onclick="setFil('cur','tf',this)">True/False</button>
-    <button class="fil" onclick="setFil('cur','fitb',this)">Fill Blank</button>
-    <button class="fil" onclick="setFil('cur','easy',this)">Easy</button>
-    <button class="fil" onclick="setFil('cur','medium',this)">Medium</button>
-    <button class="fil" onclick="setFil('cur','hard',this)">Hard</button>
+  <!-- Same hierarchy filters -->
+  <div class="card" style="padding:14px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
+      <div><label style="margin-top:0">Programme</label>
+        <select id="cf-prog" onchange="renderCurate()"><option value="">All</option></select></div>
+      <div><label style="margin-top:0">Subject</label>
+        <select id="cf-subj" onchange="renderCurate()"><option value="">All</option></select></div>
+      <div><label style="margin-top:0">Topic</label>
+        <select id="cf-topic" onchange="renderCurate()"><option value="">All</option></select></div>
+      <div><label style="margin-top:0">Test ID</label>
+        <select id="cf-testid" onchange="renderCurate()"><option value="">All</option></select></div>
+      <div><label style="margin-top:0">Type</label>
+        <select id="cf-type" onchange="renderCurate()">
+          <option value="">All</option><option value="mcq">MCQ</option><option value="tf">True/False</option>
+        </select></div>
+      <div><label style="margin-top:0">Difficulty</label>
+        <select id="cf-diff" onchange="renderCurate()">
+          <option value="">All</option><option value="easy">Easy</option>
+          <option value="medium">Medium</option><option value="hard">Hard</option>
+        </select></div>
+    </div>
+    <input type="text" id="cf-search" placeholder="Search…" style="margin-top:10px" oninput="renderCurate()"/>
   </div>
-  <div class="row" style="margin-bottom:12px;gap:7px">
-    <button class="btn btn-ghost btn-sm" onclick="selAll()">Select All</button>
-    <button class="btn btn-ghost btn-sm" onclick="deselAll()">Deselect All</button>
-    <input type="text" id="cur-srch" placeholder="Search…" style="flex:1;min-width:100px;padding:7px 11px;font-size:13px" oninput="renderCur()"/>
+  <div class="row" style="margin-bottom:12px;gap:8px;flex-wrap:wrap">
+    <button class="btn btn-ghost btn-sm" onclick="curSelAll()">Select All Visible</button>
+    <button class="btn btn-ghost btn-sm" onclick="curDeselAll()">Deselect All</button>
+    <button class="btn btn-ghost btn-sm" onclick="showSaveTemplate()">💾 Save Template</button>
+    <button class="btn btn-ghost btn-sm" onclick="showLoadTemplate()">📂 Load Template</button>
   </div>
   <div id="cur-list"></div>
-  <button class="btn btn-grn w100" style="margin-top:10px" onclick="goLaunch()">Launch Quiz →</button>
+  <!-- Session settings -->
+  <div class="card" style="margin-top:10px">
+    <h2>Session Settings</h2>
+    <label>Session Name</label>
+    <input type="text" id="cs-name" placeholder="e.g. Chapter 3 Mid-Term"/>
+    <label>Time Limit (minutes)</label>
+    <input type="number" id="cs-time" value="15" min="1" max="180"/>
+    <label>Questions per student (0 = all selected)</label>
+    <input type="number" id="cs-count" value="0" min="0"/>
+  </div>
+  <button class="btn btn-grn w100" onclick="goLaunch()">Launch Quiz →</button>
+  <div class="st" id="cur-st"></div>
 </div>
 </div>
 
-<!-- ══ LAUNCH (QR) ══ -->
+<!-- LAUNCH / QR / LOBBY -->
 <div id="s-launch" class="screen center">
-<div class="mw" style="text-align:center">
-  <div class="logo-s" style="margin-bottom:6px">Ready to Start</div>
-  <h1 id="launch-title" style="margin-bottom:6px;font-size:24px"></h1>
-  <p id="launch-meta" style="font-size:13px;color:var(--m);margin-bottom:24px"></p>
-
-  <div class="card" style="text-align:center">
-    <p style="font-size:13px;color:var(--m);margin-bottom:16px">Students scan this QR code or open the link on their phones</p>
-    <div style="display:flex;justify-content:center;margin-bottom:14px">
-      <div class="qr-box" id="qr-wrap"></div>
+<div class="mw">
+  <div class="row" style="margin-bottom:16px">
+    <button class="btn btn-ghost btn-sm" onclick="show('s-curate')">← Back</button>
+    <h3 style="flex:1" id="launch-title">Quiz Ready</h3>
+  </div>
+  <!-- Tabs: QR | Lobby | Unlock -->
+  <div class="tabs">
+    <div class="tab on" onclick="launchTab('qr')">QR &amp; Link</div>
+    <div class="tab" onclick="launchTab('lobby')">Lobby <span id="lobby-count-badge" style="margin-left:4px"></span></div>
+    <div class="tab" onclick="launchTab('unlock')">Answers</div>
+  </div>
+  <!-- QR tab -->
+  <div id="lt-qr">
+    <div class="card" style="text-align:center">
+      <p style="font-size:13px;color:var(--m);margin-bottom:14px">Students scan QR or open the link on their phone</p>
+      <div style="display:flex;justify-content:center;margin-bottom:14px">
+        <div style="background:#fff;padding:12px;border-radius:12px;display:inline-flex" id="qr-wrap"></div>
+      </div>
+      <div id="launch-url" style="font-size:11px;color:var(--m);word-break:break-all;padding:8px;background:var(--s2);border-radius:6px;margin-bottom:10px"></div>
+      <button class="btn btn-ghost btn-sm w100" onclick="copyUrl()">Copy Link</button>
     </div>
-    <div id="launch-url" style="font-size:11px;color:var(--m);word-break:break-all;margin-bottom:10px;padding:8px;background:var(--s2);border-radius:6px"></div>
-    <button class="btn btn-ghost btn-sm w100" onclick="copyUrl()">Copy Link</button>
+    <div class="card card-grn" style="text-align:center">
+      <p style="font-size:13px;color:var(--m);margin-bottom:12px" id="session-status-msg">Waiting for students to join…</p>
+      <button class="btn btn-grn w100" id="btn-go-live" onclick="goLive()">🚀 Start Test for All</button>
+      <button class="btn btn-err w100" id="btn-end-session" onclick="endSession()" style="display:none;margin-top:8px">⏹ End Session</button>
+    </div>
   </div>
-
-  <div class="card card-grn">
-    <p style="font-size:13px;color:var(--m);margin-bottom:12px">
-      Open the teacher dashboard to watch results arrive live as students submit
-    </p>
-    <button class="btn btn-pri w100" onclick="goDash()">Open Teacher Dashboard →</button>
+  <!-- Lobby tab -->
+  <div id="lt-lobby" style="display:none">
+    <div class="card">
+      <div class="row" style="margin-bottom:12px">
+        <div style="flex:1">
+          <span class="live-dot"></span>
+          <span id="lobby-live-txt" style="font-size:13px;color:var(--grn)">Live lobby</span>
+        </div>
+        <span id="lobby-count-txt" style="font-size:12px;color:var(--m)"></span>
+      </div>
+      <div id="lobby-list">
+        <div class="empty"><span class="empty-i">⏳</span>Waiting for students to join…</div>
+      </div>
+    </div>
+    <div class="col">
+      <button class="btn btn-grn w100" id="btn-go-live-2" onclick="goLive()">🚀 Start Test for All</button>
+      <button class="btn btn-err w100" id="btn-end-2" onclick="endSession()" style="display:none">⏹ End Session</button>
+    </div>
   </div>
-
-  <button class="btn btn-ghost w100" onclick="show('s-curate')">← Back to Curation</button>
+  <!-- Unlock tab -->
+  <div id="lt-unlock" style="display:none">
+    <div class="card card-warn">
+      <h2>Answer Unlock Control</h2>
+      <p style="font-size:13px;color:var(--m);margin-bottom:14px;line-height:1.7">
+        When you unlock answers, all students who completed the quiz can see correct/wrong answers on their result screen.
+      </p>
+      <button class="btn btn-warn w100" id="btn-unlock" onclick="toggleUnlock()">🔒 Answers Locked</button>
+      <div class="st" id="unlock-st"></div>
+    </div>
+    <div class="card">
+      <h2>Dashboard</h2>
+      <button class="btn btn-pri w100" onclick="goDash()">Open Teacher Dashboard →</button>
+    </div>
+  </div>
 </div>
 </div>
 
-<!-- ══ STUDENT LOGIN ══ -->
-<div id="s-login" class="screen" style="align-items:center;justify-content:center;padding:40px 16px">
-<div class="mw" style="max-width:360px">
+<!-- STUDENT LOGIN -->
+<div id="s-stu-login" class="screen" style="align-items:center;justify-content:center;padding:40px 16px">
+<div class="mw" style="max-width:380px">
   <div style="text-align:center;margin-bottom:24px">
-    <div class="logo-s" style="margin-bottom:5px">ClassQuiz</div>
-    <h1 id="lg-title" style="font-size:21px;margin-bottom:5px"></h1>
-    <p id="lg-meta" style="font-size:13px;color:var(--m)"></p>
+    <div class="logo-s" style="margin-bottom:5px" id="stu-appname-top">Self Assessment</div>
+    <h1 id="stu-session-title" style="font-size:22px;margin-bottom:5px"></h1>
+    <p id="stu-session-meta" style="font-size:13px;color:var(--m)"></p>
   </div>
-  <div class="card">
-    <label>Your Full Name</label>
-    <input type="text" id="stu-name" placeholder="Enter your name" autocomplete="off" autocorrect="off" autocapitalize="words"/>
-    <div style="margin-top:14px" class="col">
-      <button class="btn btn-grn w100" onclick="startQuiz()">Begin Quiz →</button>
+  <div class="card" id="stu-login-card">
+    <label>Full Name <span class="req">*</span></label>
+    <input type="text" id="sl-name" placeholder="Your full name" autocomplete="off" autocorrect="off" autocapitalize="words"/>
+    <label>Roll Number <span class="req">*</span></label>
+    <input type="text" id="sl-roll" placeholder="e.g. 2024-CS-045" autocomplete="off"/>
+    <label>Email Address <span class="req">*</span></label>
+    <input type="email" id="sl-email" placeholder="student@email.com" autocomplete="off"/>
+    <div style="margin-top:16px">
+      <button class="btn btn-grn w100" onclick="stuJoin()">Join Session →</button>
     </div>
   </div>
   <p style="font-size:11px;color:var(--m2);text-align:center;margin-top:12px;line-height:1.7">
@@ -386,7 +597,21 @@ tr:hover td{background:var(--s2)}
 </div>
 </div>
 
-<!-- ══ QUIZ ══ -->
+<!-- STUDENT WAITING -->
+<div id="s-stu-wait" class="screen" style="align-items:center;justify-content:center;min-height:100vh">
+<div style="text-align:center;padding:40px 20px">
+  <div style="font-size:48px;margin-bottom:20px">⏳</div>
+  <h1 id="wait-title" style="font-size:20px;margin-bottom:8px"></h1>
+  <p id="wait-name" style="font-size:14px;color:var(--m);margin-bottom:24px"></p>
+  <div style="background:var(--s1);border:1px solid var(--b);border-radius:var(--r);padding:20px;max-width:320px;margin:0 auto">
+    <div class="live-dot" style="margin-right:6px"></div>
+    <span style="font-size:13px;color:var(--grn)">Waiting for teacher to start the test…</span>
+    <p style="font-size:12px;color:var(--m);margin-top:10px">Your details have been received. The test will begin shortly.</p>
+  </div>
+</div>
+</div>
+
+<!-- QUIZ -->
 <div id="s-quiz" class="screen">
   <div class="pgbar"><div class="pgfill" id="qpg"></div></div>
   <div class="qhdr">
@@ -399,22 +624,22 @@ tr:hover td{background:var(--s2)}
       <span class="hc hc-v" id="hvio" style="display:none"></span>
     </div>
   </div>
+  <div class="q-dots" id="q-dots"></div>
   <div class="qbody" id="qbody"></div>
-  <div class="qnav">
-    <button class="btn btn-ghost" id="btn-prv" onclick="navQ(-1)" style="width:auto;padding:10px 15px">← Prev</button>
-    <button class="btn btn-pri" id="btn-nxt" onclick="navQ(1)" style="flex:1">Next →</button>
-    <button class="btn btn-grn" id="btn-sub" onclick="confSub()" style="display:none;flex:1">Submit ✓</button>
+  <div class="qnav" id="qnav-bottom" style="padding:8px 16px 24px">
+    <button class="btn btn-ghost btn-sm" id="btn-prv-bot" onclick="navQ(-1)" style="width:auto">← Prev</button>
   </div>
 </div>
 
-<!-- ══ RESULT ══ -->
+<!-- RESULT -->
 <div id="s-result" class="screen center">
 <div class="mw" style="align-items:center;display:flex;flex-direction:column">
   <div style="font-size:10px;color:var(--m);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px">Quiz Complete</div>
   <div class="sring" id="sring">
     <div class="sinn"><span class="spct" id="rpct">--%</span><span class="slbl">score</span></div>
   </div>
-  <h1 id="rname" style="font-size:20px;margin-bottom:3px;text-align:center"></h1>
+  <h1 id="rname" style="font-size:20px;margin-bottom:2px;text-align:center"></h1>
+  <p id="rroll" style="font-size:12px;color:var(--m);margin-bottom:3px"></p>
   <p id="rmood" style="color:var(--m);font-size:13px;margin-bottom:20px"></p>
   <div class="sgrid">
     <div class="sbox"><div class="sv ca" id="ratt">--</div><div class="sl">Attempted</div></div>
@@ -424,58 +649,77 @@ tr:hover td{background:var(--s2)}
   </div>
   <div id="rvio" style="display:none;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);
     border-radius:10px;padding:12px;font-size:12px;color:#fbbf24;width:100%;margin-bottom:12px;line-height:1.65"></div>
-  <div class="col w100">
+  <div id="ans-locked-msg" style="display:none;background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.2);
+    border-radius:10px;padding:12px;font-size:12px;color:#a5a0ff;width:100%;margin-bottom:12px;text-align:center">
+    🔒 Correct answers will be shown when your teacher unlocks them
+  </div>
+  <div id="ans-review-wrap" style="display:none;width:100%;max-width:520px;margin-bottom:14px">
+    <div style="font-family:var(--fh);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--m);margin-bottom:10px">Answer Review</div>
+    <div id="ans-review-list"></div>
+  </div>
+  <div class="col w100" style="max-width:520px">
     <button class="btn btn-pri w100" onclick="shareRes()">📤 Share Result</button>
-    <button class="btn btn-ghost w100" id="btn-next-stu" onclick="nextStu()">Next Student →</button>
+    <button class="btn btn-ghost btn-sm w100" id="btn-check-unlock" onclick="checkUnlock()" style="display:none">🔄 Check if answers are unlocked</button>
   </div>
 </div>
 </div>
 
-<!-- ══ DASHBOARD ══ -->
-<div id="s-dash" class="screen center">
+<!-- RESULTS DASHBOARD -->
+<div id="s-results" class="screen center">
 <div class="mw-lg">
-  <div class="row" style="margin-bottom:16px;flex-wrap:wrap;gap:10px">
-    <button class="btn btn-ghost btn-sm" onclick="show('s-launch')">← Back</button>
-    <h3 style="flex:1" id="dash-title">Live Dashboard</h3>
-    <div class="live"><div class="live-dot"></div><span id="dash-live">Waiting…</span></div>
+  <div class="row" style="margin-bottom:14px;flex-wrap:wrap;gap:10px">
+    <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
+    <h3 style="flex:1">All Results</h3>
+    <div style="font-size:11px;color:var(--m)" id="results-refreshed"></div>
   </div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:16px">
-    <div class="sbox"><div class="sv ca" id="d-tot">0</div><div class="sl">Students</div></div>
-    <div class="sbox"><div class="sv cg" id="d-avg">—</div><div class="sl">Avg Score</div></div>
-    <div class="sbox"><div class="sv cw" id="d-hi">—</div><div class="sl">Highest</div></div>
-    <div class="sbox"><div class="sv ce" id="d-lo">—</div><div class="sl">Lowest</div></div>
+  <!-- Universal filters -->
+  <div class="card" style="padding:14px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
+      <div><label style="margin-top:0">Programme</label>
+        <select id="rf-prog" onchange="renderResults()"><option value="">All</option></select></div>
+      <div><label style="margin-top:0">Subject</label>
+        <select id="rf-subj" onchange="renderResults()"><option value="">All</option></select></div>
+      <div><label style="margin-top:0">Topic</label>
+        <select id="rf-topic" onchange="renderResults()"><option value="">All</option></select></div>
+      <div><label style="margin-top:0">Test ID</label>
+        <select id="rf-testid" onchange="renderResults()"><option value="">All</option></select></div>
+      <div><label style="margin-top:0">Teacher</label>
+        <select id="rf-teacher" onchange="renderResults()"><option value="">All</option></select></div>
+    </div>
+    <input type="text" id="rf-search" placeholder="Search student name, roll, or email…" style="margin-top:10px" oninput="renderResults()"/>
+  </div>
+  <!-- Summary -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px">
+    <div class="sbox"><div class="sv ca" id="rs-tot">0</div><div class="sl">Students</div></div>
+    <div class="sbox"><div class="sv cg" id="rs-avg">—</div><div class="sl">Average</div></div>
+    <div class="sbox"><div class="sv cw" id="rs-hi">—</div><div class="sl">Highest</div></div>
+    <div class="sbox"><div class="sv ce" id="rs-lo">—</div><div class="sl">Lowest</div></div>
   </div>
   <div class="twrap">
     <table>
       <thead><tr>
-        <th>#</th><th>Name</th><th>Attempted</th><th>Correct</th>
-        <th>Score %</th><th>Time</th><th>Violations</th><th>Off-screen</th>
+        <th>#</th><th>Name</th><th>Roll</th><th>Email</th>
+        <th>Programme</th><th>Subject</th><th>Test ID</th><th>Teacher</th>
+        <th>Score</th><th>Time</th><th>Violations</th>
       </tr></thead>
-      <tbody id="dash-tbody"></tbody>
+      <tbody id="results-tbody"></tbody>
     </table>
   </div>
-  <div class="card card-acc">
-    <h2>Email Results</h2>
-    <p style="font-size:12px;color:var(--m);margin-bottom:10px">Send full CSV to <strong id="dash-email" style="color:#a5a0ff"></strong></p>
-    <button class="btn btn-pri w100" id="btn-email" onclick="sendEmail()">Send via EmailJS</button>
-    <div class="st" id="email-st"></div>
-  </div>
   <div class="row" style="flex-wrap:wrap;gap:8px">
-    <button class="btn btn-ghost" style="flex:1;min-width:110px" onclick="dlCSV()">⬇ Download CSV</button>
-    <button class="btn btn-ghost" style="flex:1;min-width:110px" onclick="refreshDash()">↻ Refresh</button>
-    <button class="btn btn-ghost" style="flex:1;min-width:110px" onclick="show('s-setup')">⚙ Setup</button>
+    <button class="btn btn-ghost" style="flex:1;min-width:120px" onclick="dlCSV()">⬇ Download CSV</button>
+    <button class="btn btn-ghost" style="flex:1;min-width:120px" onclick="loadResults(true)">↻ Refresh</button>
   </div>
 </div>
 </div>
 
-<!-- ══ OVERLAYS ══ -->
+<!-- OVERLAYS -->
 <div class="ov" id="ov-vio">
   <div class="ovc" style="border:1px solid var(--err)">
     <span class="ovi">⚠️</span>
     <div class="ovt" id="ov-vt">Screen Left!</div>
     <div class="ovb" id="ov-vb">Return within the countdown or the quiz restarts.</div>
     <div class="ovc-n" id="ov-vc">10</div>
-    <button class="btn btn-err w100" id="ov-vbtn" onclick="retVio()">Return to Quiz</button>
+    <button class="btn btn-err w100" id="ov-vbtn">Return to Quiz</button>
   </div>
 </div>
 <div class="ov" id="ov-sub">
@@ -489,521 +733,1130 @@ tr:hover td{background:var(--s2)}
     </div>
   </div>
 </div>
-<div class="ov" id="ov-pass">
+<div class="ov" id="ov-session-ended">
+  <div class="ovc" style="border:1px solid var(--warn)">
+    <span class="ovi">⏹</span>
+    <div class="ovt" style="color:var(--warn)">Session Ended</div>
+    <div class="ovb">Your teacher has ended the session. Your answers have been submitted automatically.</div>
+    <button class="btn btn-warn w100" onclick="finishQuiz()">See My Results</button>
+  </div>
+</div>
+<div class="ov" id="ov-forgot">
   <div class="ovc" style="border:1px solid var(--acc)">
-    <span class="ovi">🔐</span>
-    <div class="ovt">Teacher Dashboard</div>
-    <div class="ovb">Enter your teacher password</div>
-    <input type="password" id="pass-inp" placeholder="Password" style="margin-bottom:12px"/>
+    <span class="ovi">🔑</span>
+    <div class="ovt">Password Reminder</div>
+    <div class="ovb">Enter your email. The password will open in your email app — press Send to receive it.</div>
+    <input type="email" id="forgot-email" placeholder="your@email.com" style="margin-bottom:12px"/>
     <div class="row" style="gap:9px">
-      <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-pass')">Cancel</button>
-      <button class="btn btn-pri" style="flex:1" onclick="checkPass()">Enter</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-forgot')">Cancel</button>
+      <button class="btn btn-pri" style="flex:1" onclick="doForgot()">Send Reminder</button>
     </div>
-    <div class="st" id="pass-st"></div>
+    <div class="st" id="forgot-st"></div>
+  </div>
+</div>
+<div class="ov" id="ov-template">
+  <div class="ovc" style="border:1px solid var(--acc);max-width:400px">
+    <span class="ovi">💾</span>
+    <div class="ovt" id="ov-tpl-title">Save Template</div>
+    <div id="ov-tpl-body"></div>
+    <div class="st" id="tpl-st"></div>
   </div>
 </div>
 
 <script type="module">
-/* ══════════════════════════════════════
-   FIREBASE
-══════════════════════════════════════ */
-let db = null;
-let _fb = {};
+/* ═══════════════════════════════════════════
+   FIREBASE INIT
+═══════════════════════════════════════════ */
+let db=null, _fb={}, fbReady=false;
 
-async function initFB(){
-  const key=gv('fb-key'), pid=gv('fb-pid'), appid=gv('fb-appid');
-  if(!key||!pid||!appid){ return false; }
+async function initFB(key,pid,aid){
+  if(!key||!pid||!aid) return false;
   try{
-    const {initializeApp,getApps,deleteApp} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
-    const {getFirestore,collection,addDoc,getDocs,query,orderBy,doc,setDoc,getDoc,onSnapshot}
-      = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    // avoid duplicate init
-    getApps().forEach(a=>{ try{ deleteApp(a); }catch(e){} });
-    const app = initializeApp({apiKey:key, authDomain:`${pid}.firebaseapp.com`,
-      projectId:pid, storageBucket:`${pid}.appspot.com`, appId:appid});
-    db = getFirestore(app);
-    _fb = {collection,addDoc,getDocs,query,orderBy,doc,setDoc,getDoc,onSnapshot};
+    const {initializeApp,getApps,deleteApp}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+    const {getFirestore,collection,addDoc,getDocs,query,orderBy,where,
+           doc,setDoc,getDoc,updateDoc,deleteDoc,onSnapshot,limit}=
+      await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    getApps().forEach(a=>{try{deleteApp(a)}catch(e){}});
+    const app=initializeApp({apiKey:key,authDomain:`${pid}.firebaseapp.com`,
+      projectId:pid,storageBucket:`${pid}.appspot.com`,appId:aid});
+    db=getFirestore(app);
+    _fb={collection,addDoc,getDocs,query,orderBy,where,doc,setDoc,
+         getDoc,updateDoc,deleteDoc,onSnapshot,limit};
+    fbReady=true;
     return true;
-  }catch(e){ console.warn('FB init:',e); return false; }
+  }catch(e){console.warn('FB init:',e);return false;}
 }
 
-window.testFirebase = async function(){
-  setSt('fb-st','info','Testing…');
-  saveCfg();
-  const ok = await initFB();
-  if(!ok){ setSt('fb-st','err','❌ Could not initialise — check your values.'); return; }
-  try{
-    const {collection,addDoc,getDocs} = _fb;
-    await addDoc(collection(db,'_ping'),{ts:Date.now()});
-    setSt('fb-st','ok','✅ Firebase connected successfully!');
-  }catch(e){ setSt('fb-st','err','❌ Connected but write failed. Make sure Firestore is in Test Mode. Error: '+e.message); }
-};
-
-/* ══════════════════════════════════════
+/* ═══════════════════════════════════════════
    STATE
-══════════════════════════════════════ */
-let bank=[], curSel=[], quizQs=[], answers={};
-let curQ=0, timeLeft=0, timerInt=null, quizStart=null;
-let stuName='', vioCount=0, offSecs=0, offStart=null;
-let vioTimer=null, vioCd=10, firstVio=true, quizActive=false;
-let records=[], editId=null, bankFil='all', curFil='all';
-let sessionId=null, qParams=null;
+═══════════════════════════════════════════ */
+let appCfg=null;       // {appName,adminEmail,adminPasswordHash,teacherPasswordHash}
+let teacher=null;      // {name,email,isAdmin}
+let allQuestions=[];   // cached from Firebase
+let allResults=[];     // cached from Firebase
+let curSel=[];         // selected question IDs for curation
+let quizQs=[];         // final quiz question array
+let answers={};
+let curQ=0,timeLeft=0,timerInt=null;
+let stuName='',stuRoll='',stuEmail='';
+let vioCount=0,offSecs=0,offStart=null;
+let vioTimer=null,vioCd=10,firstVio=true,quizActive=false;
+let reviewMode=false;
+let qParams=null;      // student: parsed session data
+let activeSessionId=null;  // teacher: current session ID
+let answersLocked=true;
+let sessionUnsubscribe=null; // Firebase listener unsubscribe
+let lobbyUnsubscribe=null;
+let wizStep=0;
+let wizData={prog:'',cid:'',subj:'',topic:'',testid:'',type:'mcq',diff:'medium'};
+let editQId=null;
+let acData={prog:[],cid:[],subj:[],topic:[],testid:[]};
 
-/* ══════════════════════════════════════
+/* ═══════════════════════════════════════════
    UTILS
-══════════════════════════════════════ */
-function gv(id){ return (document.getElementById(id)?.value||'').trim() }
-function el(id){ return document.getElementById(id) }
-function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') }
-window.show = function(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); el(id).classList.add('active'); window.scrollTo(0,0); }
-function closeOv(id){ el(id).classList.remove('on') }
-window.closeOv = closeOv;
-function setSt(id,t,m){ const e=el(id); if(!e) return; e.className='st '+t; e.textContent=m; }
-function fmtT(s){ return `${Math.floor(s/60)}m ${s%60}s` }
-function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,6) }
-
-/* ══════════════════════════════════════
-   PERSIST
-══════════════════════════════════════ */
-function saveBank(){ try{ localStorage.setItem('cq3_bank',JSON.stringify(bank)) }catch(e){} }
-function loadBank(){ try{ const d=localStorage.getItem('cq3_bank'); if(d) bank=JSON.parse(d); }catch(e){} }
-function saveRec(){ try{ localStorage.setItem('cq3_rec_'+gv('cfg-title'),JSON.stringify(records)) }catch(e){} }
-function loadRec(){ try{ const d=localStorage.getItem('cq3_rec_'+gv('cfg-title')); if(d) records=JSON.parse(d); }catch(e){} }
-function saveCfg(){
-  try{
-    localStorage.setItem('cq3_cfg',JSON.stringify({
-      title:gv('cfg-title'),time:gv('cfg-time'),count:gv('cfg-count'),
-      email:gv('cfg-email'),pass:gv('cfg-pass'),
-      fbKey:gv('fb-key'),fbPid:gv('fb-pid'),fbAppid:gv('fb-appid'),
-      ejsKey:gv('ejs-key'),ejsSvc:gv('ejs-svc'),ejsTpl:gv('ejs-tpl')
-    }));
-  }catch(e){}
+═══════════════════════════════════════════ */
+function gv(id){return(document.getElementById(id)?.value||'').trim()}
+function el(id){return document.getElementById(id)}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function setSt(id,t,m){const e=el(id);if(!e)return;e.className='st '+t;e.textContent=m;}
+function fmtT(s){return`${Math.floor(s/60)}m ${s%60}s`}
+function uid16(){
+  const chars='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  return Array.from({length:16},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
 }
-function loadCfg(){
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function hashStr(s){
+  // simple djb2 hash — not cryptographic but sufficient for this use case
+  let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h)+s.charCodeAt(i);
+  return(h>>>0).toString(16);
+}
+function hideSplash(){const s=el('s-splash');if(s)s.style.display='none';}
+function showSplash(msg){const s=el('s-splash');if(s)s.style.display='flex';const m=el('splash-msg');if(m)m.textContent=msg||'Loading…';}
+
+window.show=function(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  el(id).classList.add('active');window.scrollTo(0,0);
+};
+window.closeOv=function(id){el(id).classList.remove('on');};
+
+/* ═══════════════════════════════════════════
+   LOCAL CACHE
+═══════════════════════════════════════════ */
+function saveTCache(t){try{localStorage.setItem('cq5_teacher',JSON.stringify(t))}catch(e){}}
+function loadTCache(){try{const d=localStorage.getItem('cq5_teacher');return d?JSON.parse(d):null}catch(e){return null}}
+function saveFBCfg(k,p,a){try{localStorage.setItem('cq5_fb',JSON.stringify({k,p,a}))}catch(e){}}
+function loadFBCfg(){try{const d=localStorage.getItem('cq5_fb');return d?JSON.parse(d):null}catch(e){return null}}
+
+/* ═══════════════════════════════════════════
+   FIRST RUN + LOGIN
+═══════════════════════════════════════════ */
+window.doFirstRun=async function(){
+  const appName=gv('fr-appname'),name=gv('fr-name'),email=gv('fr-email');
+  const adminPw=gv('fr-adminpw'),teachPw=gv('fr-teachpw');
+  if(!appName||!name||!email||!adminPw||!teachPw){
+    setSt('fr-st','err','Please fill in all fields.');return;
+  }
+  if(adminPw===teachPw){setSt('fr-st','err','Admin and teacher passwords must be different.');return;}
+  if(!fbReady){setSt('fr-st','err','Firebase not connected.');return;}
   try{
-    const d=localStorage.getItem('cq3_cfg'); if(!d) return;
-    const c=JSON.parse(d);
-    const m={'cfg-title':'title','cfg-time':'time','cfg-count':'count','cfg-email':'email',
-      'cfg-pass':'pass','fb-key':'fbKey','fb-pid':'fbPid','fb-appid':'fbAppid',
-      'ejs-key':'ejsKey','ejs-svc':'ejsSvc','ejs-tpl':'ejsTpl'};
-    Object.entries(m).forEach(([id,k])=>{ if(c[k]&&el(id)) el(id).value=c[k]; });
-  }catch(e){}
+    await _fb.setDoc(_fb.doc(db,'settings','app'),{
+      appName,adminEmail:email,
+      adminHash:hashStr(adminPw),
+      teacherHash:hashStr(teachPw),
+      createdAt:Date.now()
+    });
+    appCfg={appName,adminEmail:email,adminHash:hashStr(adminPw),teacherHash:hashStr(teachPw)};
+    teacher={name,email,isAdmin:true};
+    saveTCache(teacher);
+    goHome();
+  }catch(e){setSt('fr-st','err','Save failed: '+e.message);}
+};
+
+window.doLogin=async function(){
+  const name=gv('tl-name'),email=gv('tl-email'),pw=gv('tl-pw');
+  if(!name||!email||!pw){setSt('tl-st','err','Please fill in all fields.');return;}
+  if(!fbReady){setSt('tl-st','err','Firebase not connected. Check your config.json file.');return;}
+  if(!appCfg){setSt('tl-st','err','App settings not loaded.');return;}
+  const h=hashStr(pw);
+  const isAdmin=email===appCfg.adminEmail&&h===appCfg.adminHash;
+  const isTeacher=h===appCfg.teacherHash;
+  if(!isAdmin&&!isTeacher){setSt('tl-st','err','Incorrect password.');return;}
+  teacher={name,email,isAdmin};
+  saveTCache(teacher);
+  goHome();
+};
+
+window.doLogout=function(){
+  teacher=null;
+  allQuestions=[];allResults=[];curSel=[];
+  if(sessionUnsubscribe){sessionUnsubscribe();sessionUnsubscribe=null;}
+  if(lobbyUnsubscribe){lobbyUnsubscribe();lobbyUnsubscribe=null;}
+  show('s-login-teacher');
+};
+
+window.showForgot=function(){
+  el('forgot-email').value=teacher?.email||'';
+  el('forgot-st').className='st';
+  el('ov-forgot').classList.add('on');
+};
+
+window.doForgot=function(){
+  const email=gv('forgot-email');
+  if(!email){setSt('forgot-st','err','Enter your email.');return;}
+  if(!appCfg){setSt('forgot-st','err','App not loaded.');return;}
+  const isAdmin=email===appCfg.adminEmail;
+  // Open mailto with password reminder
+  const subject=encodeURIComponent('ClassQuiz Password Reminder');
+  const body=encodeURIComponent(isAdmin
+    ?`Your ClassQuiz admin password reminder.\n\nIMPORTANT: Delete this email after reading.\n\nThis is a reminder sent from the ClassQuiz app on your device.`
+    :`Your ClassQuiz teacher password reminder.\n\nIMPORTANT: Delete this email after reading.\n\nThis is a reminder sent from the ClassQuiz app on your device.`);
+  window.location.href=`mailto:${email}?subject=${subject}&body=${body}`;
+  setSt('forgot-st','info','Opening your email app… press Send to receive the reminder.');
+};
+
+/* ═══════════════════════════════════════════
+   HOME
+═══════════════════════════════════════════ */
+async function goHome(){
+  el('home-appname').textContent=appCfg?.appName||'ClassQuiz';
+  el('home-welcome').textContent='Hello, '+teacher.name.split(' ')[0];
+  el('home-role-badge').innerHTML=teacher.isAdmin
+    ?'<span class="badge-admin">Admin</span>'
+    :'<span class="chip chip-easy">Teacher</span>';
+  show('s-home');
+  await loadAllQuestions();
+  renderHomeSubjects();
+  loadRecentSessions();
 }
 
-/* ══════════════════════════════════════
-   TAB SWITCH
-══════════════════════════════════════ */
-window.switchTab = function(show,hide){
-  el(show).style.display=''; el(hide).style.display='none';
-  document.querySelectorAll('.tab').forEach((t,i)=>{
-    t.classList.toggle('on',(i===0&&show==='tc')||(i===1&&show==='te'));
+window.goBank=async function(){await loadAllQuestions();populateBankFilters();renderBank();show('s-bank');};
+window.goCurate=async function(){await loadAllQuestions();populateCurateFilters();renderCurate();show('s-curate');};
+window.goResults=async function(){await loadResults(false);show('s-results');};
+window.goDash=function(){show('s-results');};
+
+function renderHomeSubjects(){
+  const subjMap={};
+  allQuestions.forEach(q=>{
+    const key=q.courseId+'_'+q.subjectName;
+    if(!subjMap[key])subjMap[key]={courseId:q.courseId,name:q.subjectName,count:0,prog:q.programmeName};
+    subjMap[key].count++;
   });
-};
-
-/* ══════════════════════════════════════
-   QUESTION BANK
-══════════════════════════════════════ */
-window.goBank = function(){ saveCfg(); renderBank(); show('s-bank'); };
-
-window.setFil = function(ctx,f,btn){
-  if(ctx==='bank') bankFil=f; else curFil=f;
-  document.querySelectorAll(`#${ctx==='bank'?'bank':'cur'}-fil .fil`).forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on');
-  ctx==='bank'?renderBank():renderCur();
-};
-
-function mFil(q,f){
-  if(f==='all') return true;
-  if(['mcq','tf','fitb'].includes(f)) return q.type===f;
-  return q.diff===f;
+  const subjects=Object.values(subjMap);
+  const wrap=el('home-subjects');
+  if(!subjects.length){
+    wrap.innerHTML='<div class="empty"><span class="empty-i">📭</span>No subjects yet. Add your first question!</div>';
+    return;
+  }
+  wrap.innerHTML=subjects.map(s=>`
+    <div class="subj-card" onclick="filterBankBySubj('${esc(s.courseId)}')">
+      <div style="font-size:11px;color:var(--m);margin-bottom:4px">${esc(s.prog)}</div>
+      <div style="font-family:var(--fh);font-size:15px;font-weight:700;margin-bottom:4px">${esc(s.courseId)} — ${esc(s.name)}</div>
+      <div style="font-size:12px;color:var(--m)">${s.count} question${s.count!==1?'s':''}</div>
+    </div>`).join('');
 }
 
-function renderBank(){
-  const qs=bank.filter(q=>mFil(q,bankFil));
-  el('bank-total').textContent=`${bank.length} total`;
+async function loadRecentSessions(){
+  if(!fbReady)return;
+  try{
+    const snap=await _fb.getDocs(_fb.query(_fb.collection(db,'sessions'),_fb.orderBy('ts','desc'),_fb.limit(5)));
+    const sessions=snap.docs.map(d=>({id:d.id,...d.data()}));
+    const wrap=el('home-recent');
+    if(!sessions.length){wrap.innerHTML='<div style="font-size:13px;color:var(--m)">No sessions yet.</div>';return;}
+    wrap.innerHTML=sessions.map(s=>`
+      <div class="recent-item" onclick="viewSession('${s.id}')">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600">${esc(s.sessionName||s.testLabel||'Quiz')}</div>
+          <div style="font-size:11px;color:var(--m);margin-top:2px">${esc(s.teacherName||'')} • ${new Date(s.ts).toLocaleDateString()}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:12px;color:var(--acc)">${s.qs?.length||0} questions</div>
+        </div>
+      </div>`).join('');
+  }catch(e){console.warn('Recent sessions:',e);}
+}
+
+window.viewSession=function(id){
+  // future: load session details
+  goResults();
+};
+
+window.filterBankBySubj=async function(cid){
+  await loadAllQuestions();
+  populateBankFilters();
+  el('bf-subj').value=cid;
+  renderBank();
+  show('s-bank');
+};
+
+/* ═══════════════════════════════════════════
+   FIREBASE DATA LOADING
+═══════════════════════════════════════════ */
+async function loadAllQuestions(){
+  if(!fbReady)return;
+  try{
+    const snap=await _fb.getDocs(_fb.query(_fb.collection(db,'questions'),_fb.orderBy('ts','desc')));
+    allQuestions=snap.docs.map(d=>({id:d.id,...d.data()}));
+    // Rebuild autocomplete data
+    const sets={prog:new Set(),cid:new Set(),subj:new Set(),topic:new Set(),testid:new Set()};
+    allQuestions.forEach(q=>{
+      if(q.programmeName)sets.prog.add(q.programmeName);
+      if(q.courseId)sets.cid.add(q.courseId);
+      if(q.subjectName)sets.subj.add(q.subjectName);
+      if(q.topicName)sets.topic.add(q.topicName);
+      if(q.testLabel)sets.testid.add(q.testLabel);
+    });
+    acData={
+      prog:[...sets.prog].sort(),
+      cid:[...sets.cid].sort(),
+      subj:[...sets.subj].sort(),
+      topic:[...sets.topic].sort(),
+      testid:[...sets.testid].sort()
+    };
+  }catch(e){console.warn('Load questions:',e);}
+}
+
+async function loadResults(force){
+  if(!fbReady)return;
+  try{
+    const snap=await _fb.getDocs(_fb.query(_fb.collection(db,'results'),_fb.orderBy('ts','desc')));
+    allResults=snap.docs.map(d=>({id:d.id,...d.data()}));
+    populateResultFilters();
+    renderResults();
+    el('results-refreshed').textContent='Updated: '+new Date().toLocaleTimeString();
+  }catch(e){console.warn('Load results:',e);}
+}
+
+/* ═══════════════════════════════════════════
+   AUTOCOMPLETE
+═══════════════════════════════════════════ */
+window.acFilter=function(key){
+  const val=(el('aq-'+key)?.value||'').toLowerCase();
+  const src=acData[key]||[];
+  const filtered=src.filter(x=>x.toLowerCase().includes(val));
+  const drop=el('ac-'+key);
+  if(!drop)return;
+  let html=filtered.map(x=>`<div class="ac-item" onmousedown="acSelect('${key}','${esc(x)}')">${esc(x)}</div>`).join('');
+  if(val&&!filtered.find(x=>x.toLowerCase()===val)){
+    html+=`<div class="ac-item new" onmousedown="acSelect('${key}','${gv('aq-'+key)}')">${esc(gv('aq-'+key))} (new)</div>`;
+  }
+  drop.innerHTML=html;
+  drop.classList.add('show');
+};
+window.acShow=function(key){acFilter(key);};
+window.acHide=function(key,delay){setTimeout(()=>{const d=el('ac-'+key);if(d)d.classList.remove('show');},delay);};
+window.acSelect=function(key,val){
+  const inp=el('aq-'+key);if(inp)inp.value=val;
+  const drop=el('ac-'+key);if(drop)drop.classList.remove('show');
+  // cascade: selecting prog filters subj; selecting cid+subj filters topic etc.
+  if(key==='prog')acFilterCascade();
+};
+function acFilterCascade(){
+  // Could filter downstream dropdowns — left simple for now
+}
+
+/* ═══════════════════════════════════════════
+   ADD QUESTION WIZARD
+═══════════════════════════════════════════ */
+window.goAddQ=function(){
+  editQId=null;
+  wizStep=0;
+  wizData={prog:'',cid:'',subj:'',topic:'',testid:'',type:'mcq',diff:'medium'};
+  el('addq-count-badge').textContent='';
+  // Clear fields
+  ['prog','cid','subj','topic','testid'].forEach(k=>{const i=el('aq-'+k);if(i)i.value='';});
+  el('aq-text').value='';
+  setQType('mcq');
+  setDiff('medium');
+  showWizStep(0);
+  show('s-addq');
+};
+
+function showWizStep(n){
+  wizStep=n;
+  document.querySelectorAll('.wiz-step').forEach((s,i)=>s.classList.toggle('active',i===n));
+  ['pip-0','pip-1','pip-2'].forEach((id,i)=>{
+    const pip=el(id);
+    if(!pip)return;
+    pip.classList.remove('done','active');
+    if(i<n)pip.classList.add('done');
+    else if(i===n)pip.classList.add('active');
+  });
+  if(n===1) renderWizLocSummary();
+  if(n===2) renderPreview();
+}
+
+window.wizNext=function(to){
+  if(to===1){
+    // validate step 0
+    const prog=gv('aq-prog'),cid=gv('aq-cid'),subj=gv('aq-subj'),
+          topic=gv('aq-topic'),testid=gv('aq-testid');
+    if(!prog||!cid||!subj||!topic||!testid){
+      setSt('wiz0-st','err','Please fill in all location fields.');return;
+    }
+    wizData.prog=prog;wizData.cid=cid;wizData.subj=subj;
+    wizData.topic=topic;wizData.testid=testid;
+    el('wiz0-st').className='st';
+  }
+  if(to===2){
+    // validate step 1
+    const text=gv('aq-text');
+    if(!text){setSt('wiz1-st','err','Please enter question text.');return;}
+    if(wizData.type==='mcq'){
+      const opts=['A','B','C','D'].map((_,i)=>(el('ao'+i)?.value||'').trim());
+      if(!opts[0]||!opts[1]){setSt('wiz1-st','err','Please fill in at least options A and B.');return;}
+    }
+    el('wiz1-st').className='st';
+  }
+  showWizStep(to);
+};
+window.wizBack=function(to){showWizStep(to);};
+
+function renderWizLocSummary(){
+  el('wiz-loc-summary').innerHTML=
+    `<strong style="color:var(--txt)">${esc(wizData.prog)}</strong> › 
+     <strong style="color:var(--txt)">${esc(wizData.cid)}</strong> ${esc(wizData.subj)} › 
+     <strong style="color:var(--txt)">${esc(wizData.topic)}</strong> › 
+     <span style="color:var(--acc)">${esc(wizData.testid)}</span>`;
+}
+
+window.setQType=function(t){
+  wizData.type=t;
+  el('qtype-mcq').style.background=t==='mcq'?'var(--acc)':'transparent';
+  el('qtype-mcq').style.color=t==='mcq'?'#fff':'var(--txt)';
+  el('qtype-mcq').style.border=t==='mcq'?'none':'1px solid var(--b)';
+  el('qtype-tf').style.background=t==='tf'?'var(--warn)':'transparent';
+  el('qtype-tf').style.color=t==='tf'?'#fff':'var(--txt)';
+  el('qtype-tf').style.border=t==='tf'?'none':'1px solid var(--b)';
+  renderAnswerFields(t);
+};
+
+function renderAnswerFields(t){
+  const w=el('aq-answer-fields');
+  if(t==='mcq'){
+    w.innerHTML=`<label style="margin-top:14px">Options — tick the correct answer <span class="req">*</span></label>`+
+    ['A','B','C','D'].map((_,i)=>`
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <input type="radio" name="acr" value="${i}" ${i===0?'checked':''} style="width:auto;accent-color:var(--acc);min-width:16px"/>
+        <span style="font-size:12px;color:var(--m);min-width:16px">${'ABCD'[i]}.</span>
+        <input type="text" id="ao${i}" placeholder="Option ${'ABCD'[i]}" style="flex:1"/>
+      </div>`).join('')+
+    `<div style="font-size:11px;color:var(--m);margin-top:2px">Select the radio button next to the correct answer</div>`;
+  }else{
+    // TRUE/FALSE — clean and unambiguous
+    w.innerHTML=`
+      <label style="margin-top:14px">Correct Answer <span class="req">*</span></label>
+      <div style="display:flex;gap:12px;margin-top:8px">
+        <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;
+          flex:1;background:var(--s2);border:2px solid var(--b);border-radius:10px;padding:12px;
+          transition:border-color .15s" id="tf-true-lbl">
+          <input type="radio" name="atf" value="True" checked style="width:auto;accent-color:var(--grn);min-width:16px"
+            onchange="el('tf-true-lbl').style.borderColor='var(--grn)';el('tf-false-lbl').style.borderColor='var(--b)'"/>
+          <span style="font-size:15px;font-weight:600;font-family:var(--fh)">True</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;cursor:pointer;
+          flex:1;background:var(--s2);border:2px solid var(--b);border-radius:10px;padding:12px;
+          transition:border-color .15s" id="tf-false-lbl">
+          <input type="radio" name="atf" value="False" style="width:auto;accent-color:var(--err);min-width:16px"
+            onchange="el('tf-false-lbl').style.borderColor='var(--err)';el('tf-true-lbl').style.borderColor='var(--b)'"/>
+          <span style="font-size:15px;font-weight:600;font-family:var(--fh)">False</span>
+        </label>
+      </div>`;
+  }
+}
+
+window.setDiff=function(d){
+  wizData.diff=d;
+  ['easy','medium','hard'].forEach(x=>{
+    const b=el('diff-'+x);if(!b)return;
+    const colors={easy:'var(--grn)',medium:'var(--warn)',hard:'var(--err)'};
+    b.style.background=x===d?colors[x]:'transparent';
+    b.style.color=x===d?'#fff':'var(--txt)';
+    b.style.border=x===d?'none':'1px solid var(--b)';
+  });
+  renderPreview();
+};
+
+function renderPreview(){
+  const text=gv('aq-text');
+  const w=el('preview-card');if(!w)return;
+  if(!text){w.innerHTML='<div style="font-size:13px;color:var(--m);text-align:center">← Go back to enter question text</div>';return;}
+  let optHtml='';
+  if(wizData.type==='mcq'){
+    const opts=['A','B','C','D'].map((_,i)=>(el('ao'+i)?.value||'').trim()).filter(Boolean);
+    const ci=parseInt(document.querySelector('input[name="acr"]:checked')?.value||0);
+    optHtml=opts.map((o,i)=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;
+        background:${i===ci?'rgba(62,207,142,.15)':'var(--s2)'};border:1px solid ${i===ci?'var(--grn)':'var(--b)'};margin-bottom:6px">
+        <span style="font-size:11px;font-weight:700;color:${i===ci?'var(--grn)':'var(--m)'}">${'ABCD'[i]}</span>
+        <span style="font-size:13px">${esc(o)}</span>
+      </div>`).join('');
+  }else{
+    const ans=document.querySelector('input[name="atf"]:checked')?.value||'True';
+    optHtml=`<div style="font-size:13px;padding:8px 10px;background:rgba(62,207,142,.1);border:1px solid var(--grn);border-radius:8px">
+      Correct answer: <strong style="color:var(--grn)">${ans}</strong></div>`;
+  }
+  w.innerHTML=`
+    <div style="background:var(--s2);border-radius:10px;padding:14px">
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <span class="chip chip-${wizData.type}">${wizData.type==='mcq'?'MCQ':'True/False'}</span>
+        <span class="chip chip-${wizData.diff}">${wizData.diff}</span>
+        <span class="qi-tag">${esc(wizData.testid)}</span>
+      </div>
+      <div style="font-size:14px;font-weight:600;margin-bottom:12px;line-height:1.5">${esc(text)}</div>
+      ${optHtml}
+    </div>`;
+}
+
+window.saveQuestion=async function(){
+  if(!fbReady){setSt('wiz2-st','err','Firebase not connected.');return;}
+  const text=gv('aq-text');
+  let options=[],correctIndex=0,answer='';
+  if(wizData.type==='mcq'){
+    options=['A','B','C','D'].map((_,i)=>(el('ao'+i)?.value||'').trim()).filter(Boolean);
+    correctIndex=parseInt(document.querySelector('input[name="acr"]:checked')?.value||0);
+    correctIndex=Math.min(correctIndex,options.length-1);
+    answer='ABCD'[correctIndex];
+  }else{
+    answer=document.querySelector('input[name="atf"]:checked')?.value||'True';
+    options=['True','False'];
+  }
+  const q={
+    text,type:wizData.type,options,correctIndex,answer,
+    difficulty:wizData.diff,
+    programmeName:wizData.prog,
+    courseId:wizData.cid,
+    subjectName:wizData.subj,
+    topicName:wizData.topic,
+    testLabel:wizData.testid,
+    addedBy:teacher.name,
+    addedByEmail:teacher.email,
+    ts:Date.now()
+  };
+  const btn=el('btn-save-q');
+  btn.innerHTML='<span class="spin"></span> Saving…';btn.disabled=true;
+  try{
+    if(editQId){
+      await _fb.setDoc(_fb.doc(db,'questions',editQId),q);
+      editQId=null;
+    }else{
+      await _fb.addDoc(_fb.collection(db,'questions'),q);
+    }
+    // Update local cache
+    await loadAllQuestions();
+    // Show success and reset for next question (keep location)
+    setSt('wiz2-st','ok','✅ Question saved! Add another or go back.');
+    const count=(parseInt(el('addq-count-badge').textContent)||0)+1;
+    el('addq-count-badge').textContent=count+' saved';
+    // Reset question fields only
+    el('aq-text').value='';
+    setQType('mcq');
+    setDiff('medium');
+    showWizStep(1); // jump back to step 2 for next question in same test
+  }catch(e){setSt('wiz2-st','err','Save failed: '+e.message);}
+  btn.innerHTML='Save &amp; Add Another';btn.disabled=false;
+};
+
+/* ═══════════════════════════════════════════
+   QUESTION BANK
+═══════════════════════════════════════════ */
+function populateBankFilters(){
+  const progs=[...new Set(allQuestions.map(q=>q.programmeName).filter(Boolean))].sort();
+  const subjs=[...new Set(allQuestions.map(q=>q.courseId+'::'+q.subjectName).filter(Boolean))].sort();
+  const topics=[...new Set(allQuestions.map(q=>q.topicName).filter(Boolean))].sort();
+  const testids=[...new Set(allQuestions.map(q=>q.testLabel).filter(Boolean))].sort();
+  fillSelect('bf-prog',progs);
+  fillSelect('bf-subj',subjs,x=>x.split('::')[0],x=>x.split('::').join(' — '));
+  fillSelect('bf-topic',topics);
+  fillSelect('bf-testid',testids);
+}
+
+function fillSelect(id,items,valFn,lblFn){
+  const sel=el(id);if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="">All</option>'+
+    items.map(x=>`<option value="${esc(valFn?valFn(x):x)}">${esc(lblFn?lblFn(x):x)}</option>`).join('');
+  sel.value=cur;
+}
+
+function bankFilterFn(q){
+  const prog=gv('bf-prog'),subj=gv('bf-subj'),topic=gv('bf-topic'),
+        testid=gv('bf-testid'),type=gv('bf-type'),diff=gv('bf-diff'),
+        srch=(gv('bf-search')||'').toLowerCase();
+  if(prog&&q.programmeName!==prog)return false;
+  if(subj&&q.courseId!==subj)return false;
+  if(topic&&q.topicName!==topic)return false;
+  if(testid&&q.testLabel!==testid)return false;
+  if(type&&q.type!==type)return false;
+  if(diff&&q.difficulty!==diff)return false;
+  if(srch&&!q.text.toLowerCase().includes(srch))return false;
+  return true;
+}
+
+window.renderBank=function(){
+  const qs=allQuestions.filter(bankFilterFn);
+  el('bank-total').textContent=`${qs.length} of ${allQuestions.length} questions`;
   const list=el('bank-list');
-  if(!qs.length){ list.innerHTML=`<div class="empty"><span class="empty-i">${bank.length?'🔍':'📭'}</span>${bank.length?'No match.':'No questions yet. Add your first one!'}</div>`; return; }
+  if(!qs.length){
+    list.innerHTML=`<div class="empty"><span class="empty-i">${allQuestions.length?'🔍':'📭'}</span>${allQuestions.length?'No match.':'No questions yet.'}</div>`;
+    return;
+  }
   list.innerHTML=qs.map(q=>`
     <div class="qi">
       <div class="qi-row">
         <div class="qi-body">
-          <div class="qi-text">${esc(q.text)}</div>
           <div class="qi-meta">
-            <span class="chip chip-${q.type}">${q.type==='mcq'?'MCQ':q.type==='tf'?'True/False':'Fill Blank'}</span>
-            <span class="chip chip-${q.diff}">${q.diff}</span>
-            ${q.topic?`<span class="qi-topic">${esc(q.topic)}</span>`:''}
+            <span class="chip chip-${q.type}">${q.type==='mcq'?'MCQ':'T/F'}</span>
+            <span class="chip chip-${q.difficulty}">${q.difficulty}</span>
+            <span class="qi-tag">${esc(q.courseId)} ${esc(q.subjectName)}</span>
+            <span class="qi-tag">${esc(q.topicName)}</span>
+            <span class="qi-tag" style="color:var(--acc)">${esc(q.testLabel)}</span>
+            <span class="qi-tag">${esc(q.addedBy)}</span>
           </div>
-          ${q.type==='mcq'?`<div style="font-size:11px;color:var(--m);margin-top:5px">${q.options.map((o,i)=>`<span style="${i===q.ci?'color:var(--grn);font-weight:600':''}">${'ABCD'[i]}. ${esc(o)}</span>`).join(' &nbsp;')}</div>`
-          :`<div style="font-size:11px;color:var(--m);margin-top:4px">Answer: <span style="color:var(--grn);font-weight:600">${esc(q.answer)}</span></div>`}
+          <div class="qi-text">${esc(q.text)}</div>
+          ${q.type==='mcq'
+            ?`<div style="font-size:11px;color:var(--m);margin-top:4px">${(q.options||[]).map((o,i)=>`<span style="${i===q.correctIndex?'color:var(--grn);font-weight:600':''}">${'ABCD'[i]}. ${esc(o)}</span>`).join(' &nbsp;')}</div>`
+            :`<div style="font-size:11px;color:var(--grn);margin-top:4px;font-weight:600">Answer: ${esc(q.answer)}</div>`
+          }
         </div>
-        <div style="display:flex;flex-direction:column;gap:5px">
-          <button class="btn-icon" onclick="openEdit('${q.id}')">✏️</button>
-          <button class="btn-icon" onclick="delQ('${q.id}')" style="color:var(--err)">🗑</button>
+        <div style="display:flex;flex-direction:column;gap:5px;margin-left:4px">
+          <button class="btn-icon" onclick="editQ('${q.id}')">✏️</button>
+          <button class="btn-icon" onclick="deleteQ('${q.id}')" style="color:var(--err)">🗑</button>
         </div>
       </div>
     </div>`).join('');
-}
-
-window.openAdd = function(){
-  editId=null; el('addq-h').textContent='Add Question';
-  el('aq-type').value='mcq'; el('aq-text').value='';
-  el('aq-topic').value=''; el('aq-diff').value='medium';
-  el('addq-st').className='st'; renderAns(); show('s-addq');
 };
 
-window.openEdit = function(id){
-  const q=bank.find(x=>x.id===id); if(!q) return;
-  editId=id; el('addq-h').textContent='Edit Question';
-  el('aq-type').value=q.type; el('aq-text').value=q.text;
-  el('aq-topic').value=q.topic||''; el('aq-diff').value=q.diff||'medium';
-  el('addq-st').className='st'; renderAns();
+window.editQ=async function(id){
+  const q=allQuestions.find(x=>x.id===id);if(!q)return;
+  editQId=id;
+  wizData={prog:q.programmeName,cid:q.courseId,subj:q.subjectName,
+    topic:q.topicName,testid:q.testLabel,type:q.type,diff:q.difficulty};
+  el('aq-prog').value=q.programmeName||'';
+  el('aq-cid').value=q.courseId||'';
+  el('aq-subj').value=q.subjectName||'';
+  el('aq-topic').value=q.topicName||'';
+  el('aq-testid').value=q.testLabel||'';
+  el('aq-text').value=q.text||'';
+  setQType(q.type);
+  setDiff(q.difficulty||'medium');
   if(q.type==='mcq'){
-    q.options.forEach((o,i)=>{ const inp=el('ao'+i); if(inp) inp.value=o; });
-    document.querySelectorAll('input[name="acr"]').forEach(r=>{ if(parseInt(r.value)===q.ci) r.checked=true; });
-  } else if(q.type==='tf'){
-    document.querySelectorAll('input[name="atf"]').forEach(r=>{ if(r.value===q.answer) r.checked=true; });
-  } else { const inp=el('afb'); if(inp) inp.value=q.answer||''; }
+    (q.options||[]).forEach((o,i)=>{const inp=el('ao'+i);if(inp)inp.value=o;});
+    document.querySelectorAll('input[name="acr"]').forEach(r=>{r.checked=parseInt(r.value)===(q.correctIndex||0);});
+  }else{
+    const rad=document.querySelector(`input[name="atf"][value="${q.answer}"]`);
+    if(rad){rad.checked=true;rad.dispatchEvent(new Event('change'));}
+  }
+  el('addq-count-badge').textContent='Editing';
+  showWizStep(0);
   show('s-addq');
 };
 
-window.renderAns = function(){
-  const t=el('aq-type').value, w=el('aq-ans');
-  if(t==='mcq'){
-    w.innerHTML=`<label style="margin-top:14px">Options — tick the correct answer</label>`+
-    ['A','B','C','D'].map((_,i)=>`
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
-        <input type="radio" name="acr" value="${i}" ${i===0?'checked':''} style="width:auto;accent-color:var(--acc)"/>
-        <span style="font-size:12px;color:var(--m);min-width:14px">${'ABCD'[i]}.</span>
-        <input type="text" id="ao${i}" placeholder="Option ${'ABCD'[i]}" style="flex:1"/>
-      </div>`).join('')+`<div style="font-size:11px;color:var(--m);margin-top:2px">Radio = correct answer</div>`;
-  } else if(t==='tf'){
-    w.innerHTML=`<label style="margin-top:14px">Correct Answer</label>
-      <div style="display:flex;gap:16px;margin-top:8px">
-        <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:14px;cursor:pointer">
-          <input type="radio" name="atf" value="True" checked style="width:auto;accent-color:var(--acc)"/> True</label>
-        <label style="display:flex;align-items:center;gap:6px;margin:0;font-size:14px;cursor:pointer">
-          <input type="radio" name="atf" value="False" style="width:auto;accent-color:var(--acc)"/> False</label>
-      </div>`;
-  } else {
-    w.innerHTML=`<label style="margin-top:14px">Correct Answer</label>
-      <input type="text" id="afb" placeholder="Expected answer (case-insensitive)"/>
-      <div style="font-size:11px;color:var(--m);margin-top:4px">Students type their answer; matched automatically</div>`;
-  }
+window.deleteQ=async function(id){
+  if(!confirm('Delete this question? This cannot be undone.'))return;
+  try{
+    await _fb.deleteDoc(_fb.doc(db,'questions',id));
+    allQuestions=allQuestions.filter(q=>q.id!==id);
+    renderBank();
+  }catch(e){alert('Delete failed: '+e.message);}
 };
 
-window.saveQ = function(){
-  const type=el('aq-type').value, text=el('aq-text').value.trim();
-  if(!text){ setSt('addq-st','err','Please enter question text.'); return; }
-  const q={id:editId||uid(), type, text, topic:el('aq-topic').value.trim(), diff:el('aq-diff').value};
-  if(type==='mcq'){
-    const opts=['A','B','C','D'].map((_,i)=>(el('ao'+i)?.value||'').trim());
-    if(!opts[0]||!opts[1]){ setSt('addq-st','err','Fill in at least options A and B.'); return; }
-    const sel=document.querySelector('input[name="acr"]:checked');
-    q.options=opts.filter(Boolean); q.ci=sel?Math.min(parseInt(sel.value),q.options.length-1):0;
-    q.answer='ABCD'[q.ci];
-  } else if(type==='tf'){
-    const sel=document.querySelector('input[name="atf"]:checked');
-    q.answer=sel?sel.value:'True'; q.options=['True','False'];
-  } else {
-    q.answer=(el('afb')?.value||'').trim();
-  }
-  if(editId){ const idx=bank.findIndex(x=>x.id===editId); if(idx>=0) bank[idx]=q; }
-  else bank.push(q);
-  saveBank();
-  setSt('addq-st','ok',editId?'✅ Updated!':'✅ Question added!');
-  setTimeout(()=>{ show('s-bank'); renderBank(); },700);
-};
-
-window.delQ = function(id){
-  if(!confirm('Delete this question?')) return;
-  bank=bank.filter(q=>q.id!==id); saveBank(); renderBank();
-};
-
-/* ══════════════════════════════════════
+/* ═══════════════════════════════════════════
    CURATE
-══════════════════════════════════════ */
-window.goCurate = function(){
-  saveCfg();
-  if(!bank.length){ alert('Question bank is empty. Add questions first.'); goBank(); return; }
-  if(!curSel.length) curSel=bank.map(q=>q.id);
-  renderCur(); show('s-curate');
-};
-
-function visCur(){
-  const s=(el('cur-srch')?.value||'').toLowerCase();
-  return bank.filter(q=>mFil(q,curFil)&&(!s||q.text.toLowerCase().includes(s)||(q.topic||'').toLowerCase().includes(s)));
+═══════════════════════════════════════════ */
+function populateCurateFilters(){
+  const progs=[...new Set(allQuestions.map(q=>q.programmeName).filter(Boolean))].sort();
+  const subjs=[...new Set(allQuestions.map(q=>q.courseId+'::'+q.subjectName).filter(Boolean))].sort();
+  const topics=[...new Set(allQuestions.map(q=>q.topicName).filter(Boolean))].sort();
+  const testids=[...new Set(allQuestions.map(q=>q.testLabel).filter(Boolean))].sort();
+  fillSelect('cf-prog',progs);
+  fillSelect('cf-subj',subjs,x=>x.split('::')[0],x=>x.split('::').join(' — '));
+  fillSelect('cf-topic',topics);
+  fillSelect('cf-testid',testids);
 }
 
-function renderCur(){
-  const qs=visCur(); el('cur-hdr').textContent=`${curSel.length} selected`;
+function curateFiltFn(q){
+  const prog=gv('cf-prog'),subj=gv('cf-subj'),topic=gv('cf-topic'),
+        testid=gv('cf-testid'),type=gv('cf-type'),diff=gv('cf-diff'),
+        srch=(gv('cf-search')||'').toLowerCase();
+  if(prog&&q.programmeName!==prog)return false;
+  if(subj&&q.courseId!==subj)return false;
+  if(topic&&q.topicName!==topic)return false;
+  if(testid&&q.testLabel!==testid)return false;
+  if(type&&q.type!==type)return false;
+  if(diff&&q.difficulty!==diff)return false;
+  if(srch&&!q.text.toLowerCase().includes(srch))return false;
+  return true;
+}
+
+window.renderCurate=function(){
+  const qs=allQuestions.filter(curateFiltFn);
+  el('cur-sel-count').textContent=`${curSel.length} selected`;
   const list=el('cur-list');
-  if(!qs.length){ list.innerHTML=`<div class="empty"><span class="empty-i">🔍</span>No match.</div>`; return; }
+  if(!qs.length){list.innerHTML=`<div class="empty"><span class="empty-i">🔍</span>No questions match.</div>`;return;}
   list.innerHTML=qs.map(q=>{
     const on=curSel.includes(q.id);
-    return `<div class="qi ${on?'sel':''}" onclick="togCur('${q.id}')">
+    return`<div class="qi ${on?'sel':''}" onclick="togCur('${q.id}')">
       <div class="qi-row">
         <div class="chk ${on?'on':''}" id="cc-${q.id}">✓</div>
         <div class="qi-body">
-          <div class="qi-text">${esc(q.text)}</div>
           <div class="qi-meta">
-            <span class="chip chip-${q.type}">${q.type==='mcq'?'MCQ':q.type==='tf'?'T/F':'Fill Blank'}</span>
-            <span class="chip chip-${q.diff}">${q.diff}</span>
-            ${q.topic?`<span class="qi-topic">${esc(q.topic)}</span>`:''}
+            <span class="chip chip-${q.type}">${q.type==='mcq'?'MCQ':'T/F'}</span>
+            <span class="chip chip-${q.difficulty}">${q.difficulty}</span>
+            <span class="qi-tag">${esc(q.courseId)}</span>
+            <span class="qi-tag">${esc(q.topicName)}</span>
+            <span class="qi-tag" style="color:var(--acc)">${esc(q.testLabel)}</span>
           </div>
+          <div class="qi-text">${esc(q.text)}</div>
         </div>
       </div>
     </div>`;
   }).join('');
-}
+};
 
-window.togCur = function(id){
+window.togCur=function(id){
   curSel=curSel.includes(id)?curSel.filter(x=>x!==id):[...curSel,id];
-  el('cur-hdr').textContent=`${curSel.length} selected`;
+  el('cur-sel-count').textContent=`${curSel.length} selected`;
   const item=document.querySelector(`.qi[onclick="togCur('${id}')"]`);
   const cc=el('cc-'+id);
-  if(item) item.classList.toggle('sel',curSel.includes(id));
-  if(cc) cc.classList.toggle('on',curSel.includes(id));
+  if(item)item.classList.toggle('sel',curSel.includes(id));
+  if(cc)cc.classList.toggle('on',curSel.includes(id));
 };
-window.selAll = function(){ visCur().forEach(q=>{ if(!curSel.includes(q.id)) curSel.push(q.id); }); renderCur(); };
-window.deselAll = function(){ curSel=[]; renderCur(); };
+window.curSelAll=function(){
+  allQuestions.filter(curateFiltFn).forEach(q=>{if(!curSel.includes(q.id))curSel.push(q.id);});
+  renderCurate();
+};
+window.curDeselAll=function(){curSel=[];renderCurate();};
 
-/* ══════════════════════════════════════
-   LAUNCH — Firebase session or fallback
-══════════════════════════════════════ */
-window.goLaunch = async function(){
-  saveCfg();
-  if(!curSel.length){ alert('Select at least one question.'); return; }
+/* ═══════════════════════════════════════════
+   TEMPLATES
+═══════════════════════════════════════════ */
+window.showSaveTemplate=function(){
+  if(!curSel.length){alert('Select questions first.');return;}
+  el('ov-tpl-title').textContent='Save Template';
+  el('ov-tpl-body').innerHTML=`
+    <div class="ovb">${curSel.length} questions selected. Give this template a name.</div>
+    <input type="text" id="tpl-name" placeholder="e.g. Chapter 3 MCQs" style="margin-bottom:12px"/>
+    <div class="row" style="gap:9px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-template')">Cancel</button>
+      <button class="btn btn-grn" style="flex:1" onclick="saveTemplate()">Save</button>
+    </div>`;
+  el('tpl-st').className='st';
+  el('ov-template').classList.add('on');
+};
 
-  const title=gv('cfg-title'), time=parseInt(gv('cfg-time'))||15, count=parseInt(gv('cfg-count'))||0;
-  el('launch-title').textContent=title;
-  el('launch-meta').textContent=`${curSel.length} questions • ${time} minutes`;
+window.saveTemplate=async function(){
+  const name=gv('tpl-name');
+  if(!name){setSt('tpl-st','err','Enter a name.');return;}
+  try{
+    await _fb.addDoc(_fb.collection(db,'templates'),{
+      name,questionIds:curSel,
+      settings:{time:gv('cs-time'),count:gv('cs-count'),sessionName:gv('cs-name')},
+      createdBy:teacher.name,createdByEmail:teacher.email,ts:Date.now()
+    });
+    setSt('tpl-st','ok','✅ Template saved!');
+    setTimeout(()=>closeOv('ov-template'),1000);
+  }catch(e){setSt('tpl-st','err','Save failed: '+e.message);}
+};
+
+window.showLoadTemplate=async function(){
+  el('ov-tpl-title').textContent='Load Template';
+  el('ov-tpl-body').innerHTML='<div class="ovb">Loading templates…</div>';
+  el('tpl-st').className='st';
+  el('ov-template').classList.add('on');
+  try{
+    const snap=await _fb.getDocs(_fb.query(_fb.collection(db,'templates'),_fb.orderBy('ts','desc')));
+    const tpls=snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(!tpls.length){el('ov-tpl-body').innerHTML='<div class="ovb">No templates saved yet.</div><button class="btn btn-ghost w100" onclick="closeOv(\'ov-template\')">Close</button>';return;}
+    el('ov-tpl-body').innerHTML=tpls.map(t=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--s2);border-radius:8px;margin-bottom:6px">
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600">${esc(t.name)}</div>
+          <div style="font-size:11px;color:var(--m)">${(t.questionIds||[]).length} questions • ${esc(t.createdBy)}</div>
+        </div>
+        <button class="btn btn-pri btn-sm" onclick="loadTemplate('${t.id}')">Load</button>
+      </div>`).join('')+
+      `<button class="btn btn-ghost btn-sm w100" style="margin-top:8px" onclick="closeOv('ov-template')">Cancel</button>`;
+  }catch(e){el('ov-tpl-body').innerHTML='<div style="color:var(--err)">Load failed: '+e.message+'</div>';}
+};
+
+window.loadTemplate=async function(id){
+  try{
+    const snap=await _fb.getDoc(_fb.doc(db,'templates',id));
+    if(!snap.exists())return;
+    const t=snap.data();
+    curSel=t.questionIds||[];
+    if(t.settings){
+      if(t.settings.time)el('cs-time').value=t.settings.time;
+      if(t.settings.count)el('cs-count').value=t.settings.count;
+      if(t.settings.sessionName)el('cs-name').value=t.settings.sessionName;
+    }
+    closeOv('ov-template');
+    renderCurate();
+  }catch(e){alert('Load failed: '+e.message);}
+};
+
+/* ═══════════════════════════════════════════
+   LAUNCH
+═══════════════════════════════════════════ */
+window.goLaunch=async function(){
+  if(!curSel.length){setSt('cur-st','err','Please select at least one question.');return;}
+  if(!fbReady){setSt('cur-st','err','Firebase not connected.');return;}
+  const sessionName=gv('cs-name')||'Quiz';
+  const time=parseInt(gv('cs-time'))||15;
+  const count=parseInt(gv('cs-count'))||0;
+  const selectedQs=allQuestions.filter(q=>curSel.includes(q.id));
+  if(!selectedQs.length){setSt('cur-st','err','Selected questions not found.');return;}
+
+  activeSessionId=uid16();
+  answersLocked=true;
+
+  // Pick metadata from first question
+  const fq=selectedQs[0];
+  try{
+    await _fb.setDoc(_fb.doc(db,'sessions',activeSessionId),{
+      sessionName,time,count,
+      qs:selectedQs,
+      status:'waiting', // waiting | live | ended
+      answersLocked:true,
+      programmeName:fq.programmeName||'',
+      courseId:fq.courseId||'',
+      subjectName:fq.subjectName||'',
+      topicName:fq.topicName||'',
+      testLabel:fq.testLabel||'',
+      teacherName:teacher.name,
+      teacherEmail:teacher.email,
+      ts:Date.now()
+    });
+  }catch(e){setSt('cur-st','err','Failed to create session: '+e.message);return;}
 
   const base=window.location.href.split('?')[0].split('#')[0];
-  let url='';
+  const url=base+'?s='+activeSessionId;
+  el('launch-title').textContent=sessionName;
+  el('launch-url').textContent=url;
 
-  const fbOk = await initFB();
-
-  if(fbOk){
-    // Firebase path: store session in Firestore, share tiny ?s=ID url
-    sessionId = uid();
-    const selectedQs = bank.filter(q=>curSel.includes(q.id));
-    try{
-      await _fb.setDoc(_fb.doc(db,'sessions',sessionId),{
-        title, time, count,
-        qs: selectedQs,
-        created: Date.now()
-      });
-      // Embed Firebase config in URL hash so student devices can connect
-      const fbCfg = btoa(JSON.stringify({k:gv('fb-key'),p:gv('fb-pid'),a:gv('fb-appid')}));
-      url = base + '?s=' + sessionId + '#' + fbCfg;
-      setSt('fb-st','ok','');
-    }catch(e){
-      console.warn('FB session write failed, falling back',e);
-      url = makeFallbackUrl(base, title, time, count, curSel);
-    }
-  } else {
-    // No Firebase — use compact fallback URL (IDs only, questions from local bank)
-    url = makeFallbackUrl(base, title, time, count, curSel);
-  }
-
-  el('launch-url').textContent = url;
-
-  // Generate QR using Google Charts API — always works, no library needed
+  // QR
   el('qr-wrap').innerHTML='';
-  const img = document.createElement('img');
-  img.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=4&data=${encodeURIComponent(url)}`;
-  img.width=200; img.height=200; img.alt='QR Code';
-  img.style.cssText='display:block;border-radius:4px';
+  const img=document.createElement('img');
+  img.src=`https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=6&data=${encodeURIComponent(url)}`;
+  img.width=200;img.height=200;img.style.cssText='display:block;border-radius:4px';
+  img.alt='QR Code for students';
   el('qr-wrap').appendChild(img);
 
+  el('session-status-msg').textContent='Waiting for students to join…';
+  el('btn-go-live').style.display='';
+  el('btn-end-session').style.display='none';
+  el('btn-go-live-2').style.display='';
+  el('btn-end-2').style.display='none';
+  el('btn-unlock').textContent='🔒 Answers Locked';
+  el('btn-unlock').className='btn btn-warn w100';
+
+  // Start listening to lobby
+  startLobbyListener();
+  launchTab('qr');
   show('s-launch');
 };
 
-function makeFallbackUrl(base, title, time, count, ids){
-  // Compact: only IDs — only works on same device (teacher testing)
-  const p = btoa(JSON.stringify({title,time,count,qids:ids}));
-  return base+'?s=local_'+p;
-}
-
-window.copyUrl = function(){
+window.copyUrl=function(){
   const url=el('launch-url').textContent;
   navigator.clipboard?.writeText(url).then(()=>{
-    const btn=event.target; btn.textContent='Copied!'; setTimeout(()=>btn.textContent='Copy Link',2000);
-  }).catch(()=>{ alert(url); });
+    const btn=event.target;btn.textContent='Copied!';
+    setTimeout(()=>btn.textContent='Copy Link',2000);
+  }).catch(()=>alert(url));
 };
 
-/* ══════════════════════════════════════
-   PARSE STUDENT URL
-══════════════════════════════════════ */
-async function parseStudentUrl(){
-  const p=new URLSearchParams(window.location.search);
-  const s=p.get('s'); if(!s) return null;
+window.launchTab=function(tab){
+  ['qr','lobby','unlock'].forEach(t=>{
+    const div=el('lt-'+t);if(div)div.style.display=t===tab?'':'none';
+  });
+  document.querySelectorAll('#s-launch .tab').forEach((t,i)=>{
+    t.classList.toggle('on',['qr','lobby','unlock'][i]===tab);
+  });
+};
 
-  if(s.startsWith('local_')){
-    // fallback local mode
-    try{ return JSON.parse(atob(s.slice(6))); }catch(e){ return null; }
-  }
-
-  // Firebase session
-  const fbOk = await initFBFromMeta(s);
-  if(fbOk){
-    try{
-      const snap = await _fb.getDoc(_fb.doc(db,'sessions',s));
-      if(snap.exists()){ const d=snap.data(); d.sessionId=s; return d; }
-    }catch(e){ console.warn('Session fetch failed',e); }
-  }
-  return null;
+function startLobbyListener(){
+  if(lobbyUnsubscribe){lobbyUnsubscribe();lobbyUnsubscribe=null;}
+  if(!fbReady||!activeSessionId)return;
+  lobbyUnsubscribe=_fb.onSnapshot(
+    _fb.query(_fb.collection(db,'lobby_'+activeSessionId),_fb.orderBy('ts','asc')),
+    snap=>{
+      const entries=snap.docs.map(d=>({id:d.id,...d.data()}));
+      renderLobby(entries);
+    }
+  );
 }
 
-async function initFBFromMeta(sid){
-  // Priority 1: extract Firebase config from URL hash (most reliable on all browsers)
-  try{
-    const hash = window.location.hash.slice(1);
-    if(hash){
-      const cfg = JSON.parse(atob(hash));
-      if(cfg.k && cfg.p && cfg.a){
-        if(el('fb-key')) el('fb-key').value=cfg.k;
-        if(el('fb-pid')) el('fb-pid').value=cfg.p;
-        if(el('fb-appid')) el('fb-appid').value=cfg.a;
-        return await initFB();
-      }
-    }
-  }catch(e){}
-  // Priority 2: use locally cached config (teacher testing on same device)
-  try{
-    const cfg=JSON.parse(localStorage.getItem('cq3_cfg')||'{}');
-    if(cfg.fbKey&&cfg.fbPid&&cfg.fbAppid){
-      if(el('fb-key')) el('fb-key').value=cfg.fbKey;
-      if(el('fb-pid')) el('fb-pid').value=cfg.fbPid;
-      if(el('fb-appid')) el('fb-appid').value=cfg.fbAppid;
-      return await initFB();
-    }
-  }catch(e){}
-  return false;
-}
-
-/* ══════════════════════════════════════
-   STUDENT LOGIN
-══════════════════════════════════════ */
-async function initStudentMode(){
-  showSplash('Connecting to quiz…');
-  const params = await parseStudentUrl();
-  hideSplash();
-  if(!params){
-    // Could not load session — show friendly error instead of teacher setup
-    show('s-login');
-    el('lg-title').textContent='Session Not Found';
-    el('lg-meta').textContent='This link may have expired. Ask your teacher for a new one.';
-    el('stu-name').style.display='none';
-    document.querySelector('#s-login .btn-grn').style.display='none';
+function renderLobby(entries){
+  const count=entries.length;
+  el('lobby-count-badge').textContent=count?`(${count})`:'';
+  el('lobby-count-txt').textContent=`${count} joined`;
+  const list=el('lobby-list');
+  if(!count){
+    list.innerHTML='<div class="empty"><span class="empty-i">⏳</span>Waiting for students to join…</div>';
     return;
   }
-  qParams=params;
-  el('lg-title').textContent=params.title||'Quiz';
-  const qCount=(params.qs||params.qids||[]).length;
-  el('lg-meta').textContent=`${qCount} questions • ${params.time||15} minutes`;
-  el('stu-name').style.display='';
-  el('stu-name').value='';
-  const startBtn=document.querySelector('#s-login .btn-grn');
-  if(startBtn) startBtn.style.display='';
-  show('s-login');
+  list.innerHTML=entries.map(e=>{
+    const statusCls=e.status==='submitted'?'chip-submitted':e.status==='started'?'chip-started':'chip-joined';
+    const statusLbl=e.status==='submitted'?'✓ Submitted':e.status==='started'?'▶ Started':'● Waiting';
+    return`<div class="lobby-row">
+      <div style="flex:1">
+        <div class="lobby-name">${esc(e.name)}</div>
+        <div class="lobby-roll">${esc(e.roll)} • ${esc(e.email)}</div>
+      </div>
+      <span class="chip ${statusCls}" style="font-size:10px">${statusLbl}</span>
+      <button class="btn-icon" onclick="removeFromLobby('${e.id}')" title="Remove" style="color:var(--err);font-size:11px">✕</button>
+    </div>`;
+  }).join('');
 }
 
-window.startQuiz = function(){
-  const name=el('stu-name').value.trim();
-  if(!name){ alert('Please enter your name.'); return; }
-  stuName=name;
+window.removeFromLobby=async function(docId){
+  if(!confirm('Remove this student from the lobby?'))return;
+  try{
+    await _fb.deleteDoc(_fb.doc(db,'lobby_'+activeSessionId,docId));
+  }catch(e){alert('Remove failed: '+e.message);}
+};
 
-  let pool = [];
-  if(qParams){
-    pool = qParams.qs || [];
-    if(!pool.length){
-      const ids=qParams.qids||[];
-      pool=bank.filter(q=>ids.includes(q.id));
+window.goLive=async function(){
+  if(!fbReady||!activeSessionId)return;
+  try{
+    await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{status:'live'});
+    el('session-status-msg').textContent='✅ Test is live! Students are now taking the quiz.';
+    el('btn-go-live').style.display='none';
+    el('btn-end-session').style.display='';
+    el('btn-go-live-2').style.display='none';
+    el('btn-end-2').style.display='';
+  }catch(e){alert('Go live failed: '+e.message);}
+};
+
+window.endSession=async function(){
+  if(!confirm('End this session? All students still attempting will be auto-submitted.'))return;
+  if(!fbReady||!activeSessionId)return;
+  try{
+    await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{status:'ended'});
+    el('session-status-msg').textContent='⏹ Session ended.';
+    el('btn-end-session').style.display='none';
+    el('btn-end-2').style.display='none';
+  }catch(e){alert('End session failed: '+e.message);}
+};
+
+window.toggleUnlock=async function(){
+  if(!fbReady||!activeSessionId){setSt('unlock-st','err','No active session.');return;}
+  answersLocked=!answersLocked;
+  const btn=el('btn-unlock');
+  btn.textContent=answersLocked?'🔒 Answers Locked':'🔓 Answers Unlocked';
+  btn.className=answersLocked?'btn btn-warn w100':'btn btn-grn w100';
+  try{
+    await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{answersLocked});
+    setSt('unlock-st',answersLocked?'info':'ok',
+      answersLocked?'Answers are now locked.':'✅ Students can now see correct answers.');
+  }catch(e){setSt('unlock-st','err','Update failed: '+e.message);}
+};
+
+/* ═══════════════════════════════════════════
+   STUDENT FLOW
+═══════════════════════════════════════════ */
+async function initStudentMode(){
+  showSplash('Loading quiz…');
+  const sid=new URLSearchParams(window.location.search).get('s');
+  if(!sid){hideSplash();show('s-login-teacher');return;}
+
+  // Load session from Firebase
+  try{
+    const snap=await _fb.getDoc(_fb.doc(db,'sessions',sid));
+    if(!snap.exists()){
+      hideSplash();
+      showStuError('Session not found. Ask your teacher for the correct link.');
+      return;
     }
-  } else {
-    pool=bank.filter(q=>curSel.includes(q.id));
+    qParams={sessionId:sid,...snap.data()};
+  }catch(e){
+    hideSplash();
+    showStuError('Could not connect. Check your internet and try again.');
+    return;
   }
 
-  if(!pool.length){ alert('No questions available. Ask your teacher to check the setup.'); return; }
+  hideSplash();
+  el('stu-appname-top').textContent=appCfg?.appName||'ClassQuiz';
+  el('stu-session-title').textContent=qParams.sessionName||qParams.testLabel||'Quiz';
+  el('stu-session-meta').textContent=
+    `${(qParams.qs||[]).length} questions • ${qParams.time||15} minutes`;
+  el('stu-login-card').style.display='';
+  el('sl-name').value='';el('sl-roll').value='';el('sl-email').value='';
+  show('s-stu-login');
+}
 
-  // shuffle
-  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]; }
-  const cnt=qParams?(qParams.count||0):parseInt(gv('cfg-count'))||0;
+function showStuError(msg){
+  el('stu-session-title').textContent='Cannot Join';
+  el('stu-session-meta').textContent=msg;
+  el('stu-login-card').style.display='none';
+  show('s-stu-login');
+}
+
+window.stuJoin=async function(){
+  const name=gv('sl-name'),roll=gv('sl-roll'),email=gv('sl-email');
+  if(!name){alert('Please enter your full name.');el('sl-name').focus();return;}
+  if(!roll){alert('Please enter your roll number.');el('sl-roll').focus();return;}
+  if(!email||!email.includes('@')){alert('Please enter a valid email.');el('sl-email').focus();return;}
+  stuName=name;stuRoll=roll;stuEmail=email;
+
+  // Check session status
+  const status=qParams?.status;
+  if(status==='ended'){
+    showStuError('This session has already ended.');return;
+  }
+
+  // Register in lobby
+  if(fbReady&&qParams?.sessionId){
+    try{
+      await _fb.setDoc(_fb.doc(db,'lobby_'+qParams.sessionId,roll.replace(/\W/g,'_')+'_'+Date.now()),{
+        name,roll,email,status:'joined',ts:Date.now()
+      });
+    }catch(e){console.warn('Lobby register:',e);}
+  }
+
+  // Show waiting screen
+  el('wait-title').textContent=qParams.sessionName||'Quiz';
+  el('wait-name').textContent='Joined as: '+name+' ('+roll+')';
+  show('s-stu-wait');
+
+  // Listen for session status change
+  listenForSessionStart();
+};
+
+function listenForSessionStart(){
+  if(!fbReady||!qParams?.sessionId)return;
+  // If already live, start immediately
+  if(qParams.status==='live'){beginQuiz();return;}
+  // Otherwise listen
+  const unsub=_fb.onSnapshot(_fb.doc(db,'sessions',qParams.sessionId),snap=>{
+    if(!snap.exists())return;
+    const data=snap.data();
+    if(data.status==='live'){
+      unsub();
+      qParams={...qParams,...data};
+      beginQuiz();
+    }else if(data.status==='ended'){
+      unsub();
+      showStuError('This session was ended before you could start.');
+    }
+  });
+}
+
+function beginQuiz(){
+  let pool=qParams.qs||[];
+  if(!pool.length){alert('No questions in this session.');return;}
+  // Shuffle
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+  const cnt=qParams.count||0;
   quizQs=cnt>0?pool.slice(0,cnt):pool;
 
-  answers={}; curQ=0; vioCount=0; offSecs=0; firstVio=true; quizActive=true;
-  timeLeft=(qParams?qParams.time:parseInt(gv('cfg-time'))||15)*60;
-  quizStart=Date.now();
+  answers={};curQ=0;vioCount=0;offSecs=0;firstVio=true;quizActive=true;reviewMode=false;
+  timeLeft=(qParams.time||15)*60;
+
+  // Update lobby status
+  if(fbReady&&qParams.sessionId){
+    const lobbyKey=stuRoll.replace(/\W/g,'_')+'_';
+    // Best-effort update
+    _fb.getDocs(_fb.query(_fb.collection(db,'lobby_'+qParams.sessionId),
+      _fb.where('roll','==',stuRoll))).then(snap=>{
+      snap.docs.forEach(d=>_fb.updateDoc(d.ref,{status:'started'}));
+    }).catch(()=>{});
+  }
 
   el('hstu').textContent='👤 '+stuName;
   show('s-quiz');
-  renderQ();
-  startTmr();
-  reqFS();
+  renderQ();renderDots();
+  startTmr();reqFS();
   document.addEventListener('visibilitychange',onVis);
   document.addEventListener('fullscreenchange',onFS);
   document.addEventListener('webkitfullscreenchange',onFS);
-};
 
-/* ══════════════════════════════════════
+  // Listen for session end
+  listenForSessionEnd();
+}
+
+function listenForSessionEnd(){
+  if(!fbReady||!qParams?.sessionId)return;
+  const unsub=_fb.onSnapshot(_fb.doc(db,'sessions',qParams.sessionId),snap=>{
+    if(!snap.exists())return;
+    if(snap.data().status==='ended'&&quizActive){
+      unsub();
+      el('ov-session-ended').classList.add('on');
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════
    FULLSCREEN + VIOLATIONS
-══════════════════════════════════════ */
-function reqFS(){ const e=document.documentElement; (e.requestFullscreen||e.webkitRequestFullscreen||function(){}).call(e); }
-function exitFS(){ (document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document); }
-function onFS(){ if(!quizActive) return; if(!(document.fullscreenElement||document.webkitFullscreenElement)) trigVio(); }
-function onVis(){ if(!quizActive) return; if(document.hidden){ offStart=Date.now(); trigVio(); } else { if(offStart){ offSecs+=Math.round((Date.now()-offStart)/1000); offStart=null; } } }
+═══════════════════════════════════════════ */
+function reqFS(){const e=document.documentElement;(e.requestFullscreen||e.webkitRequestFullscreen||function(){}).call(e);}
+function exitFS(){try{(document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document);}catch(e){}}
+function onFS(){if(!quizActive)return;if(!(document.fullscreenElement||document.webkitFullscreenElement))trigVio();}
+function onVis(){
+  if(!quizActive)return;
+  if(document.hidden){offStart=Date.now();trigVio();}
+  else{if(offStart){offSecs+=Math.round((Date.now()-offStart)/1000);offStart=null;}}
+}
 
 function trigVio(){
-  if(!quizActive) return;
+  if(!quizActive)return;
   vioCount++;
   el('hvio').style.display='';
   el('hvio').textContent=`⚠ ${vioCount} violation${vioCount>1?'s':''}`;
   const sec=!firstVio;
   el('ov-vt').textContent=sec?'🚨 Second Violation!':'⚠ Screen Left — Warning!';
-  el('ov-vb').textContent=sec?'Quiz restarts with remaining time. Violation recorded.':'Return within 10 seconds or the quiz will restart.';
+  el('ov-vb').textContent=sec
+    ?'Quiz restarts with remaining time. Violation recorded.'
+    :'Return within 10 seconds or the quiz will restart.';
   el('ov-vbtn').textContent=sec?'Restart Quiz':'Return to Quiz';
   el('ov-vbtn').onclick=sec?restartVio:retVio;
-  vioCd=10; el('ov-vc').textContent='10';
+  vioCd=10;el('ov-vc').textContent='10';
   el('ov-vio').classList.add('on');
   clearInterval(vioTimer);
-  vioTimer=setInterval(()=>{ vioCd--; el('ov-vc').textContent=vioCd; if(vioCd<=0){ clearInterval(vioTimer); restartVio(); } },1000);
+  vioTimer=setInterval(()=>{
+    vioCd--;el('ov-vc').textContent=vioCd;
+    if(vioCd<=0){clearInterval(vioTimer);restartVio();}
+  },1000);
   firstVio=false;
 }
-window.retVio = function(){ clearInterval(vioTimer); closeOv('ov-vio'); reqFS(); };
+
+function retVio(){clearInterval(vioTimer);closeOv('ov-vio');reqFS();}
 function restartVio(){
-  clearInterval(vioTimer); closeOv('ov-vio'); answers={}; curQ=0; firstVio=true;
-  for(let i=quizQs.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1));[quizQs[i],quizQs[j]]=[quizQs[j],quizQs[i]]; }
-  renderQ(); reqFS();
+  clearInterval(vioTimer);closeOv('ov-vio');
+  answers={};curQ=0;firstVio=true;
+  for(let i=quizQs.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[quizQs[i],quizQs[j]]=[quizQs[j],quizQs[i]];}
+  renderQ();renderDots();reqFS();
 }
 
-/* ══════════════════════════════════════
+/* ═══════════════════════════════════════════
    TIMER
-══════════════════════════════════════ */
+═══════════════════════════════════════════ */
 function startTmr(){
   clearInterval(timerInt);
-  timerInt=setInterval(()=>{ timeLeft--; updTmr(); if(timeLeft<=0){ clearInterval(timerInt); finishQuiz(); } },1000);
+  timerInt=setInterval(()=>{
+    timeLeft--;updTmr();
+    if(timeLeft<=0){clearInterval(timerInt);finishQuiz();}
+  },1000);
   updTmr();
 }
 function updTmr(){
-  const m=String(Math.floor(timeLeft/60)).padStart(2,'0'), s=String(timeLeft%60).padStart(2,'0');
-  const t=el('htmr'); t.textContent=`⏱ ${m}:${s}`; t.classList.toggle('warn',timeLeft<=60);
+  const m=String(Math.floor(timeLeft/60)).padStart(2,'0'),s=String(timeLeft%60).padStart(2,'0');
+  const t=el('htmr');t.textContent=`⏱ ${m}:${s}`;t.classList.toggle('warn',timeLeft<=60);
 }
 
-/* ══════════════════════════════════════
+/* ═══════════════════════════════════════════
    RENDER QUESTION
-══════════════════════════════════════ */
+═══════════════════════════════════════════ */
 function renderQ(){
   const q=quizQs[curQ];
   el('qpg').style.width=((curQ+1)/quizQs.length*100)+'%';
   el('hq').textContent=`Q ${curQ+1} / ${quizQs.length}`;
-  el('btn-prv').style.display=curQ===0?'none':'';
+  el('btn-prv').style.display=(reviewMode||curQ>0)?'':'none';
   const last=curQ===quizQs.length-1;
   el('btn-nxt').style.display=last?'none':'';
   el('btn-sub').style.display=last?'':'none';
 
-  const tl=q.type==='mcq'?'Multiple Choice':q.type==='tf'?'True / False':'Fill in the Blank';
-  let html=`<div class="qnum">Question ${curQ+1} of ${quizQs.length}</div>
+  const tl=q.type==='mcq'?'Multiple Choice':'True / False';
+  let html=`<div class="qnum">Question ${curQ+1} of ${quizQs.length}${reviewMode?' — Review':''}${q.difficulty?' · '+q.difficulty:''}</div>
     <span class="chip chip-${q.type}" style="margin-bottom:10px;display:inline-block">${tl}</span>
     <div class="qtxt">${esc(q.text)}</div>`;
 
@@ -1011,203 +1864,413 @@ function renderQ(){
     html+=`<div class="opts">`;
     (q.options||[]).forEach((o,i)=>{
       const sel=answers[curQ]===String(i)?'sel':'';
-      html+=`<button class="opt ${sel}" onclick="pickOpt(${i})"><span class="oltr">${'ABCD'[i]||i+1}</span><span>${esc(o)}</span></button>`;
+      const clickable=reviewMode?'':'clickable';
+      const onclick=reviewMode?'':`onclick="pickOpt(${i})"`;
+      html+=`<button class="opt ${sel} ${clickable}" ${onclick}>
+        <span class="oltr">${q.type==='mcq'?'ABCD'[i]:o.charAt(0)}</span>
+        <span style="flex:1">${esc(o)}</span>
+        ${reviewMode&&answers[curQ]===String(i)?'<span style="font-size:10px;color:var(--acc)">Your answer</span>':''}
+      </button>`;
     });
     html+=`</div>`;
-  } else {
-    html+=`<input type="text" style="font-size:15px;padding:12px" placeholder="Type your answer…"
-      value="${esc(answers[curQ]||'')}" oninput="answers[curQ]=this.value"
-      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>`;
+    if(reviewMode&&answers[curQ]===undefined){
+      html+=`<div style="font-size:12px;color:var(--m);text-align:center;margin-top:12px">You did not answer this question</div>`;
+    }
   }
+
+  if(reviewMode){
+    html+=`<div style="margin-top:14px;text-align:center;font-size:12px;color:var(--m2);padding:10px;
+      background:var(--s2);border-radius:8px">
+      🔒 Review mode — answers cannot be changed
+    </div>`;
+  }
+
+  // Next / Submit button embedded in question body — 28px below last option
+  html+=`<div style="height:1px;background:var(--b);margin:28px 0 20px"></div>`;
+  if(last){
+    html+=`<button class="btn btn-grn w100" onclick="confSub()" style="padding:14px;font-size:14px">
+      Submit Quiz ✓
+    </button>`;
+  } else {
+    html+=`<button class="btn btn-pri w100" onclick="navQ(1)" style="padding:14px;font-size:14px">
+      Next Question →
+    </button>`;
+  }
+
+  // Show prev hint only if not on first question
+  if(curQ > 0){
+    html+=`<div style="text-align:center;margin-top:12px">
+      <button class="btn btn-ghost btn-sm" onclick="navQ(-1)" style="font-size:11px;opacity:0.7;padding:6px 14px">
+        ← Previous (review only)
+      </button>
+    </div>`;
+  }
+
   el('qbody').innerHTML=html;
 }
-window.pickOpt = function(i){ answers[curQ]=String(i); renderQ(); };
-window.navQ = function(d){ curQ=Math.max(0,Math.min(quizQs.length-1,curQ+d)); renderQ(); };
 
-/* ══════════════════════════════════════
+function renderDots(){
+  el('q-dots').innerHTML=quizQs.map((_,i)=>{
+    const cls=i===curQ?'qdot current':(answers[i]!==undefined)?'qdot answered':'qdot';
+    return`<div class="${cls}" onclick="jumpQ(${i})">${i+1}</div>`;
+  }).join('');
+}
+
+window.jumpQ=function(i){curQ=i;renderQ();renderDots();};
+window.pickOpt=function(i){if(reviewMode)return;answers[curQ]=String(i);renderQ();renderDots();};
+window.navQ=function(d){curQ=Math.max(0,Math.min(quizQs.length-1,curQ+d));renderQ();renderDots();};
+
+/* ═══════════════════════════════════════════
    SUBMIT
-══════════════════════════════════════ */
-window.confSub = function(){
-  el('ov-sm').textContent=`Answered ${Object.keys(answers).length} of ${quizQs.length}. Submit?`;
+═══════════════════════════════════════════ */
+window.confSub=function(){
+  const ans=Object.keys(answers).filter(k=>answers[k]!=='').length;
+  const unans=quizQs.length-ans;
+  el('ov-sm').textContent=`Answered ${ans} of ${quizQs.length}.${unans>0?` ${unans} unanswered.`:''} Submit now?`;
   el('ov-sub').classList.add('on');
 };
 
-window.finishQuiz = async function(){
-  closeOv('ov-sub'); quizActive=false; clearInterval(timerInt); clearInterval(vioTimer);
+window.finishQuiz=async function(){
+  closeOv('ov-sub');closeOv('ov-session-ended');
+  quizActive=false;clearInterval(timerInt);clearInterval(vioTimer);
   document.removeEventListener('visibilitychange',onVis);
   document.removeEventListener('fullscreenchange',onFS);
   document.removeEventListener('webkitfullscreenchange',onFS);
-  exitFS();
+  exitFS();reviewMode=true;
 
-  const timeTaken=((qParams?qParams.time:parseInt(gv('cfg-time'))||15)*60)-timeLeft;
-  let correct=0, attempted=0;
+  const timeTaken=((qParams?.time||15)*60)-timeLeft;
+  let correct=0,attempted=0;
   quizQs.forEach((q,i)=>{
     const ua=answers[i];
-    if(ua===undefined||ua==='') return;
+    if(ua===undefined||ua==='')return;
     attempted++;
-    if(q.type==='mcq'){ if(parseInt(ua)===q.ci) correct++; }
-    else if(q.type==='tf'){ if((['True','False'][parseInt(ua)]||'').toLowerCase()===(q.answer||'').toLowerCase()) correct++; }
-    else { if(ua.trim().toLowerCase()===(q.answer||'').trim().toLowerCase()&&q.answer) correct++; }
+    if(q.type==='mcq'){if(parseInt(ua)===(q.correctIndex||0))correct++;}
+    else if(q.type==='tf'){if((['True','False'][parseInt(ua)]||'').toLowerCase()===(q.answer||'').toLowerCase())correct++;}
   });
 
   const pct=quizQs.length?Math.round(correct/quizQs.length*100):0;
-  const rec={name:stuName,total:quizQs.length,attempted,correct,wrong:attempted-correct,
-    pct,time:fmtT(timeTaken),violations:vioCount,offSecs,ts:Date.now(),
-    session:qParams?.sessionId||sessionId||'local'};
+  const rec={
+    studentName:stuName,roll:stuRoll,email:stuEmail,
+    total:quizQs.length,attempted,correct,wrong:attempted-correct,
+    pct,timeTaken:fmtT(timeTaken),violations:vioCount,offSecs,
+    sessionId:qParams?.sessionId||'',
+    sessionName:qParams?.sessionName||'',
+    testLabel:qParams?.testLabel||'',
+    programmeName:qParams?.programmeName||'',
+    courseId:qParams?.courseId||'',
+    subjectName:qParams?.subjectName||'',
+    topicName:qParams?.topicName||'',
+    teacherName:qParams?.teacherName||'',
+    teacherEmail:qParams?.teacherEmail||'',
+    ts:Date.now()
+  };
 
-  records.push(rec); saveRec();
-
-  // Push to Firebase
-  if(db){
+  if(fbReady){
     try{
-      const col='results_'+(qParams?.title||gv('cfg-title')||'quiz').replace(/\W/g,'_');
-      await _fb.addDoc(_fb.collection(db,col),rec);
-    }catch(e){ console.warn('FB save:',e); }
+      await _fb.addDoc(_fb.collection(db,'results'),rec);
+      // Update lobby status
+      if(qParams?.sessionId){
+        _fb.getDocs(_fb.query(_fb.collection(db,'lobby_'+qParams.sessionId),
+          _fb.where('roll','==',stuRoll))).then(snap=>{
+          snap.docs.forEach(d=>_fb.updateDoc(d.ref,{status:'submitted'}));
+        }).catch(()=>{});
+      }
+    }catch(e){console.warn('Save result:',e);}
   }
 
   showResult(rec);
 };
 
-/* ══════════════════════════════════════
-   RESULT
-══════════════════════════════════════ */
-function showResult(r){
+/* ═══════════════════════════════════════════
+   RESULT SCREEN
+═══════════════════════════════════════════ */
+async function showResult(r){
   const color=r.pct>=70?'#6c63ff':r.pct>=50?'#f59e0b':'#ef4444';
   el('sring').style.background=`conic-gradient(${color} ${r.pct*3.6}deg,var(--s2) 0%)`;
   el('rpct').textContent=r.pct+'%';
-  el('rname').textContent=r.name;
+  el('rname').textContent=r.studentName;
+  el('rroll').textContent=`Roll: ${r.roll} | ${r.email}`;
   el('rmood').textContent=r.pct>=70?'🎉 Excellent!':r.pct>=50?'👍 Good effort!':'📚 Keep practising!';
   el('ratt').textContent=r.attempted;
   el('rcor').textContent=r.correct;
   el('rwrg').textContent=r.wrong;
-  el('rtim').textContent=r.time;
+  el('rtim').textContent=r.timeTaken;
   const vb=el('rvio');
   vb.style.display=r.violations>0?'':'none';
-  if(r.violations>0) vb.textContent=`⚠ ${r.violations} violation(s) recorded. Off-screen time: ${r.offSecs}s.`;
-  // hide next-student on student devices
-  el('btn-next-stu').style.display=qParams?'none':'';
+  if(r.violations>0)vb.textContent=`⚠ ${r.violations} violation(s). Off-screen: ${r.offSecs}s.`;
+
+  // Check if answers unlocked
+  let locked=true;
+  if(fbReady&&qParams?.sessionId){
+    try{
+      const snap=await _fb.getDoc(_fb.doc(db,'sessions',qParams.sessionId));
+      if(snap.exists())locked=snap.data().answersLocked!==false;
+    }catch(e){}
+  }
+
+  if(!locked){
+    showAnswerReview();
+    el('ans-locked-msg').style.display='none';
+    el('btn-check-unlock').style.display='none';
+  }else{
+    el('ans-review-wrap').style.display='none';
+    el('ans-locked-msg').style.display=qParams?.sessionId?'':'none';
+    el('btn-check-unlock').style.display=qParams?.sessionId?'':'none';
+  }
   show('s-result');
 }
 
-window.shareRes = function(){
-  const r=records[records.length-1]; if(!r) return;
-  const t=`📝 ${qParams?.title||gv('cfg-title')}\n👤 ${r.name}\n✅ ${r.correct}/${r.total} correct\n📊 ${r.pct}%\n⏱ ${r.time}`;
-  if(navigator.share) navigator.share({title:'Quiz Result',text:t}).catch(()=>{});
-  else { const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('Result copied!'); }
+window.checkUnlock=async function(){
+  if(!fbReady||!qParams?.sessionId)return;
+  const btn=el('btn-check-unlock');
+  btn.textContent='Checking…';btn.disabled=true;
+  try{
+    const snap=await _fb.getDoc(_fb.doc(db,'sessions',qParams.sessionId));
+    if(snap.exists()&&snap.data().answersLocked===false){
+      showAnswerReview();
+      el('ans-locked-msg').style.display='none';
+      btn.style.display='none';
+    }else{
+      btn.textContent='Still locked — try again later';
+      setTimeout(()=>{btn.textContent='🔄 Check if answers are unlocked';btn.disabled=false;},3000);
+      return;
+    }
+  }catch(e){btn.textContent='Error — try again';setTimeout(()=>{btn.disabled=false;btn.textContent='🔄 Check if answers are unlocked';},2000);}
+  btn.disabled=false;
 };
 
-window.nextStu = function(){
-  answers={}; curQ=0; vioCount=0; offSecs=0; firstVio=true;
-  el('stu-name').value=''; renderCur(); show('s-curate');
-};
-
-/* ══════════════════════════════════════
-   DASHBOARD
-══════════════════════════════════════ */
-window.goDash = function(){
-  const pass=gv('cfg-pass');
-  if(pass){ el('ov-pass').classList.add('on'); el('pass-inp').value=''; el('pass-st').className='st'; }
-  else openDash();
-};
-window.checkPass = function(){
-  if(el('pass-inp').value===gv('cfg-pass')){ closeOv('ov-pass'); openDash(); }
-  else setSt('pass-st','err','Incorrect password.');
-};
-
-async function openDash(){
-  saveCfg(); loadRec();
-  el('dash-title').textContent=(gv('cfg-title')||'Quiz')+' — Dashboard';
-  el('dash-email').textContent=gv('cfg-email')||'(no email set)';
-  await refreshDash();
-  show('s-dash');
+function showAnswerReview(){
+  const list=el('ans-review-list');if(!list)return;
+  list.innerHTML=quizQs.map((q,i)=>{
+    const ua=answers[i];
+    let correct=false,uTxt='Not answered',cTxt='';
+    if(q.type==='mcq'){
+      const uIdx=parseInt(ua);
+      correct=!isNaN(uIdx)&&uIdx===(q.correctIndex||0);
+      uTxt=!isNaN(uIdx)?`${'ABCD'[uIdx]}. ${q.options[uIdx]||''}`: 'Not answered';
+      cTxt=`${'ABCD'[q.correctIndex||0]}. ${q.options[q.correctIndex||0]||''}`;
+    }else{
+      const uText=['True','False'][parseInt(ua)]||'';
+      correct=uText.toLowerCase()===(q.answer||'').toLowerCase();
+      uTxt=uText||'Not answered';
+      cTxt=q.answer||'';
+    }
+    const cls=!ua?'ans-skip':correct?'ans-ok':'ans-ng';
+    const icon=!ua?'⬜':correct?'✅':'❌';
+    return`<div class="ans-item ${cls}">
+      <div class="ans-q">${icon} Q${i+1}. ${esc(q.text)}</div>
+      <div class="ans-row">
+        <span style="color:var(--m)">Your answer:</span>
+        <span style="color:${correct?'var(--grn)':'var(--err)'};font-weight:600">${esc(uTxt)}</span>
+        ${!correct&&cTxt?`<span style="color:var(--m)">· Correct:</span><span style="color:var(--grn);font-weight:600">${esc(cTxt)}</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  el('ans-review-wrap').style.display='';
 }
 
-window.refreshDash = async function(){
-  if(db){
-    try{
-      const col='results_'+(gv('cfg-title')||'quiz').replace(/\W/g,'_');
-      const snap=await _fb.getDocs(_fb.query(_fb.collection(db,col),_fb.orderBy('ts','asc')));
-      const fbRecs=snap.docs.map(d=>d.data());
-      fbRecs.forEach(r=>{ if(!records.find(x=>x.name===r.name&&x.ts===r.ts)) records.push(r); });
-    }catch(e){ console.warn('FB fetch:',e); }
+window.shareRes=function(){
+  const pct=el('rpct').textContent;
+  const cor=el('rcor').textContent;
+  const tot=el('ratt').textContent;
+  const t=`📝 ${qParams?.sessionName||'Quiz'}\n👤 ${stuName} (${stuRoll})\n📧 ${stuEmail}\n✅ ${cor}/${quizQs.length} correct\n📊 ${pct}\n⏱ ${el('rtim').textContent}`;
+  if(navigator.share)navigator.share({title:'Quiz Result',text:t}).catch(()=>{});
+  else{const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('Result copied to clipboard!');}
+};
+
+/* ═══════════════════════════════════════════
+   RESULTS DASHBOARD
+═══════════════════════════════════════════ */
+function populateResultFilters(){
+  const progs=[...new Set(allResults.map(r=>r.programmeName).filter(Boolean))].sort();
+  const subjs=[...new Set(allResults.map(r=>r.courseId+'::'+r.subjectName).filter(Boolean))].sort();
+  const topics=[...new Set(allResults.map(r=>r.topicName).filter(Boolean))].sort();
+  const testids=[...new Set(allResults.map(r=>r.testLabel).filter(Boolean))].sort();
+  const teachers=[...new Set(allResults.map(r=>r.teacherName).filter(Boolean))].sort();
+  fillSelect('rf-prog',progs);
+  fillSelect('rf-subj',subjs,x=>x.split('::')[0],x=>x.split('::').join(' — '));
+  fillSelect('rf-topic',topics);
+  fillSelect('rf-testid',testids);
+  fillSelect('rf-teacher',teachers);
+}
+
+window.renderResults=function(){
+  const prog=gv('rf-prog'),subj=gv('rf-subj'),topic=gv('rf-topic'),
+        testid=gv('rf-testid'),teacher_f=gv('rf-teacher'),
+        srch=(gv('rf-search')||'').toLowerCase();
+  const filtered=allResults.filter(r=>{
+    if(prog&&r.programmeName!==prog)return false;
+    if(subj&&r.courseId!==subj)return false;
+    if(topic&&r.topicName!==topic)return false;
+    if(testid&&r.testLabel!==testid)return false;
+    if(teacher_f&&r.teacherName!==teacher_f)return false;
+    if(srch&&!(r.studentName||'').toLowerCase().includes(srch)&&
+       !(r.roll||'').toLowerCase().includes(srch)&&
+       !(r.email||'').toLowerCase().includes(srch))return false;
+    return true;
+  });
+
+  el('rs-tot').textContent=filtered.length;
+  if(!filtered.length){
+    el('rs-avg').textContent=el('rs-hi').textContent=el('rs-lo').textContent='—';
+    el('results-tbody').innerHTML=`<tr><td colspan="11" style="text-align:center;color:var(--m);padding:24px">No results match.</td></tr>`;
+    return;
   }
-  renderDash(records);
+  const pcts=filtered.map(r=>r.pct);
+  el('rs-avg').textContent=Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length)+'%';
+  el('rs-hi').textContent=Math.max(...pcts)+'%';
+  el('rs-lo').textContent=Math.min(...pcts)+'%';
+
+  el('results-tbody').innerHTML=filtered.map((r,i)=>`
+    <tr>
+      <td>${i+1}</td>
+      <td><strong>${esc(r.studentName||'—')}</strong></td>
+      <td>${esc(r.roll||'—')}</td>
+      <td style="font-size:11px">${esc(r.email||'—')}</td>
+      <td style="font-size:11px">${esc(r.programmeName||'—')}</td>
+      <td style="font-size:11px">${esc(r.courseId||'')} ${esc(r.subjectName||'—')}</td>
+      <td style="font-size:11px">${esc(r.testLabel||'—')}</td>
+      <td style="font-size:11px">${esc(r.teacherName||'—')}</td>
+      <td style="color:${r.pct>=70?'var(--grn)':r.pct>=50?'var(--warn)':'var(--err)'};font-weight:700">${r.pct}%</td>
+      <td>${esc(r.timeTaken||'—')}</td>
+      <td style="color:${r.violations>0?'var(--warn)':'var(--m)'}">${r.violations||0}</td>
+    </tr>`).join('');
 };
 
-function renderDash(recs){
-  const tbody=el('dash-tbody');
-  el('d-tot').textContent=recs.length;
-  el('dash-live').textContent=recs.length?`${recs.length} result${recs.length>1?'s':''} collected`:'Waiting for students…';
-  if(!recs.length){ tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;color:var(--m);padding:24px">No results yet</td></tr>`; return; }
-  const pcts=recs.map(r=>r.pct);
-  el('d-avg').textContent=Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length)+'%';
-  el('d-hi').textContent=Math.max(...pcts)+'%';
-  el('d-lo').textContent=Math.min(...pcts)+'%';
-  tbody.innerHTML=recs.map((r,i)=>`
-    <tr>
-      <td>${i+1}</td><td><strong>${esc(r.name)}</strong></td>
-      <td>${r.attempted}/${r.total}</td>
-      <td style="color:var(--grn)">${r.correct}</td>
-      <td style="color:${r.pct>=70?'var(--grn)':r.pct>=50?'var(--warn)':'var(--err)'};font-weight:700">${r.pct}%</td>
-      <td>${r.time}</td>
-      <td style="color:${r.violations>0?'var(--warn)':'var(--m)'}">${r.violations}</td>
-      <td>${r.offSecs}s</td>
-    </tr>`).join('');
-}
-
-/* ══════════════════════════════════════
-   CSV + EMAIL
-══════════════════════════════════════ */
-function buildCSV(){
-  const h=['#','Name','Total','Attempted','Correct','Wrong','Score %','Time','Violations','Off-Screen(s)'];
-  const r=records.map((r,i)=>[i+1,r.name,r.total,r.attempted,r.correct,r.wrong,r.pct+'%',r.time,r.violations,r.offSecs]);
-  return [h,...r].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-}
-window.dlCSV = function(){
-  const blob=new Blob([buildCSV()],{type:'text/csv'});
+window.dlCSV=function(){
+  const headers=['#','Name','Roll','Email','Programme','Course ID','Subject','Topic','Test ID','Teacher','Attempted','Correct','Wrong','Score %','Time','Violations','Off-screen(s)'];
+  const rows=allResults.map((r,i)=>[
+    i+1,r.studentName,r.roll,r.email,
+    r.programmeName,r.courseId,r.subjectName,r.topicName,
+    r.testLabel,r.teacherName,
+    r.attempted,r.correct,r.wrong,r.pct+'%',r.timeTaken,r.violations,r.offSecs
+  ]);
+  const csv=[headers,...rows].map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download=(gv('cfg-title')||'quiz')+'_results.csv'; a.click();
+  const a=document.createElement('a');a.href=url;a.download='classquiz_results.csv';a.click();
   URL.revokeObjectURL(url);
 };
-window.sendEmail = async function(){
-  const key=gv('ejs-key'),svc=gv('ejs-svc'),tpl=gv('ejs-tpl'),email=gv('cfg-email');
-  if(!key||!svc||!tpl){ setSt('email-st','err','EmailJS credentials missing.'); return; }
-  if(!records.length){ setSt('email-st','err','No results to send.'); return; }
-  const btn=el('btn-email'); btn.innerHTML='<span class="spin"></span> Sending…'; btn.disabled=true;
+
+/* ═══════════════════════════════════════════
+   INIT — APP BOOTSTRAP
+═══════════════════════════════════════════ */
+async function bootstrap(){
+  showSplash('Starting ClassQuiz…');
+
+  // Load Firebase config from config.json
+  let fbCfg=null;
   try{
-    const m=await import('https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.esm.js');
-    const ejs=m.default||m;
-    ejs.init(key);
-    await ejs.send(svc,tpl,{teacher_email:email,quiz_title:gv('cfg-title'),csv_data:buildCSV(),student_count:records.length,date:new Date().toLocaleDateString()});
-    setSt('email-st','ok','✅ Sent to '+email);
-  }catch(e){ setSt('email-st','err','❌ '+(e.text||e.message||String(e))); }
-  btn.innerHTML='Send via EmailJS'; btn.disabled=false;
+    const resp=await fetch('./config.json');
+    if(resp.ok)fbCfg=await resp.json();
+  }catch(e){}
+
+  // Fallback: try localStorage
+  if(!fbCfg)fbCfg=loadFBCfg();
+
+  if(!fbCfg||!fbCfg.k||!fbCfg.p||!fbCfg.a){
+    hideSplash();
+    // Show inline config screen
+    showInlineConfig();
+    return;
+  }
+
+  saveFBCfg(fbCfg.k,fbCfg.p,fbCfg.a);
+  const ok=await initFB(fbCfg.k,fbCfg.p,fbCfg.a);
+  if(!ok){
+    hideSplash();
+    showInlineConfig('Firebase initialisation failed. Check your config.json values.');
+    return;
+  }
+
+  // Check if student URL
+  const sid=new URLSearchParams(window.location.search).get('s');
+  if(sid){
+    // Student mode — load app config from Firebase
+    try{
+      const snap=await _fb.getDoc(_fb.doc(db,'settings','app'));
+      if(snap.exists())appCfg=snap.data();
+    }catch(e){}
+    initStudentMode();
+    return;
+  }
+
+  // Teacher mode
+  try{
+    const snap=await _fb.getDoc(_fb.doc(db,'settings','app'));
+    if(!snap.exists()){
+      hideSplash();
+      show('s-firstrun');
+      return;
+    }
+    appCfg=snap.data();
+  }catch(e){
+    hideSplash();
+    showInlineConfig('Could not read app settings: '+e.message);
+    return;
+  }
+
+  hideSplash();
+  el('login-appname').textContent=appCfg.appName||'ClassQuiz';
+
+  // Check cached teacher
+  const cached=loadTCache();
+  if(cached){
+    teacher=cached;
+    el('tl-name').value=cached.name||'';
+    el('tl-email').value=cached.email||'';
+  }
+  show('s-login-teacher');
+}
+
+function showInlineConfig(errMsg){
+  // Show a minimal config screen over the splash
+  el('s-splash').style.display='none';
+  document.body.insertAdjacentHTML('afterbegin',`
+    <div id="s-inline-cfg" style="display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px;background:var(--bg)">
+      <div style="max-width:460px;width:100%">
+        <div style="text-align:center;margin-bottom:24px">
+          <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;background:linear-gradient(135deg,#6c63ff,#ff6584);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Self Assessment</div>
+          <div style="font-size:12px;color:#7070a0;margin-top:4px;letter-spacing:2px;text-transform:uppercase">Firebase Configuration</div>
+        </div>
+        ${errMsg?`<div class="st err" style="display:block;margin-bottom:14px">${errMsg}</div>`:''}
+        <div class="card">
+          <p style="font-size:13px;color:var(--m);margin-bottom:14px;line-height:1.7">
+            Enter your Firebase credentials. After saving, a <code style="background:var(--s2);padding:1px 5px;border-radius:4px;font-size:11px">config.json</code> file should also be placed in your GitHub Pages folder.
+          </p>
+          <label>Firebase API Key</label><input type="text" id="ic-key" placeholder="AIzaSy..."/>
+          <label>Project ID</label><input type="text" id="ic-pid" placeholder="my-project-12345"/>
+          <label>App ID</label><input type="text" id="ic-appid" placeholder="1:123456789:web:abcdef"/>
+          <button class="btn btn-pri w100" style="margin-top:16px" onclick="saveInlineCfg()">Connect to Firebase →</button>
+          <div class="st" id="ic-st"></div>
+        </div>
+        <div class="card" style="font-size:12px;color:var(--m);line-height:1.8">
+          <strong style="color:var(--txt)">config.json</strong> format (create this file in your GitHub Pages repo):<br>
+          <code style="display:block;background:var(--s2);padding:10px;border-radius:8px;margin-top:8px;font-size:11px;white-space:pre">{"k":"YOUR_API_KEY","p":"YOUR_PROJECT_ID","a":"YOUR_APP_ID"}</code>
+        </div>
+      </div>
+    </div>`);
+}
+
+window.saveInlineCfg=async function(){
+  const k=(document.getElementById('ic-key')?.value||'').trim();
+  const p=(document.getElementById('ic-pid')?.value||'').trim();
+  const a=(document.getElementById('ic-appid')?.value||'').trim();
+  if(!k||!p||!a){setSt('ic-st','err','Please fill in all three fields.');return;}
+  const btn=event.target;btn.textContent='Connecting…';btn.disabled=true;
+  const ok=await initFB(k,p,a);
+  if(!ok){setSt('ic-st','err','Could not connect. Check your values and try again.');btn.textContent='Connect to Firebase →';btn.disabled=false;return;}
+  saveFBCfg(k,p,a);
+  // Test write
+  try{
+    await _fb.getDoc(_fb.doc(db,'settings','app'));
+    document.getElementById('s-inline-cfg')?.remove();
+    bootstrap(); // restart
+  }catch(e){setSt('ic-st','err','Connected but read failed: '+e.message);btn.textContent='Connect to Firebase →';btn.disabled=false;}
 };
 
-/* ══════════════════════════════════════
-   INIT
-══════════════════════════════════════ */
-function hideSplash(){ const s=el('s-loading'); if(s) s.style.display='none'; }
-function showSplash(msg){ 
-  const s=el('s-loading'); if(s) s.style.display='flex';
-  const m=el('loading-msg'); if(m) m.textContent=msg||'Loading…';
-}
-
-// Detect student mode SYNCHRONOUSLY before anything else
-const _urlParam = new URLSearchParams(window.location.search).get('s');
-
-if(_urlParam){
-  // Student mode — show splash while Firebase loads
-  showSplash('Loading quiz…');
-  loadBank(); loadCfg();
-  initStudentMode();
-} else {
-  // Teacher mode
-  loadBank(); loadCfg();
-  hideSplash();
-  show('s-setup');
-  initFB(); // pre-warm firebase if configured
-}
+// Start
+bootstrap();
 </script>
 </body>
 </html>
