@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="mobile-web-app-capable" content="yes"/>
 <title>ClassQuiz</title>
-<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
 :root{
@@ -746,22 +746,40 @@ function goLaunch(){
   el('launch-title').textContent=c.title;
   el('launch-meta').textContent=`${curSel.length} questions curated • ${c.time} minutes`;
 
-  // Build QR / URL
-  const baseUrl=window.location.href.split('?')[0].split('#')[0];
-  const params=btoa(JSON.stringify({
-    title:c.title, time:parseInt(c.time)||15,
-    count:parseInt(c.count)||0,
-    qids:curSel
-  }));
-  const url=baseUrl+'?quiz='+params;
-  el('launch-url').textContent=url;
+  // Embed FULL question objects so student phones need no local bank
+  const selectedQs = bank.filter(q=>curSel.includes(q.id));
+  const payload = {
+    title: c.title,
+    time: parseInt(c.time)||15,
+    count: parseInt(c.count)||0,
+    qs: selectedQs   // full question data, not just IDs
+  };
 
-  el('qr-wrap').innerHTML='';
-  try{
-    new QRCode(el('qr-wrap'),{text:url,width:180,height:180,colorDark:'#000000',colorLight:'#ffffff'});
-  }catch(e){ el('qr-wrap').textContent=url; }
+  // Use encodeURIComponent(JSON) — btoa breaks on non-ASCII (Urdu, Arabic etc.)
+  const baseUrl = window.location.href.split('?')[0].split('#')[0];
+  const params = encodeURIComponent(JSON.stringify(payload));
+  const url = baseUrl + '?quiz=' + params;
+  el('launch-url').textContent = url;
+
+  el('qr-wrap').innerHTML = '';
+  // Try QRCode library, fallback to a fetch-based QR if unavailable
+  if(typeof QRCode !== 'undefined'){
+    try{
+      new QRCode(el('qr-wrap'), {text:url, width:180, height:180, colorDark:'#000000', colorLight:'#ffffff'});
+    }catch(e){ showQrFallback(url); }
+  } else {
+    // Fallback: use Google Charts QR API
+    showQrFallback(url);
+  }
 
   show('s-launch');
+}
+
+function showQrFallback(url){
+  const img = document.createElement('img');
+  img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(url);
+  img.width = 180; img.height = 180; img.style.borderRadius = '6px';
+  el('qr-wrap').appendChild(img);
 }
 
 function copyUrl(){
@@ -841,7 +859,10 @@ function parseQuizParams(){
   try{
     const p=new URLSearchParams(window.location.search);
     const raw=p.get('quiz'); if(!raw) return null;
-    return JSON.parse(atob(raw));
+    // Support both old btoa format and new encodeURIComponent format
+    try{ return JSON.parse(decodeURIComponent(raw)); }catch(e){}
+    try{ return JSON.parse(atob(raw)); }catch(e){}
+    return null;
   }catch(e){ return null; }
 }
 
@@ -851,7 +872,7 @@ let qParams=null; // set if student mode
 function initStudentMode(params){
   qParams=params;
   el('lg-title').textContent=params.title||'Quiz';
-  el('lg-meta').textContent=`${params.qids?.length||'?'} questions • ${params.time||15} minutes`;
+  el('lg-meta').textContent=`${(params.qs||params.qids||[]).length} questions • ${params.time||15} minutes`;
   el('stu-name').value='';
   show('s-login');
 }
@@ -864,11 +885,12 @@ function startQuiz(){
   // build quiz from params or local curSel
   let pool;
   if(qParams){
-    const ids=qParams.qids||[];
-    pool=bank.filter(q=>ids.includes(q.id));
+    // Full question objects are embedded in the URL — no local bank needed
+    pool = (qParams.qs || []);
+    // Fallback: try matching by ID from local bank (teacher mode)
     if(!pool.length){
-      // bank may not be loaded on student device — store minimal q data in params
-      pool=(qParams.qs||[]);
+      const ids = qParams.qids || [];
+      pool = bank.filter(q=>ids.includes(q.id));
     }
   } else {
     pool=bank.filter(q=>curSel.includes(q.id));
