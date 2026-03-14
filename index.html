@@ -2186,18 +2186,20 @@ async function bootstrap(){
   // Check if student URL
   const sid=new URLSearchParams(window.location.search).get('s');
   if(sid){
-    // Student mode — load app config from Firebase
+    // Student mode — load app config from Firebase with retry
     try{
-      const snap=await _fb.getDoc(_fb.doc(db,'settings','app'));
+      await wait(500);
+      const snap=await getDocWithRetry(_fb.doc(db,'settings','app'), 3, 1200);
       if(snap.exists())appCfg=snap.data();
-    }catch(e){}
+    }catch(e){console.warn('Could not load app cfg:',e);}
     initStudentMode();
     return;
   }
 
-  // Teacher mode
+  // Teacher mode — use retry in case SDK needs a moment to connect
   try{
-    const snap=await _fb.getDoc(_fb.doc(db,'settings','app'));
+    await wait(500); // brief pause for SDK network init
+    const snap=await getDocWithRetry(_fb.doc(db,'settings','app'), 3, 1500);
     if(!snap.exists()){
       hideSplash();
       show('s-firstrun');
@@ -2206,7 +2208,7 @@ async function bootstrap(){
     appCfg=snap.data();
   }catch(e){
     hideSplash();
-    showInlineConfig('Could not read app settings: '+e.message);
+    showInlineConfig('Could not read app settings: '+e.message+'. Try refreshing the page.');
     return;
   }
 
@@ -2252,21 +2254,62 @@ function showInlineConfig(errMsg){
     </div>`);
 }
 
+// Helper: wait ms milliseconds
+function wait(ms){return new Promise(r=>setTimeout(r,ms));}
+
+// Helper: try Firestore getDoc up to maxTries times with delay between attempts
+async function getDocWithRetry(docRef, maxTries=4, delayMs=1500){
+  let lastErr;
+  for(let i=0;i<maxTries;i++){
+    try{
+      const snap=await _fb.getDoc(docRef);
+      return snap; // success
+    }catch(e){
+      lastErr=e;
+      if(i<maxTries-1){
+        await wait(delayMs);
+      }
+    }
+  }
+  throw lastErr; // all attempts failed
+}
+
 window.saveInlineCfg=async function(){
   const k=(document.getElementById('ic-key')?.value||'').trim();
   const p=(document.getElementById('ic-pid')?.value||'').trim();
   const a=(document.getElementById('ic-appid')?.value||'').trim();
   if(!k||!p||!a){setSt('ic-st','err','Please fill in all three fields.');return;}
-  const btn=event.target;btn.textContent='Connecting…';btn.disabled=true;
+  const btn=event.target;
+  btn.textContent='Connecting…';btn.disabled=true;
+  setSt('ic-st','info','Connecting to Firebase…');
+
   const ok=await initFB(k,p,a);
-  if(!ok){setSt('ic-st','err','Could not connect. Check your values and try again.');btn.textContent='Connect to Firebase →';btn.disabled=false;return;}
+  if(!ok){
+    setSt('ic-st','err','Could not initialise Firebase. Check your values and try again.');
+    btn.textContent='Connect to Firebase →';btn.disabled=false;return;
+  }
   saveFBCfg(k,p,a);
-  // Test write
+
+  // Wait for Firestore network connection then read with retry
+  setSt('ic-st','info','Waiting for Firestore connection…');
+  await wait(1000); // give SDK time to establish connection
+
   try{
-    await _fb.getDoc(_fb.doc(db,'settings','app'));
+    await getDocWithRetry(_fb.doc(db,'settings','app'), 4, 1500);
+    setSt('ic-st','ok','✅ Connected! Loading app…');
+    await wait(600);
     document.getElementById('s-inline-cfg')?.remove();
-    bootstrap(); // restart
-  }catch(e){setSt('ic-st','err','Connected but read failed: '+e.message);btn.textContent='Connect to Firebase →';btn.disabled=false;}
+    bootstrap();
+  }catch(e){
+    // If all retries failed, show specific guidance
+    const msg=e.message||'';
+    if(msg.includes('offline')){
+      setSt('ic-st','err','Firebase says the client is offline. Please check: (1) Firestore rules are set to allow read/write, (2) You are not on a VPN or restricted network, (3) Try refreshing the page and entering credentials again.');
+    } else {
+      setSt('ic-st','err','Read failed after 4 attempts: '+msg);
+    }
+    btn.textContent='Try Again';btn.disabled=false;
+  }
 };
 
 // Start
