@@ -162,7 +162,13 @@ tr:hover td{background:var(--s2)}
 <body>
 
 <!-- ══ SETUP ══ -->
-<div id="s-setup" class="screen active center">
+<div id="s-loading" style="display:flex;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;gap:16px">
+  <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;background:linear-gradient(135deg,#6c63ff,#ff6584);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">ClassQuiz</div>
+  <div id="loading-msg" style="font-size:13px;color:#7070a0">Loading…</div>
+  <div style="width:32px;height:32px;border:3px solid rgba(108,99,255,.2);border-top-color:#6c63ff;border-radius:50%;animation:rot .7s linear infinite"></div>
+</div>
+
+<div id="s-setup" class="screen center">
 <div class="mw">
   <div class="logo"><div class="logo-t">ClassQuiz</div><div class="logo-s">Secure Classroom Testing</div></div>
   <div class="tabs">
@@ -787,7 +793,9 @@ window.goLaunch = async function(){
         qs: selectedQs,
         created: Date.now()
       });
-      url = base + '?s=' + sessionId;
+      // Embed Firebase config in URL hash so student devices can connect
+      const fbCfg = btoa(JSON.stringify({k:gv('fb-key'),p:gv('fb-pid'),a:gv('fb-appid')}));
+      url = base + '?s=' + sessionId + '#' + fbCfg;
       setSt('fb-st','ok','');
     }catch(e){
       console.warn('FB session write failed, falling back',e);
@@ -848,8 +856,20 @@ async function parseStudentUrl(){
 }
 
 async function initFBFromMeta(sid){
-  // Try to get firebase config from session meta stored in URL hash or from cached config
-  // First try local saved config
+  // Priority 1: extract Firebase config from URL hash (most reliable on all browsers)
+  try{
+    const hash = window.location.hash.slice(1);
+    if(hash){
+      const cfg = JSON.parse(atob(hash));
+      if(cfg.k && cfg.p && cfg.a){
+        if(el('fb-key')) el('fb-key').value=cfg.k;
+        if(el('fb-pid')) el('fb-pid').value=cfg.p;
+        if(el('fb-appid')) el('fb-appid').value=cfg.a;
+        return await initFB();
+      }
+    }
+  }catch(e){}
+  // Priority 2: use locally cached config (teacher testing on same device)
   try{
     const cfg=JSON.parse(localStorage.getItem('cq3_cfg')||'{}');
     if(cfg.fbKey&&cfg.fbPid&&cfg.fbAppid){
@@ -866,13 +886,26 @@ async function initFBFromMeta(sid){
    STUDENT LOGIN
 ══════════════════════════════════════ */
 async function initStudentMode(){
+  showSplash('Connecting to quiz…');
   const params = await parseStudentUrl();
-  if(!params){ show('s-setup'); return; }
+  hideSplash();
+  if(!params){
+    // Could not load session — show friendly error instead of teacher setup
+    show('s-login');
+    el('lg-title').textContent='Session Not Found';
+    el('lg-meta').textContent='This link may have expired. Ask your teacher for a new one.';
+    el('stu-name').style.display='none';
+    document.querySelector('#s-login .btn-grn').style.display='none';
+    return;
+  }
   qParams=params;
   el('lg-title').textContent=params.title||'Quiz';
   const qCount=(params.qs||params.qids||[]).length;
   el('lg-meta').textContent=`${qCount} questions • ${params.time||15} minutes`;
+  el('stu-name').style.display='';
   el('stu-name').value='';
+  const startBtn=document.querySelector('#s-login .btn-grn');
+  if(startBtn) startBtn.style.display='';
   show('s-login');
 }
 
@@ -1154,11 +1187,25 @@ window.sendEmail = async function(){
 /* ══════════════════════════════════════
    INIT
 ══════════════════════════════════════ */
-loadBank(); loadCfg();
-const _sp=new URLSearchParams(window.location.search);
-if(_sp.get('s')){
+function hideSplash(){ const s=el('s-loading'); if(s) s.style.display='none'; }
+function showSplash(msg){ 
+  const s=el('s-loading'); if(s) s.style.display='flex';
+  const m=el('loading-msg'); if(m) m.textContent=msg||'Loading…';
+}
+
+// Detect student mode SYNCHRONOUSLY before anything else
+const _urlParam = new URLSearchParams(window.location.search).get('s');
+
+if(_urlParam){
+  // Student mode — show splash while Firebase loads
+  showSplash('Loading quiz…');
+  loadBank(); loadCfg();
   initStudentMode();
 } else {
+  // Teacher mode
+  loadBank(); loadCfg();
+  hideSplash();
+  show('s-setup');
   initFB(); // pre-warm firebase if configured
 }
 </script>
