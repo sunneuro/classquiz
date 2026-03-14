@@ -223,6 +223,11 @@ tr:hover td{background:var(--s2)}
 </head>
 <body>
 
+<!-- Hidden Firebase credential store — populated by bootstrap before initFB is called -->
+<input type="hidden" id="fb-key" value=""/>
+<input type="hidden" id="fb-pid" value=""/>
+<input type="hidden" id="fb-appid" value=""/>
+
 <!-- SPLASH -->
 <div id="s-splash" style="display:flex;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;gap:16px">
   <div style="font-family:'Syne',sans-serif;font-size:34px;font-weight:800;background:linear-gradient(135deg,#6c63ff,#ff6584);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Self Assessment</div>
@@ -770,15 +775,19 @@ tr:hover td{background:var(--s2)}
 let db=null, _fb={}, fbReady=false;
 
 async function initFB(key,pid,aid){
-  if(!key||!pid||!aid) return false;
+  // Allow calling with params OR reading from hidden fields (like v3/v4)
+  const k = key || (document.getElementById('fb-key')?.value||'').trim();
+  const p = pid  || (document.getElementById('fb-pid')?.value||'').trim();
+  const a = aid  || (document.getElementById('fb-appid')?.value||'').trim();
+  if(!k||!p||!a) return false;
   try{
     const {initializeApp,getApps,deleteApp}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
     const {getFirestore,collection,addDoc,getDocs,query,orderBy,where,
            doc,setDoc,getDoc,updateDoc,deleteDoc,onSnapshot,limit}=
       await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
     getApps().forEach(a=>{try{deleteApp(a)}catch(e){}});
-    const app=initializeApp({apiKey:key,authDomain:`${pid}.firebaseapp.com`,
-      projectId:pid,storageBucket:`${pid}.appspot.com`,appId:aid});
+    const app=initializeApp({apiKey:k,authDomain:`${p}.firebaseapp.com`,
+      projectId:p,storageBucket:`${p}.appspot.com`,appId:a});
     db=getFirestore(app);
     _fb={collection,addDoc,getDocs,query,orderBy,where,doc,setDoc,
          getDoc,updateDoc,deleteDoc,onSnapshot,limit};
@@ -2156,106 +2165,194 @@ window.dlCSV=function(){
    INIT — APP BOOTSTRAP
 ═══════════════════════════════════════════ */
 async function bootstrap(){
-  showSplash('Starting ClassQuiz…');
+  showSplash('Starting…');
 
-  // Load Firebase config from config.json
-  let fbCfg=null;
+  // Load Firebase config — try config.json first, then localStorage
+  let fbCfg = null;
+
+  // Priority 1: config.json sitting next to index.html on GitHub Pages
   try{
-    const resp=await fetch('./config.json');
-    if(resp.ok)fbCfg=await resp.json();
-  }catch(e){}
+    const resp = await fetch('./config.json?_='+Date.now()); // cache-bust
+    if(resp.ok){
+      const data = await resp.json();
+      if(data.k && data.p && data.a){
+        fbCfg = data;
+        saveFBCfg(data.k, data.p, data.a); // keep localStorage in sync
+      }
+    }
+  }catch(e){ /* config.json not present — that is fine */ }
 
-  // Fallback: try localStorage
-  if(!fbCfg)fbCfg=loadFBCfg();
+  // Priority 2: localStorage (entered manually before, or saved above)
+  if(!fbCfg) fbCfg = loadFBCfg();
 
+  // Priority 3: show manual entry screen
   if(!fbCfg||!fbCfg.k||!fbCfg.p||!fbCfg.a){
     hideSplash();
-    // Show inline config screen
-    showInlineConfig();
+    showFBSetup('');
     return;
   }
 
-  saveFBCfg(fbCfg.k,fbCfg.p,fbCfg.a);
-  const ok=await initFB(fbCfg.k,fbCfg.p,fbCfg.a);
+  // Populate hidden fields so initFB can always find credentials
+  const fk=document.getElementById('fb-key');
+  const fp=document.getElementById('fb-pid');
+  const fa=document.getElementById('fb-appid');
+  if(fk) fk.value=fbCfg.k;
+  if(fp) fp.value=fbCfg.p;
+  if(fa) fa.value=fbCfg.a;
+
+  showSplash('Connecting to Firebase…');
+  const ok = await initFB(fbCfg.k, fbCfg.p, fbCfg.a);
   if(!ok){
     hideSplash();
-    showInlineConfig('Firebase initialisation failed. Check your config.json values.');
+    showFBSetup('Firebase could not be initialised. Please check your credentials.');
     return;
   }
 
   // Check if student URL
-  const sid=new URLSearchParams(window.location.search).get('s');
+  const sid = new URLSearchParams(window.location.search).get('s');
   if(sid){
-    // Student mode — load app config from Firebase with retry
     try{
-      await wait(500);
-      const snap=await getDocWithRetry(_fb.doc(db,'settings','app'), 3, 1200);
-      if(snap.exists())appCfg=snap.data();
-    }catch(e){console.warn('Could not load app cfg:',e);}
+      showSplash('Loading quiz…');
+      const snap = await getDocWithRetry(_fb.doc(db,'settings','app'),3,1200);
+      if(snap.exists()) appCfg = snap.data();
+    }catch(e){ console.warn('appCfg load:',e); }
     initStudentMode();
     return;
   }
 
-  // Teacher mode — use retry in case SDK needs a moment to connect
+  // Teacher mode
+  showSplash('Loading app settings…');
   try{
-    await wait(500); // brief pause for SDK network init
-    const snap=await getDocWithRetry(_fb.doc(db,'settings','app'), 3, 1500);
+    const snap = await getDocWithRetry(_fb.doc(db,'settings','app'),3,1500);
     if(!snap.exists()){
       hideSplash();
       show('s-firstrun');
       return;
     }
-    appCfg=snap.data();
+    appCfg = snap.data();
   }catch(e){
     hideSplash();
-    showInlineConfig('Could not read app settings: '+e.message+'. Try refreshing the page.');
+    showFBSetup('Could not read app settings. Error: '+e.message+
+      ' — Make sure Firestore Database has been created in your Firebase project (Build → Firestore Database → Create database → Test mode).');
     return;
   }
 
   hideSplash();
-  el('login-appname').textContent=appCfg.appName||'ClassQuiz';
-
-  // Check cached teacher
-  const cached=loadTCache();
+  el('login-appname').textContent = appCfg.appName||'Self Assessment';
+  const cached = loadTCache();
   if(cached){
-    teacher=cached;
-    el('tl-name').value=cached.name||'';
-    el('tl-email').value=cached.email||'';
+    teacher = cached;
+    el('tl-name').value = cached.name||'';
+    el('tl-email').value = cached.email||'';
   }
   show('s-login-teacher');
 }
 
-function showInlineConfig(errMsg){
-  // Show a minimal config screen over the splash
+function showFBSetup(errMsg){
   el('s-splash').style.display='none';
+  // Remove any existing setup div
+  document.getElementById('s-fb-setup')?.remove();
+  const saved=loadFBCfg()||{};
   document.body.insertAdjacentHTML('afterbegin',`
-    <div id="s-inline-cfg" style="display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px;background:var(--bg)">
+    <div id="s-fb-setup" style="display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px;background:var(--bg)">
       <div style="max-width:460px;width:100%">
         <div style="text-align:center;margin-bottom:24px">
-          <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;background:linear-gradient(135deg,#6c63ff,#ff6584);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Self Assessment</div>
-          <div style="font-size:12px;color:#7070a0;margin-top:4px;letter-spacing:2px;text-transform:uppercase">Firebase Configuration</div>
+          <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;
+            background:linear-gradient(135deg,#6c63ff,#ff6584);-webkit-background-clip:text;
+            -webkit-text-fill-color:transparent;background-clip:text">Self Assessment</div>
+          <div style="font-size:11px;color:#7070a0;margin-top:4px;letter-spacing:2px;text-transform:uppercase">Firebase Setup</div>
         </div>
         ${errMsg?`<div class="st err" style="display:block;margin-bottom:14px">${errMsg}</div>`:''}
         <div class="card">
-          <p style="font-size:13px;color:var(--m);margin-bottom:14px;line-height:1.7">
-            Enter your Firebase credentials. After saving, a <code style="background:var(--s2);padding:1px 5px;border-radius:4px;font-size:11px">config.json</code> file should also be placed in your GitHub Pages folder.
+          <h2>Enter Firebase Credentials</h2>
+          <p style="font-size:13px;color:var(--m);margin-bottom:16px;line-height:1.7">
+            Find these in Firebase Console → Project Settings → Your apps → SDK setup.
           </p>
-          <label>Firebase API Key</label><input type="text" id="ic-key" placeholder="AIzaSy..."/>
-          <label>Project ID</label><input type="text" id="ic-pid" placeholder="my-project-12345"/>
-          <label>App ID</label><input type="text" id="ic-appid" placeholder="1:123456789:web:abcdef"/>
-          <button class="btn btn-pri w100" style="margin-top:16px" onclick="saveInlineCfg()">Connect to Firebase →</button>
-          <div class="st" id="ic-st"></div>
-        </div>
-        <div class="card" style="font-size:12px;color:var(--m);line-height:1.8">
-          <strong style="color:var(--txt)">config.json</strong> format (create this file in your GitHub Pages repo):<br>
-          <code style="display:block;background:var(--s2);padding:10px;border-radius:8px;margin-top:8px;font-size:11px;white-space:pre">{"k":"YOUR_API_KEY","p":"YOUR_PROJECT_ID","a":"YOUR_APP_ID"}</code>
+          <label>API Key</label>
+          <input type="text" id="fbs-key" placeholder="AIzaSy..." value="${esc(saved.k||'')}"/>
+          <label>Project ID</label>
+          <input type="text" id="fbs-pid" placeholder="my-project-12345" value="${esc(saved.p||'')}"/>
+          <label>App ID</label>
+          <input type="text" id="fbs-appid" placeholder="1:123456789:web:abcdef" value="${esc(saved.a||'')}"/>
+          <button class="btn btn-pri w100" style="margin-top:16px" id="fbs-btn" onclick="doFBSetup()">
+            Connect to Firebase →
+          </button>
+          <div class="st" id="fbs-st"></div>
         </div>
       </div>
     </div>`);
 }
 
+window.doFBSetup=async function(){
+  const k=(document.getElementById('fbs-key')?.value||'').trim();
+  const p=(document.getElementById('fbs-pid')?.value||'').trim();
+  const a=(document.getElementById('fbs-appid')?.value||'').trim();
+  if(!k||!p||!a){
+    document.getElementById('fbs-st').className='st err';
+    document.getElementById('fbs-st').textContent='Please fill in all three fields.';
+    return;
+  }
+  const btn=document.getElementById('fbs-btn');
+  btn.innerHTML='<span class="spin"></span> Connecting…';btn.disabled=true;
+  document.getElementById('fbs-st').className='st info';
+  document.getElementById('fbs-st').textContent='Initialising Firebase SDK…';
+  document.getElementById('fbs-st').style.display='block';
+
+  // Populate hidden fields before init
+  const fk=document.getElementById('fb-key');
+  const fp=document.getElementById('fb-pid');
+  const fa=document.getElementById('fb-appid');
+  if(fk) fk.value=k;
+  if(fp) fp.value=p;
+  if(fa) fa.value=a;
+
+  const ok=await initFB(k,p,a);
+  if(!ok){
+    document.getElementById('fbs-st').className='st err';
+    document.getElementById('fbs-st').textContent='SDK failed to initialise. Check your API Key and App ID.';
+    btn.innerHTML='Try Again';btn.disabled=false;return;
+  }
+
+  document.getElementById('fbs-st').textContent='SDK ready. Testing Firestore connection…';
+  saveFBCfg(k,p,a);
+
+  try{
+    const snap=await getDocWithRetry(_fb.doc(db,'settings','app'),5,1500);
+    document.getElementById('fbs-st').className='st ok';
+    document.getElementById('fbs-st').textContent='✅ Connected successfully!';
+    await wait(700);
+    document.getElementById('s-fb-setup')?.remove();
+    // Proceed based on what we found
+    if(!snap.exists()){
+      hideSplash();
+      show('s-firstrun');
+    } else {
+      appCfg=snap.data();
+      hideSplash();
+      el('login-appname').textContent=appCfg.appName||'Self Assessment';
+      const cached=loadTCache();
+      if(cached){teacher=cached;el('tl-name').value=cached.name||'';el('tl-email').value=cached.email||'';}
+      show('s-login-teacher');
+    }
+  }catch(e){
+    const msg=e.message||'';
+    let hint='';
+    if(msg.toLowerCase().includes('offline')){
+      hint=' Firebase SDK connected but Firestore says offline. This usually means Firestore has not been created yet in your Firebase project. Go to Firebase Console → Build → Firestore Database → Create database → Start in test mode.';
+    } else if(msg.toLowerCase().includes('permission')){
+      hint=' Permission denied. Go to Firebase Console → Firestore → Rules and set: allow read, write: if true;';
+    }
+    document.getElementById('fbs-st').className='st err';
+    document.getElementById('fbs-st').textContent='Connection failed: '+msg+hint;
+    btn.innerHTML='Try Again';btn.disabled=false;
+  }
+};
+
+// showInlineConfig removed — replaced by showFBSetup
+
 // Helper: wait ms milliseconds
 function wait(ms){return new Promise(r=>setTimeout(r,ms));}
+// saveInlineCfg removed — replaced by doFBSetup
 
 // Helper: try Firestore getDoc up to maxTries times with delay between attempts
 async function getDocWithRetry(docRef, maxTries=4, delayMs=1500){
@@ -2274,43 +2371,7 @@ async function getDocWithRetry(docRef, maxTries=4, delayMs=1500){
   throw lastErr; // all attempts failed
 }
 
-window.saveInlineCfg=async function(){
-  const k=(document.getElementById('ic-key')?.value||'').trim();
-  const p=(document.getElementById('ic-pid')?.value||'').trim();
-  const a=(document.getElementById('ic-appid')?.value||'').trim();
-  if(!k||!p||!a){setSt('ic-st','err','Please fill in all three fields.');return;}
-  const btn=event.target;
-  btn.textContent='Connecting…';btn.disabled=true;
-  setSt('ic-st','info','Connecting to Firebase…');
 
-  const ok=await initFB(k,p,a);
-  if(!ok){
-    setSt('ic-st','err','Could not initialise Firebase. Check your values and try again.');
-    btn.textContent='Connect to Firebase →';btn.disabled=false;return;
-  }
-  saveFBCfg(k,p,a);
-
-  // Wait for Firestore network connection then read with retry
-  setSt('ic-st','info','Waiting for Firestore connection…');
-  await wait(1000); // give SDK time to establish connection
-
-  try{
-    await getDocWithRetry(_fb.doc(db,'settings','app'), 4, 1500);
-    setSt('ic-st','ok','✅ Connected! Loading app…');
-    await wait(600);
-    document.getElementById('s-inline-cfg')?.remove();
-    bootstrap();
-  }catch(e){
-    // If all retries failed, show specific guidance
-    const msg=e.message||'';
-    if(msg.includes('offline')){
-      setSt('ic-st','err','Firebase says the client is offline. Please check: (1) Firestore rules are set to allow read/write, (2) You are not on a VPN or restricted network, (3) Try refreshing the page and entering credentials again.');
-    } else {
-      setSt('ic-st','err','Read failed after 4 attempts: '+msg);
-    }
-    btn.textContent='Try Again';btn.disabled=false;
-  }
-};
 
 // Start
 bootstrap();
