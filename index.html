@@ -723,7 +723,7 @@ tr:hover td{background:var(--s2)}
         <th class="th-sort" onclick="sortResults('studentName')">Name <span class="arr">↕</span></th>
         <th class="th-sort" onclick="sortResults('roll')">Roll <span class="arr">↕</span></th>
         <th>Email</th>
-        <th class="th-sort" onclick="sortResults('performanceScore')">Perf.Score <span class="arr">↕</span></th>
+        <th class="th-sort" onclick="sortResults('performanceScore')">Performance <span class="arr">↕</span></th>
         <th class="th-sort" onclick="sortResults('pct')">Score% <span class="arr">↕</span></th>
         <th class="th-sort" onclick="sortResults('timeTaken')">Time <span class="arr">↕</span></th>
         <th class="th-sort" onclick="sortResults('violations')">Violations <span class="arr">↕</span></th>
@@ -2450,17 +2450,24 @@ window.renderResults=function(){
   });
 
   // Sort
+  // Numeric columns — always compare as numbers
+  const numericCols=['pct','performanceScore','violations','offSecs','attempted','correct','wrong'];
   filtered.sort((a,b)=>{
     let va=a[sortCol],vb=b[sortCol];
-    // Parse time strings like "5m 30s" to seconds for proper numeric sort
+    // Parse time strings "5m 30s" → seconds
     if(sortCol==='timeTaken'){
       const toSec=s=>{if(!s)return 0;const m=s.match(/(\d+)m\s*(\d+)s/);return m?parseInt(m[1])*60+parseInt(m[2]):0;};
-      va=toSec(va);vb=toSec(vb);
+      va=toSec(va); vb=toSec(vb);
+    } else if(numericCols.includes(sortCol)){
+      va=parseFloat(va)||0;
+      vb=parseFloat(vb)||0;
+    } else {
+      // String comparison
+      va=String(va||'').toLowerCase();
+      vb=String(vb||'').toLowerCase();
     }
-    if(typeof va==='string') va=va.toLowerCase();
-    if(typeof vb==='string') vb=vb.toLowerCase();
-    if(va===undefined||va===null||va==='')return 1;
-    if(vb===undefined||vb===null||vb==='')return -1;
+    if(va===''||va==null)return 1;
+    if(vb===''||vb==null)return -1;
     if(va<vb)return sortDir==='asc'?-1:1;
     if(va>vb)return sortDir==='asc'?1:-1;
     return 0;
@@ -2505,7 +2512,7 @@ window.renderResults=function(){
 };
 
 window.dlCSV=function(){
-  const headers=['#','Name','Roll','Email','Performance Score','Score %','Time','Violations',
+  const headers=['#','Name','Roll','Email','Performance','Score %','Time','Violations',
     'Programme','Course ID','Subject','Unit/Topic','Test ID/Comment','Session ID','Teacher',
     'Attempted','Correct','Wrong','Off-screen(s)'];
   const rows=allResults.map((r,i)=>[
