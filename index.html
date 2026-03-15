@@ -1724,12 +1724,49 @@ function startLobbyListener(){
 
 function renderLobby(entries){
   const count=entries.length;
-  el('lobby-count-badge').textContent=count?`(${count})`:'';
-  el('lobby-count-txt').textContent=`${count} joined`;
+  el('lobby-count-badge').textContent=count?'('+count+')':'';
+  el('lobby-count-txt').textContent=count+' joined';
   const list=el('lobby-list');
   if(!count){
     list.innerHTML='<div class="empty"><span class="empty-i">⏳</span>Waiting for students to join…</div>';
     return;
+  }
+  // Auto-unlock logic:
+  // Only students who STARTED (or submitted) count — joined/waiting do NOT block unlock
+  // All started+submitted = auto-unlock; warn teacher about any still waiting
+  if(fbReady&&activeSessionId&&answersLocked){
+    const waiting=entries.filter(e=>e.status==='joined');
+    const started=entries.filter(e=>e.status==='started');
+    const submitted=entries.filter(e=>e.status==='submitted');
+    const allStartedSubmitted=started.length===0&&submitted.length>0;
+
+    if(allStartedSubmitted){
+      // All who entered the quiz have submitted — auto-unlock
+      _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{answersLocked:false})
+        .then(()=>{
+          answersLocked=false;
+          const btn=el('btn-unlock');
+          if(btn){btn.textContent='🔓 Answers Unlocked (auto)';btn.className='btn btn-grn w100';}
+          if(waiting.length>0){
+            // Warn teacher about students who joined but never started
+            setSt('unlock-st','warn',
+              '⚠ Answers auto-unlocked. '+waiting.length+
+              ' student(s) joined the lobby but never started the quiz: '+
+              waiting.map(e=>e.name+' ('+e.roll+')').join(', ')+
+              '. You may remove them from the lobby.');
+          }else{
+            setSt('unlock-st','ok','✅ All students submitted — answers automatically unlocked.');
+          }
+        }).catch(()=>{});
+    } else if(started.length===0&&submitted.length===0&&waiting.length>0){
+      // No one has started yet — do nothing, just show lobby
+    } else if(started.length>0){
+      // Some students still attempting — show progress info
+      const msg='⏳ '+started.length+' student(s) still attempting'
+        +(waiting.length>0?', '+waiting.length+' waiting (never started)':'')
+        +'. Answers will auto-unlock when all finish.';
+      setSt('unlock-st','info',msg);
+    }
   }
   list.innerHTML=entries.map(e=>{
     const statusCls=e.status==='submitted'?'chip-submitted':e.status==='started'?'chip-started':'chip-joined';
@@ -1778,10 +1815,19 @@ window.endSession=async function(){
   if(!confirm('End this session? All students still attempting will be auto-submitted.'))return;
   if(!fbReady||!activeSessionId)return;
   try{
-    await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{status:'ended'});
-    el('session-status-msg').textContent='⏹ Session ended.';
+    // End session AND auto-unlock answers
+    await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{
+      status:'ended',
+      answersLocked:false
+    });
+    answersLocked=false;
+    el('session-status-msg').textContent='⏹ Session ended — answers auto-unlocked.';
     el('btn-end-session').style.display='none';
     el('btn-end-2').style.display='none';
+    // Update unlock button visual
+    const btn=el('btn-unlock');
+    if(btn){btn.textContent='🔓 Answers Unlocked (auto)';btn.className='btn btn-grn w100';}
+    setSt('unlock-st','ok','✅ Session ended — answers automatically unlocked for all students.');
   }catch(e){alert('End session failed: '+e.message);}
 };
 
