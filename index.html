@@ -1513,7 +1513,7 @@ window.showLoadTemplate=async function(){
   try{
     const snap=await _fb.getDocs(_fb.query(_fb.collection(db,'templates'),_fb.orderBy('ts','desc')));
     const tpls=snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(!tpls.length){el('ov-tpl-body').innerHTML='<div class="ovb">No templates saved yet.</div><button class="btn btn-ghost w100" onclick="closeOv(&quot;ov-template&quot;)">Close</button>';return;}
+    if(!tpls.length){el('ov-tpl-body').innerHTML=`<div class="ovb">No templates saved yet.</div><button class="btn btn-ghost w100" onclick="closeOv('ov-template')">Close</button>`;return;}
     el('ov-tpl-body').innerHTML=tpls.map(t=>`
       <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--s2);border-radius:8px;margin-bottom:6px">
         <div style="flex:1">
@@ -1840,7 +1840,7 @@ function showTapToBegin(){
   const waitDiv=document.querySelector('#s-stu-wait > div');
   if(!waitDiv)return;
   var h='';
-  h+='<div style="font-size:48px;margin-bottom:20px">&#x1F680;</div>';
+  h+='<div style="font-size:48px;margin-bottom:20px">🚀</div>';
   h+='<h2 style="font-family:var(--fh);font-size:22px;margin-bottom:10px">Test is Live!</h2>';
   h+='<p style="font-size:14px;color:var(--m);margin-bottom:28px">Your teacher has started the session.</p>';
   h+='<button class="btn btn-grn" onclick="beginQuizFromTap()" style="font-size:16px;padding:16px 32px;border-radius:12px">Tap to Begin &rarr;</button>';
