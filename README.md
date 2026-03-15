@@ -51,7 +51,7 @@ A browser-based quiz and self-assessment tool for classrooms. Single HTML file, 
 
 
 **Calculation of Performance**
-PERFORMANCE SCORE — FORMULA, EXPLANATION & WORKED EXAMPLES
+PERFORMANCE — FORMULA, EXPLANATION & WORKED EXAMPLES
 ============================================================
 
 PURPOSE
@@ -65,7 +65,7 @@ similarly but cheats or rushes carelessly.
 THE FORMULA
 -----------
 
-  Performance Score = min(Score% + SpeedBonus, 100) × IntegrityMultiplier
+  Performance  = min(Score% + SpeedBonus, 100) × IntegrityMultiplier
 
 
 COMPONENT 1: Score%
@@ -157,7 +157,7 @@ Ali       90%     7.5 min (50%)   2           +10.0       100.0          × 0.90
 Fatima    90%     15 min (100%)   0           0.0         90.0           × 1.00       90.0
 Usman     90%     7.5 min (50%)   3           +10.0       100.0          × 0.80       80.0
 
-RANKING:
+PERFOMANCE RANKING:
   1st  Ahmed   — 100.0  Honest and fast. Maximum reward.
   2nd  Sara    —  93.3  Honest and careful. Speed bonus is modest but counts.
   3rd  Ali     —  90.0  Fast but 2 violations. Speed bonus cancelled by penalty.
@@ -184,7 +184,7 @@ KEY OBSERVATIONS:
 FORMULA SUMMARY
 ------------------------------
 
-  Performance Score = min(Score% + SpeedBonus, 100) × IntegrityMultiplier
+  Performance = min(Score% + SpeedBonus, 100) × IntegrityMultiplier
 
   SpeedBonus       = (min(allottedTime / timeTaken, 2.0) − 1.0) × 10
                      Range: 0 to +10 points
