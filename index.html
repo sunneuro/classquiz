@@ -851,6 +851,7 @@ let stuName='',stuRoll='',stuEmail='';
 let vioCount=0,offSecs=0,offStart=null;
 let vioTimer=null,vioCd=10,firstVio=true,quizActive=false;
 let reviewMode=false;
+let lockedAnswers={}; // answers locked after navigating away
 let immRestartTimer=null;
 let lastQType='mcq';   // remembers last used question type across saves
 let lastDiff='medium'; // remembers last used difficulty across saves
@@ -1994,7 +1995,7 @@ function beginQuiz(){
   const cnt=qParams.count||0;
   quizQs=cnt>0?pool.slice(0,cnt):pool;
 
-  answers={};curQ=0;vioCount=0;offSecs=0;firstVio=true;quizActive=true;reviewMode=false;
+  answers={};lockedAnswers={};curQ=0;vioCount=0;offSecs=0;firstVio=true;quizActive=true;reviewMode=false;
   timeLeft=(qParams.time||15)*60;
 
   // Update lobby status
@@ -2174,31 +2175,33 @@ function renderQ(){
   if(q.type==='mcq'||q.type==='tf'){
     html+=`<div class="opts">`;
     (q.options||[]).forEach((o,i)=>{
+      const isLocked=!!lockedAnswers[curQ]||reviewMode; // locked only after navigating away
       const isAnswered=answers[curQ]!==undefined;
       const isSel=answers[curQ]===String(i);
-      // Lock answer once selected — cannot change during review OR active quiz
-      const clickable=(!isAnswered&&!reviewMode)?'clickable':'';
-      const onclickAttr=(!isAnswered&&!reviewMode)?' onclick="pickOpt('+i+')"':'';
-      const lockedBadge=isSel?'<span style="font-size:10px;color:var(--acc);margin-left:auto">✓ Your answer</span>':'';
+      // Clickable on current question until navigated away
+      const clickable=(!isLocked)?'clickable':'';
+      const onclickAttr=(!isLocked)?' onclick="pickOpt('+i+')"':'';
+      const lockedBadge=isSel&&isLocked?'<span style="font-size:10px;color:var(--acc);margin-left:auto">✓ Locked</span>':'';
+      const selBadge=isSel&&!isLocked?'<span style="font-size:10px;color:var(--acc);margin-left:auto">✓ Selected</span>':'';
       const ltr=q.type==='mcq'?'ABCD'[i]:o.charAt(0);
-      // Greyed out non-selected options when answer is locked
-      const greyStyle=(isAnswered&&!isSel)?'opacity:0.45;':'';
-      html+='<button class="opt '+( isSel?'sel':'')+' '+clickable+'" style="'+greyStyle+'"'+onclickAttr+'>'
+      // Grey non-selected only when locked
+      const greyStyle=(isLocked&&!isSel)?'opacity:0.45;':'';
+      html+='<button class="opt '+(isSel?'sel':'')+' '+clickable+'" style="'+greyStyle+'"'+onclickAttr+'>'
         +'<span class="oltr">'+ltr+'</span>'
         +'<span style="flex:1">'+esc(o)+'</span>'
-        +lockedBadge
+        +lockedBadge+selBadge
         +'</button>';
     });
     html+=`</div>`;
-    if(answers[curQ]===undefined){
-      if(reviewMode){
-        html+='<div style="font-size:12px;color:var(--m);text-align:center;margin-top:12px">You did not answer this question</div>';
-      }
-    } else {
-      // Answer is locked — show notice during active quiz too
-      html+='<div style="margin-top:10px;text-align:center;font-size:11px;color:var(--m2);'
-        +'padding:6px 10px;background:var(--s2);border-radius:6px">'
-        +(reviewMode?'🔒 Review mode — answers cannot be changed':'🔒 Answer locked — you can review but not change')
+    if(answers[curQ]===undefined&&reviewMode){
+      html+='<div style="font-size:12px;color:var(--m);text-align:center;margin-top:12px">You did not answer this question</div>';
+    } else if(lockedAnswers[curQ]||reviewMode){
+      html+='<div style="margin-top:10px;text-align:center;font-size:11px;color:var(--m2);padding:6px 10px;background:var(--s2);border-radius:6px">'
+        +(reviewMode?'🔒 Review mode — answers cannot be changed':'🔒 Answer locked — navigate back to change is not allowed')
+        +'</div>';
+    } else if(answers[curQ]!==undefined){
+      html+='<div style="margin-top:8px;text-align:center;font-size:11px;color:var(--m2)">'
+        +'Tap another option to change · answer locks when you move to next question'
         +'</div>';
     }
   }
@@ -2240,15 +2243,23 @@ function renderDots(){
   }).join('');
 }
 
-window.jumpQ=function(i){curQ=i;renderQ();renderDots();};
+window.jumpQ=function(i){
+  // Lock current answer before jumping
+  if(answers[curQ]!==undefined) lockedAnswers[curQ]=true;
+  curQ=i;renderQ();renderDots();
+};
 window.pickOpt=function(i){
-  // Never allow changing an already-set answer
   if(reviewMode)return;
-  if(answers[curQ]!==undefined)return; // answer already locked
-  answers[curQ]=String(i);
+  if(lockedAnswers[curQ])return; // locked after navigating away
+  answers[curQ]=String(i); // freely changeable on current question
   renderQ();renderDots();
 };
-window.navQ=function(d){curQ=Math.max(0,Math.min(quizQs.length-1,curQ+d));renderQ();renderDots();};
+window.navQ=function(d){
+  // Lock current answer before navigating away
+  if(answers[curQ]!==undefined) lockedAnswers[curQ]=true;
+  curQ=Math.max(0,Math.min(quizQs.length-1,curQ+d));
+  renderQ();renderDots();
+};
 
 /* ═══════════════════════════════════════════
    SUBMIT
@@ -2359,6 +2370,21 @@ async function showResult(r){
     el('ans-review-wrap').style.display='none';
     el('ans-locked-msg').style.display=qParams?.sessionId?'':'none';
     el('btn-check-unlock').style.display=qParams?.sessionId?'':'none';
+    // Auto-poll immediately — no need for student to tap "Check"
+    if(qParams?.sessionId&&fbReady){
+      clearInterval(unlockPollInt);
+      unlockPollInt=setInterval(async function(){
+        try{
+          const s=await _fb.getDoc(_fb.doc(db,'sessions',qParams.sessionId));
+          if(s.exists()&&s.data().answersLocked===false){
+            clearInterval(unlockPollInt);
+            showAnswerReview();
+            el('ans-locked-msg').style.display='none';
+            const b=el('btn-check-unlock');if(b)b.style.display='none';
+          }
+        }catch(e){}
+      },3000); // poll every 3 seconds
+    }
   }
   show('s-result');
 }
