@@ -631,8 +631,7 @@ tr:hover td{background:var(--s2)}
   </div>
   <div class="q-dots" id="q-dots"></div>
   <div class="qbody" id="qbody"></div>
-  <div class="qnav" id="qnav-bottom" style="padding:8px 16px 24px">
-    <button class="btn btn-ghost btn-sm" id="btn-prv-bot" onclick="navQ(-1)" style="width:auto">← Prev</button>
+  <div class="qnav" id="qnav-bottom" style="padding:8px 16px 24px;min-height:20px">
   </div>
 </div>
 
@@ -811,6 +810,8 @@ let stuName='',stuRoll='',stuEmail='';
 let vioCount=0,offSecs=0,offStart=null;
 let vioTimer=null,vioCd=10,firstVio=true,quizActive=false;
 let reviewMode=false;
+let lastQType='mcq';   // remembers last used question type across saves
+let lastDiff='medium'; // remembers last used difficulty across saves
 let qParams=null;      // student: parsed session data
 let activeSessionId=null;  // teacher: current session ID
 let answersLocked=true;
@@ -940,7 +941,14 @@ async function goHome(){
 
 window.goBank=async function(){await loadAllQuestions();populateBankFilters();renderBank();show('s-bank');};
 window.goCurate=async function(){await loadAllQuestions();populateCurateFilters();renderCurate();show('s-curate');};
-window.goResults=async function(){await loadResults(false);show('s-results');};
+let resultsRefreshInt=null;
+window.goResults=async function(){
+  clearInterval(resultsRefreshInt);
+  await loadResults(false);
+  show('s-results');
+  // Auto-refresh every 30 seconds
+  resultsRefreshInt=setInterval(()=>loadResults(false),30000);
+};
 window.goDash=function(){show('s-results');};
 
 function renderHomeSubjects(){
@@ -1025,14 +1033,25 @@ async function loadAllQuestions(){
 }
 
 async function loadResults(force){
-  if(!fbReady)return;
+  if(!fbReady){
+    const rb=el('results-refreshed');
+    if(rb)rb.textContent='Firebase not connected';
+    return;
+  }
+  const rb=el('results-refreshed');
+  if(rb)rb.textContent='Refreshing…';
   try{
-    const snap=await _fb.getDocs(_fb.query(_fb.collection(db,'results'),_fb.orderBy('ts','desc')));
+    const snap=await _fb.getDocs(
+      _fb.query(_fb.collection(db,'results'),_fb.orderBy('ts','desc'))
+    );
     allResults=snap.docs.map(d=>({id:d.id,...d.data()}));
     populateResultFilters();
     renderResults();
-    el('results-refreshed').textContent='Updated: '+new Date().toLocaleTimeString();
-  }catch(e){console.warn('Load results:',e);}
+    if(rb)rb.textContent='Updated: '+new Date().toLocaleTimeString();
+  }catch(e){
+    console.warn('Load results:',e);
+    if(rb)rb.textContent='Error: '+e.message;
+  }
 }
 
 /* ═══════════════════════════════════════════
@@ -1069,13 +1088,27 @@ function acFilterCascade(){
 window.goAddQ=function(){
   editQId=null;
   wizStep=0;
-  wizData={prog:'',cid:'',subj:'',topic:'',testid:'',type:'mcq',diff:'medium'};
+
+  // Auto-generate Test ID from teacher name + today's date
+  // Format: TeacherName_15Jan2026
+  function autoTestId(){
+    const name=(teacher?.name||'').trim().replace(/\s+/g,'');
+    const now=new Date();
+    const day=now.getDate();
+    const mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][now.getMonth()];
+    const yr=now.getFullYear();
+    return name ? `${name}_${day}${mon}${yr}` : `${day}${mon}${yr}`;
+  }
+
+  wizData={prog:'',cid:'',subj:'',topic:'',testid:autoTestId(),type:'mcq',diff:'medium'};
   el('addq-count-badge').textContent='';
-  // Clear fields
-  ['prog','cid','subj','topic','testid'].forEach(k=>{const i=el('aq-'+k);if(i)i.value='';});
+  // Clear fields except testid which gets the auto value
+  ['prog','cid','subj','topic'].forEach(k=>{const i=el('aq-'+k);if(i)i.value='';});
+  const testidInp=el('aq-testid');
+  if(testidInp) testidInp.value=wizData.testid;
   el('aq-text').value='';
-  setQType('mcq');
-  setDiff('medium');
+  setQType(lastQType);
+  setDiff(lastDiff);
   showWizStep(0);
   show('s-addq');
 };
@@ -1130,6 +1163,7 @@ function renderWizLocSummary(){
 
 window.setQType=function(t){
   wizData.type=t;
+  lastQType=t;
   el('qtype-mcq').style.background=t==='mcq'?'var(--acc)':'transparent';
   el('qtype-mcq').style.color=t==='mcq'?'#fff':'var(--txt)';
   el('qtype-mcq').style.border=t==='mcq'?'none':'1px solid var(--b)';
@@ -1175,6 +1209,7 @@ function renderAnswerFields(t){
 
 window.setDiff=function(d){
   wizData.diff=d;
+  lastDiff=d;
   ['easy','medium','hard'].forEach(x=>{
     const b=el('diff-'+x);if(!b)return;
     const colors={easy:'var(--grn)',medium:'var(--warn)',hard:'var(--err)'};
@@ -1256,10 +1291,13 @@ window.saveQuestion=async function(){
     setSt('wiz2-st','ok','✅ Question saved! Add another or go back.');
     const count=(parseInt(el('addq-count-badge').textContent)||0)+1;
     el('addq-count-badge').textContent=count+' saved';
-    // Reset question fields only
+    // Remember type and difficulty for next question
+    lastQType=wizData.type;
+    lastDiff=wizData.diff;
+    // Reset question text only — keep type and difficulty
     el('aq-text').value='';
-    setQType('mcq');
-    setDiff('medium');
+    setQType(lastQType);
+    setDiff(lastDiff);
     showWizStep(1); // jump back to step 2 for next question in same test
   }catch(e){setSt('wiz2-st','err','Save failed: '+e.message);}
   btn.innerHTML='Save &amp; Add Another';btn.disabled=false;
@@ -1582,16 +1620,28 @@ window.launchTab=function(tab){
   });
 };
 
+let lobbyPollInt=null;
+
 function startLobbyListener(){
   if(lobbyUnsubscribe){lobbyUnsubscribe();lobbyUnsubscribe=null;}
   if(!fbReady||!activeSessionId)return;
-  lobbyUnsubscribe=_fb.onSnapshot(
-    _fb.query(_fb.collection(db,'lobby_'+activeSessionId),_fb.orderBy('ts','asc')),
-    snap=>{
+  clearInterval(lobbyPollInt);
+  // Poll lobby every 3 seconds
+  lobbyPollInt=setInterval(async()=>{
+    try{
+      const snap=await _fb.getDocs(
+        _fb.query(_fb.collection(db,'lobby_'+activeSessionId),_fb.orderBy('ts','asc'))
+      );
       const entries=snap.docs.map(d=>({id:d.id,...d.data()}));
       renderLobby(entries);
-    }
-  );
+    }catch(e){}
+  },3000);
+  // Also load immediately
+  _fb.getDocs(_fb.query(_fb.collection(db,'lobby_'+activeSessionId),_fb.orderBy('ts','asc')))
+    .then(snap=>{
+      const entries=snap.docs.map(d=>({id:d.id,...d.data()}));
+      renderLobby(entries);
+    }).catch(()=>{});
 }
 
 function renderLobby(entries){
@@ -1705,18 +1755,45 @@ window.stuJoin=async function(){
   if(!name){alert('Please enter your full name.');el('sl-name').focus();return;}
   if(!roll){alert('Please enter your roll number.');el('sl-roll').focus();return;}
   if(!email||!email.includes('@')){alert('Please enter a valid email.');el('sl-email').focus();return;}
-  stuName=name;stuRoll=roll;stuEmail=email;
 
   // Check session status
   const status=qParams?.status;
-  if(status==='ended'){
-    showStuError('This session has already ended.');return;
+  if(status==='ended'){showStuError('This session has already ended.');return;}
+
+  // Check for duplicate roll number or email in lobby
+  if(fbReady&&qParams?.sessionId){
+    try{
+      const existing=await _fb.getDocs(_fb.collection(db,'lobby_'+qParams.sessionId));
+      for(const d of existing.docs){
+        const data=d.data();
+        if(data.roll===roll){
+          alert('Roll number '+roll+' has already joined this session. If this is you, please wait — you are already registered.');
+          return;
+        }
+        if(data.email===email){
+          alert('Email '+email+' has already joined this session. Each student must use a unique email.');
+          return;
+        }
+      }
+    }catch(e){console.warn('Duplicate check:',e);}
   }
+
+  stuName=name;stuRoll=roll;stuEmail=email;
+
+  // Save to sessionStorage so refresh restores the student
+  try{
+    sessionStorage.setItem('cq5_stu',JSON.stringify({
+      name,roll,email,sessionId:qParams?.sessionId,
+      sessionName:qParams?.sessionName||'',
+      time:qParams?.time||15
+    }));
+  }catch(e){}
 
   // Register in lobby
   if(fbReady&&qParams?.sessionId){
     try{
-      await _fb.setDoc(_fb.doc(db,'lobby_'+qParams.sessionId,roll.replace(/\W/g,'_')+'_'+Date.now()),{
+      const lobbyDocId=roll.replace(/[^a-zA-Z0-9]/g,'_');
+      await _fb.setDoc(_fb.doc(db,'lobby_'+qParams.sessionId,lobbyDocId),{
         name,roll,email,status:'joined',ts:Date.now()
       });
     }catch(e){console.warn('Lobby register:',e);}
@@ -1727,28 +1804,60 @@ window.stuJoin=async function(){
   el('wait-name').textContent='Joined as: '+name+' ('+roll+')';
   show('s-stu-wait');
 
-  // Listen for session status change
-  listenForSessionStart();
+  // Start polling for session status
+  startSessionPoller();
 };
 
-function listenForSessionStart(){
+let sessionPollInt=null;
+
+function startSessionPoller(){
   if(!fbReady||!qParams?.sessionId)return;
-  // If already live, start immediately
-  if(qParams.status==='live'){beginQuiz();return;}
-  // Otherwise listen
-  const unsub=_fb.onSnapshot(_fb.doc(db,'sessions',qParams.sessionId),snap=>{
-    if(!snap.exists())return;
-    const data=snap.data();
-    if(data.status==='live'){
-      unsub();
+  clearInterval(sessionPollInt);
+  // Poll every 2 seconds for session status changes
+  sessionPollInt=setInterval(async()=>{
+    try{
+      const snap=await _fb.getDoc(_fb.doc(db,'sessions',qParams.sessionId));
+      if(!snap.exists())return;
+      const data=snap.data();
       qParams={...qParams,...data};
-      beginQuiz();
-    }else if(data.status==='ended'){
-      unsub();
-      showStuError('This session was ended before you could start.');
-    }
-  });
+      if(data.status==='live'){
+        clearInterval(sessionPollInt);
+        // Show tap-to-begin screen (required for fullscreen gesture)
+        showTapToBegin();
+      }else if(data.status==='ended'){
+        clearInterval(sessionPollInt);
+        showStuError('This session was ended by the teacher.');
+      }
+    }catch(e){console.warn('Session poll:',e);}
+  },2000);
 }
+
+// Keep backward compat
+function listenForSessionStart(){startSessionPoller();}
+
+function showTapToBegin(){
+  // Replace waiting screen content with a tap button
+  // This tap is required by browsers to allow fullscreen
+  el('wait-title').textContent=qParams.sessionName||'Quiz';
+  const waitDiv=document.querySelector('#s-stu-wait > div');
+  if(waitDiv){
+    waitDiv.innerHTML=\`
+      <div style="font-size:48px;margin-bottom:20px">🚀</div>
+      <h2 style="font-family:var(--fh);font-size:22px;margin-bottom:10px">Test is Live!</h2>
+      <p style="font-size:14px;color:var(--m);margin-bottom:28px">Your teacher has started the session.</p>
+      <button class="btn btn-grn" onclick="beginQuizFromTap()"
+        style="font-size:16px;padding:16px 32px;border-radius:12px">
+        Tap to Begin →
+      </button>
+      <p style="font-size:11px;color:var(--m2);margin-top:16px">
+        Quiz will go fullscreen when you tap
+      </p>\`;
+  }
+}
+
+window.beginQuizFromTap=function(){
+  beginQuiz();
+};
 
 function beginQuiz(){
   let pool=qParams.qs||[];
@@ -1783,15 +1892,21 @@ function beginQuiz(){
   listenForSessionEnd();
 }
 
+let endPollInt=null;
+
 function listenForSessionEnd(){
   if(!fbReady||!qParams?.sessionId)return;
-  const unsub=_fb.onSnapshot(_fb.doc(db,'sessions',qParams.sessionId),snap=>{
-    if(!snap.exists())return;
-    if(snap.data().status==='ended'&&quizActive){
-      unsub();
-      el('ov-session-ended').classList.add('on');
-    }
-  });
+  clearInterval(endPollInt);
+  endPollInt=setInterval(async()=>{
+    if(!quizActive){clearInterval(endPollInt);return;}
+    try{
+      const snap=await _fb.getDoc(_fb.doc(db,'sessions',qParams.sessionId));
+      if(snap.exists()&&snap.data().status==='ended'){
+        clearInterval(endPollInt);
+        el('ov-session-ended').classList.add('on');
+      }
+    }catch(e){}
+  },3000);
 }
 
 /* ═══════════════════════════════════════════
@@ -1909,8 +2024,9 @@ function renderQ(){
   // Show prev hint only if not on first question
   if(curQ > 0){
     html+=`<div style="text-align:center;margin-top:12px">
-      <button class="btn btn-ghost btn-sm" onclick="navQ(-1)" style="font-size:11px;opacity:0.7;padding:6px 14px">
-        ← Previous (review only)
+      <button class="btn btn-ghost btn-sm" onclick="navQ(-1)"
+        style="font-size:11px;opacity:0.7;padding:6px 14px">
+        ← Go Back${reviewMode?' (review only)':''}
       </button>
     </div>`;
   }
@@ -1941,7 +2057,9 @@ window.confSub=function(){
 
 window.finishQuiz=async function(){
   closeOv('ov-sub');closeOv('ov-session-ended');
-  quizActive=false;clearInterval(timerInt);clearInterval(vioTimer);
+  quizActive=false;
+  clearInterval(timerInt);clearInterval(vioTimer);
+  clearInterval(sessionPollInt);clearInterval(endPollInt);
   document.removeEventListener('visibilitychange',onVis);
   document.removeEventListener('fullscreenchange',onFS);
   document.removeEventListener('webkitfullscreenchange',onFS);
@@ -2029,6 +2147,8 @@ async function showResult(r){
   show('s-result');
 }
 
+let unlockPollInt=null;
+
 window.checkUnlock=async function(){
   if(!fbReady||!qParams?.sessionId)return;
   const btn=el('btn-check-unlock');
@@ -2036,16 +2156,32 @@ window.checkUnlock=async function(){
   try{
     const snap=await _fb.getDoc(_fb.doc(db,'sessions',qParams.sessionId));
     if(snap.exists()&&snap.data().answersLocked===false){
+      clearInterval(unlockPollInt);
       showAnswerReview();
       el('ans-locked-msg').style.display='none';
       btn.style.display='none';
-    }else{
-      btn.textContent='Still locked — try again later';
-      setTimeout(()=>{btn.textContent='🔄 Check if answers are unlocked';btn.disabled=false;},3000);
       return;
+    }else{
+      btn.textContent='🔄 Check again';btn.disabled=false;
+      // Start auto-polling every 5 seconds
+      if(!unlockPollInt){
+        unlockPollInt=setInterval(async()=>{
+          try{
+            const s=await _fb.getDoc(_fb.doc(db,'sessions',qParams.sessionId));
+            if(s.exists()&&s.data().answersLocked===false){
+              clearInterval(unlockPollInt);
+              showAnswerReview();
+              el('ans-locked-msg').style.display='none';
+              const b=el('btn-check-unlock');if(b)b.style.display='none';
+            }
+          }catch(e){}
+        },5000);
+      }
     }
-  }catch(e){btn.textContent='Error — try again';setTimeout(()=>{btn.disabled=false;btn.textContent='🔄 Check if answers are unlocked';},2000);}
-  btn.disabled=false;
+  }catch(e){
+    btn.textContent='Error — try again';
+    setTimeout(()=>{btn.disabled=false;btn.textContent='🔄 Check if answers are unlocked';},2000);
+  }
 };
 
 function showAnswerReview(){
