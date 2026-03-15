@@ -780,10 +780,10 @@ async function initFB(key,pid,aid){
   const a = aid  || (document.getElementById('fb-appid')?.value||'').trim();
   if(!k||!p||!a) return false;
   try{
-    const {initializeApp,getApps,deleteApp}=await import('https://cdn.jsdelivr.net/npm/firebase@10.12.0/app/+esm');
+    const {initializeApp,getApps,deleteApp}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
     const {getFirestore,collection,addDoc,getDocs,query,orderBy,where,
            doc,setDoc,getDoc,updateDoc,deleteDoc,onSnapshot,limit}=
-      await import('https://cdn.jsdelivr.net/npm/firebase@10.12.0/firestore/+esm');
+      await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
     getApps().forEach(a=>{try{deleteApp(a)}catch(e){}});
     const app=initializeApp({apiKey:k,authDomain:`${p}.firebaseapp.com`,
       projectId:p,storageBucket:`${p}.appspot.com`,appId:a});
@@ -1513,7 +1513,7 @@ window.showLoadTemplate=async function(){
   try{
     const snap=await _fb.getDocs(_fb.query(_fb.collection(db,'templates'),_fb.orderBy('ts','desc')));
     const tpls=snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(!tpls.length){el('ov-tpl-body').innerHTML='<div class="ovb">No templates saved yet.</div><button class="btn btn-ghost w100" onclick="closeOv('ov-template')">Close</button>';return;}
+    if(!tpls.length){el('ov-tpl-body').innerHTML='<div class="ovb">No templates saved yet.</div><button class="btn btn-ghost w100" onclick="closeOv(&quot;ov-template&quot;)">Close</button>';return;}
     el('ov-tpl-body').innerHTML=tpls.map(t=>`
       <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--s2);border-radius:8px;margin-bottom:6px">
         <div style="flex:1">
