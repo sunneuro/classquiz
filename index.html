@@ -632,6 +632,10 @@ tr:hover td{background:var(--s2)}
   </div>
   <div class="q-dots" id="q-dots"></div>
   <div class="qbody" id="qbody"></div>
+  <!-- Hidden nav controls referenced by renderQ() -->
+  <button id="btn-prv" style="display:none" onclick="navQ(-1)"></button>
+  <button id="btn-nxt" style="display:none" onclick="navQ(1)"></button>
+  <button id="btn-sub" style="display:none" onclick="confSub()"></button>
   <div class="qnav" id="qnav-bottom" style="padding:8px 16px 24px;min-height:20px">
   </div>
 </div>
@@ -1911,9 +1915,26 @@ function listenForSessionEnd(){
 /* ═══════════════════════════════════════════
    FULLSCREEN + VIOLATIONS
 ═══════════════════════════════════════════ */
-function reqFS(){const e=document.documentElement;(e.requestFullscreen||e.webkitRequestFullscreen||function(){}).call(e);}
-function exitFS(){try{(document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document);}catch(e){}}
-function onFS(){if(!quizActive)return;if(!(document.fullscreenElement||document.webkitFullscreenElement))trigVio();}
+function reqFS(){
+  const e=document.documentElement;
+  const fn=e.requestFullscreen||e.webkitRequestFullscreen||e.mozRequestFullScreen||null;
+  if(fn) fn.call(e).catch(()=>{}); // catch rejection silently on desktop
+}
+function exitFS(){
+  try{
+    const fn=document.exitFullscreen||document.webkitExitFullscreen||document.mozCancelFullScreen||null;
+    if(fn) fn.call(document);
+  }catch(e){}
+}
+function onFS(){
+  if(!quizActive)return;
+  // Only enforce fullscreen on touch devices (mobile)
+  // Desktop browsers handle fullscreen differently and shouldn't trigger violations
+  const isMobile=('ontouchstart' in window)||navigator.maxTouchPoints>0;
+  if(isMobile&&!(document.fullscreenElement||document.webkitFullscreenElement||document.mozFullScreenElement)){
+    trigVio();
+  }
+}
 function onVis(){
   if(!quizActive)return;
   if(document.hidden){offStart=Date.now();trigVio();}
@@ -1973,10 +1994,11 @@ function renderQ(){
   const q=quizQs[curQ];
   el('qpg').style.width=((curQ+1)/quizQs.length*100)+'%';
   el('hq').textContent=`Q ${curQ+1} / ${quizQs.length}`;
-  el('btn-prv').style.display=(reviewMode||curQ>0)?'':'none';
   const last=curQ===quizQs.length-1;
-  el('btn-nxt').style.display=last?'none':'';
-  el('btn-sub').style.display=last?'':'none';
+  // These hidden elements are referenced for backward compat
+  const _prv=el('btn-prv'); if(_prv) _prv.style.display='none';
+  const _nxt=el('btn-nxt'); if(_nxt) _nxt.style.display='none';
+  const _sub=el('btn-sub'); if(_sub) _sub.style.display='none';
 
   const tl=q.type==='mcq'?'Multiple Choice':'True / False';
   let html=`<div class="qnum">Question ${curQ+1} of ${quizQs.length}${reviewMode?' — Review':''}${q.difficulty?' · '+q.difficulty:''}</div>
