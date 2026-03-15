@@ -4,6 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="mobile-web-app-capable" content="yes"/>
 <title>ClassQuiz</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
@@ -847,7 +848,7 @@ window.show=function(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   el(id).classList.add('active');window.scrollTo(0,0);
 };
-window.closeOv=function(id){el(id).classList.remove('on');};
+window.closeOv=function(id){const e=el(id);if(e)e.classList.remove('on');};
 
 /* ═══════════════════════════════════════════
    LOCAL CACHE
@@ -1442,32 +1443,37 @@ window.renderCurate=function(){
   if(!qs.length){list.innerHTML=`<div class="empty"><span class="empty-i">🔍</span>No questions match.</div>`;return;}
   list.innerHTML=qs.map(q=>{
     const on=curSel.includes(q.id);
-    return`<div class="qi ${on?'sel':''}" onclick="togCur('${q.id}')">
-      <div class="qi-row">
-        <div class="chk ${on?'on':''}" id="cc-${q.id}">✓</div>
-        <div class="qi-body">
-          <div class="qi-meta">
-            <span class="chip chip-${q.type}">${q.type==='mcq'?'MCQ':'T/F'}</span>
-            <span class="chip chip-${q.difficulty}">${q.difficulty}</span>
-            <span class="qi-tag">${esc(q.courseId)}</span>
-            <span class="qi-tag">${esc(q.topicName)}</span>
-            <span class="qi-tag" style="color:var(--acc)">${esc(q.testLabel)}</span>
-          </div>
-          <div class="qi-text">${esc(q.text)}</div>
-        </div>
-      </div>
-    </div>`;
+    const selCls=on?'sel':'';
+    const chkCls=on?'on':'';
+    const typLbl=q.type==='mcq'?'MCQ':'T/F';
+    return '<div class="qi '+selCls+'" data-qid="'+q.id+'" onclick="togCurById(this)">'
+      +'<div class="qi-row">'
+        +'<div class="chk '+chkCls+'" id="cc-'+q.id+'">&#x2713;</div>'
+        +'<div class="qi-body">'
+          +'<div class="qi-meta">'
+            +'<span class="chip chip-'+q.type+'">'+typLbl+'</span>'
+            +'<span class="chip chip-'+q.difficulty+'">'+q.difficulty+'</span>'
+            +'<span class="qi-tag">'+esc(q.courseId)+'</span>'
+            +'<span class="qi-tag">'+esc(q.topicName)+'</span>'
+            +'<span class="qi-tag" style="color:var(--acc)">'+esc(q.testLabel)+'</span>'
+          +'</div>'
+          +'<div class="qi-text">'+esc(q.text)+'</div>'
+        +'</div>'
+      +'</div>'
+    +'</div>';
   }).join('');
 };
 
-window.togCur=function(id){
+window.togCurById=function(el_){
+  const id=el_.dataset.qid;
+  if(!id)return;
   curSel=curSel.includes(id)?curSel.filter(x=>x!==id):[...curSel,id];
-  el('cur-sel-count').textContent=`${curSel.length} selected`;
-  const item=document.querySelector(`.qi[onclick="togCur('${id}')"]`);
+  el('cur-sel-count').textContent=curSel.length+' selected';
+  el_.classList.toggle('sel',curSel.includes(id));
   const cc=el('cc-'+id);
-  if(item)item.classList.toggle('sel',curSel.includes(id));
   if(cc)cc.classList.toggle('on',curSel.includes(id));
 };
+window.togCur=window.togCurById;
 window.curSelAll=function(){
   allQuestions.filter(curateFiltFn).forEach(q=>{if(!curSel.includes(q.id))curSel.push(q.id);});
   renderCurate();
@@ -1513,7 +1519,7 @@ window.showLoadTemplate=async function(){
   try{
     const snap=await _fb.getDocs(_fb.query(_fb.collection(db,'templates'),_fb.orderBy('ts','desc')));
     const tpls=snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(!tpls.length){el('ov-tpl-body').innerHTML=`<div class="ovb">No templates saved yet.</div><button class="btn btn-ghost w100" onclick="closeOv('ov-template')">Close</button>`;return;}
+    if(!tpls.length){el('ov-tpl-body').innerHTML='<div class="ovb">No templates saved yet.</div><button class="btn btn-ghost w100" onclick="closeOv(this.dataset.id)" data-id="ov-template">Close</button>';return;}
     el('ov-tpl-body').innerHTML=tpls.map(t=>`
       <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--s2);border-radius:8px;margin-bottom:6px">
         <div style="flex:1">
@@ -1522,7 +1528,7 @@ window.showLoadTemplate=async function(){
         </div>
         <button class="btn btn-pri btn-sm" onclick="loadTemplate('${t.id}')">Load</button>
       </div>`).join('')+
-      `<button class="btn btn-ghost btn-sm w100" style="margin-top:8px" onclick="closeOv('ov-template')">Cancel</button>`;
+      '<button class="btn btn-ghost btn-sm w100" style="margin-top:8px" onclick="closeOv(this.dataset.id)" data-id="ov-template">Cancel</button>';
   }catch(e){el('ov-tpl-body').innerHTML='<div style="color:var(--err)">Load failed: '+e.message+'</div>';}
 };
 
@@ -1982,12 +1988,15 @@ function renderQ(){
     (q.options||[]).forEach((o,i)=>{
       const sel=answers[curQ]===String(i)?'sel':'';
       const clickable=reviewMode?'':'clickable';
-      const onclick=reviewMode?'':`onclick="pickOpt(${i})"`;
-      html+=`<button class="opt ${sel} ${clickable}" ${onclick}>
-        <span class="oltr">${q.type==='mcq'?'ABCD'[i]:o.charAt(0)}</span>
-        <span style="flex:1">${esc(o)}</span>
-        ${reviewMode&&answers[curQ]===String(i)?'<span style="font-size:10px;color:var(--acc)">Your answer</span>':''}
-      </button>`;
+      const onclickAttr=reviewMode?'':' onclick="pickOpt('+i+')"';
+      const yourAns=(reviewMode&&answers[curQ]===String(i))
+        ?'<span style="font-size:10px;color:var(--acc)">Your answer</span>':'';
+      const ltr=q.type==='mcq'?'ABCD'[i]:o.charAt(0);
+      html+='<button class="opt '+sel+' '+clickable+'"'+onclickAttr+'>'
+        +'<span class="oltr">'+ltr+'</span>'
+        +'<span style="flex:1">'+esc(o)+'</span>'
+        +yourAns
+        +'</button>';
     });
     html+=`</div>`;
     if(reviewMode&&answers[curQ]===undefined){
