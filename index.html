@@ -1091,6 +1091,14 @@ async function loadResults(force){
       _fb.query(_fb.collection(db,'results'),_fb.orderBy('ts','desc'))
     );
     allResults=snap.docs.map(d=>({id:d.id,...d.data()}));
+    // Ensure every record has a numeric performanceScore for sorting
+    allResults.forEach(r=>{
+      if(r.performanceScore==null){
+        const m=(r.timeTaken||'').match(/(\d+)m\s*(\d+)s/);
+        const t=m?parseInt(m[1])*60+parseInt(m[2]):0;
+        r.performanceScore=calcPerformance(r.pct,t,(r.sessionTotalTime||15)*60,r.violations);
+      }
+    });
     populateResultFilters();
     renderResults();
     if(rb)rb.textContent='Updated: '+new Date().toLocaleTimeString();
@@ -2380,10 +2388,19 @@ function showAnswerReview(){
 window.shareRes=function(){
   const pct=el('rpct').textContent;
   const cor=el('rcor').textContent;
-  const tot=el('ratt').textContent;
-  const t=`📝 ${qParams?.sessionName||'Quiz'}\n👤 ${stuName} (${stuRoll})\n📧 ${stuEmail}\n✅ ${cor}/${quizQs.length} correct\n📊 ${pct}\n⏱ ${el('rtim').textContent}`;
-  if(navigator.share)navigator.share({title:'Quiz Result',text:t}).catch(()=>{});
-  else{const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');document.body.removeChild(ta);alert('Result copied to clipboard!');}
+  const sessionId=qParams?.sessionDisplayId||qParams?.sessionName||'Self Assessment';
+  const t='📝 '+sessionId+'\n👤 '+stuName+' ('+stuRoll+')\n📧 '+stuEmail+'\n✅ '+cor+'/'+quizQs.length+' correct\n📊 '+pct+'\n⏱ '+el('rtim').textContent;
+  if(navigator.share){
+    navigator.share({title:sessionId, text:t}).catch(()=>{});
+  } else {
+    const ta=document.createElement('textarea');
+    ta.value=t;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('Result copied to clipboard!');
+  }
 };
 
 /* ═══════════════════════════════════════════
