@@ -986,8 +986,8 @@ async function goHome(){
 window.goBank=async function(){await loadAllQuestions();populateBankFilters();renderBank();show('s-bank');};
 window.goCurate=async function(){await loadAllQuestions();populateCurateFilters();renderCurate();show('s-curate');};
 let resultsRefreshInt=null;
-let sortCol='ts';
-let sortDir='desc'; // asc or desc
+window.sortCol='ts';
+window.sortDir='desc';
 window.goResults=async function(){
   clearInterval(resultsRefreshInt);
   await loadResults(false);
@@ -2423,27 +2423,31 @@ function populateResultFilters(){
 }
 
 window.sortResults=function(col){
+  // Toggle direction if same column, else set new column with sensible default
   if(sortCol===col){
-    sortDir=sortDir==='asc'?'desc':'asc';
+    sortDir=(sortDir==='asc')?'desc':'asc';
   } else {
     sortCol=col;
-    sortDir=col==='pct'||col==='performanceScore'?'desc':'asc'; // default desc for scores
+    // Scores and numeric rankings default to descending (highest first)
+    sortDir=(col==='pct'||col==='performanceScore'||col==='violations')?'desc':'asc';
   }
-  // Update header arrows
-  document.querySelectorAll('.th-sort').forEach(th=>{
+  // Update all header arrows
+  document.querySelectorAll('.th-sort').forEach(function(th){
     th.classList.remove('active');
-    const arr=th.querySelector('.arr');
-    if(arr)arr.textContent='↕';
+    var arr=th.querySelector('.arr');
+    if(arr) arr.textContent='↕';
   });
-  const activeTh=document.querySelector('.th-sort[onclick*="\'' + col + '\'"]');
-  if(activeTh){
-    activeTh.classList.add('active');
-    const arr=activeTh.querySelector('.arr');
-    if(arr)arr.textContent=sortDir==='asc'?'↑':'↓';
-  }
+  // Find active header by checking onclick attribute
+  document.querySelectorAll('.th-sort').forEach(function(th){
+    var oc=th.getAttribute('onclick')||'';
+    if(oc.indexOf("'"+col+"'")>=0 || oc.indexOf('"'+col+'"')>=0){
+      th.classList.add('active');
+      var arr=th.querySelector('.arr');
+      if(arr) arr.textContent=(window.sortDir==='asc')?'↑':'↓';
+    }
+  });
   renderResults();
 };
-
 window.renderResults=function(){
   const prog=gv('rf-prog'),subj=gv('rf-subj'),topic=gv('rf-topic'),
         testid=gv('rf-testid'),teacher_f=gv('rf-teacher'),
@@ -2469,13 +2473,14 @@ window.renderResults=function(){
   // Sort
   // Numeric columns — always compare as numbers
   const numericCols=['pct','performanceScore','violations','offSecs','attempted','correct','wrong'];
+  const _sc=window.sortCol; const _sd=window.sortDir;
   filtered.sort((a,b)=>{
-    let va=a[sortCol],vb=b[sortCol];
+    let va=a[_sc],vb=b[_sc];
     // Parse time strings "5m 30s" → seconds
-    if(sortCol==='timeTaken'){
+    if(_sc==='timeTaken'){
       const toSec=s=>{if(!s)return 0;const m=s.match(/(\d+)m\s*(\d+)s/);return m?parseInt(m[1])*60+parseInt(m[2]):0;};
       va=toSec(va); vb=toSec(vb);
-    } else if(numericCols.includes(sortCol)){
+    } else if(numericCols.includes(_sc)){
       va=parseFloat(va)||0;
       vb=parseFloat(vb)||0;
     } else {
@@ -2485,8 +2490,8 @@ window.renderResults=function(){
     }
     if(va===''||va==null)return 1;
     if(vb===''||vb==null)return -1;
-    if(va<vb)return sortDir==='asc'?-1:1;
-    if(va>vb)return sortDir==='asc'?1:-1;
+    if(va<vb)return _sd==='asc'?-1:1;
+    if(va>vb)return _sd==='asc'?1:-1;
     return 0;
   });
 
