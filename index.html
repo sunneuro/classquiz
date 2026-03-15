@@ -2303,32 +2303,14 @@ window.dlCSV=function(){
 async function bootstrap(){
   showSplash('Starting…');
 
-  // Load Firebase config — try config.json first, then localStorage
-  let fbCfg = null;
+  // Firebase credentials hardcoded — no config.json or localStorage needed
+  const fbCfg = {
+    k: "AIzaSyCrIrsfFY7BLw2mmIGHDM-hSVAllqbdYjI",
+    p: "classquiz-bc2a2",
+    a: "1:326614094240:web:609bc57c2f271920ff14c5"
+  };
 
-  // Priority 1: config.json sitting next to index.html on GitHub Pages
-  try{
-    const resp = await fetch('./config.json');
-    if(resp.ok){
-      const data = await resp.json();
-      if(data.k && data.p && data.a){
-        fbCfg = data;
-        saveFBCfg(data.k, data.p, data.a); // keep localStorage in sync
-      }
-    }
-  }catch(e){ /* config.json not present — that is fine */ }
-
-  // Priority 2: localStorage (entered manually before, or saved above)
-  if(!fbCfg) fbCfg = loadFBCfg();
-
-  // Priority 3: show manual entry screen
-  if(!fbCfg||!fbCfg.k||!fbCfg.p||!fbCfg.a){
-    hideSplash();
-    showFBSetup('');
-    return;
-  }
-
-  // Populate hidden fields so initFB can always find credentials
+  // Populate hidden fields
   const fk=document.getElementById('fb-key');
   const fp=document.getElementById('fb-pid');
   const fa=document.getElementById('fb-appid');
@@ -2340,7 +2322,7 @@ async function bootstrap(){
   const ok = await initFB(fbCfg.k, fbCfg.p, fbCfg.a);
   if(!ok){
     hideSplash();
-    showFBSetup('Firebase could not be initialised. Please check your credentials.');
+    showFBSetup('Firebase could not be initialised.');
     return;
   }
 
@@ -2357,7 +2339,7 @@ async function bootstrap(){
   }
 
   // Teacher mode
-  showSplash('Loading app settings…');
+  showSplash('Loading…');
   try{
     const snap = await getDocWithRetry(_fb.doc(db,'settings','app'),2,800);
     if(!snap.exists()){
@@ -2368,8 +2350,7 @@ async function bootstrap(){
     appCfg = snap.data();
   }catch(e){
     hideSplash();
-    showFBSetup('Could not read app settings. Error: '+e.message+
-      ' — Make sure Firestore Database has been created in your Firebase project (Build → Firestore Database → Create database → Test mode).');
+    showFBSetup('Could not load app: '+e.message);
     return;
   }
 
@@ -2378,135 +2359,42 @@ async function bootstrap(){
   const cached = loadTCache();
   if(cached){
     teacher = cached;
-    el('tl-name').value = cached.name||'';
-    el('tl-email').value = cached.email||'';
+    if(el('tl-name')) el('tl-name').value = cached.name||'';
+    if(el('tl-email')) el('tl-email').value = cached.email||'';
   }
   show('s-login-teacher');
 }
 
 function showFBSetup(errMsg){
   el('s-splash').style.display='none';
-  // Remove any existing setup div
   document.getElementById('s-fb-setup')?.remove();
-  const saved=loadFBCfg()||{};
   document.body.insertAdjacentHTML('afterbegin',`
     <div id="s-fb-setup" style="display:flex;min-height:100vh;align-items:center;justify-content:center;padding:24px;background:var(--bg)">
-      <div style="max-width:460px;width:100%">
-        <div style="text-align:center;margin-bottom:24px">
-          <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;
-            background:linear-gradient(135deg,#6c63ff,#ff6584);-webkit-background-clip:text;
-            -webkit-text-fill-color:transparent;background-clip:text">Self Assessment</div>
-          <div style="font-size:11px;color:#7070a0;margin-top:4px;letter-spacing:2px;text-transform:uppercase">Firebase Setup</div>
-        </div>
-        ${errMsg?`<div class="st err" style="display:block;margin-bottom:14px">${errMsg}</div>`:''}
+      <div style="max-width:420px;width:100%;text-align:center">
+        <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;
+          background:linear-gradient(135deg,#6c63ff,#ff6584);-webkit-background-clip:text;
+          -webkit-text-fill-color:transparent;background-clip:text;margin-bottom:24px">Self Assessment</div>
         <div class="card">
-          <h2>Enter Firebase Credentials</h2>
-          <p style="font-size:13px;color:var(--m);margin-bottom:16px;line-height:1.7">
-            Find these in Firebase Console → Project Settings → Your apps → SDK setup.
-          </p>
-          <label>API Key</label>
-          <input type="text" id="fbs-key" placeholder="AIzaSy..." value="${esc(saved.k||'')}"/>
-          <label>Project ID</label>
-          <input type="text" id="fbs-pid" placeholder="my-project-12345" value="${esc(saved.p||'')}"/>
-          <label>App ID</label>
-          <input type="text" id="fbs-appid" placeholder="1:123456789:web:abcdef" value="${esc(saved.a||'')}"/>
-          <button class="btn btn-pri w100" style="margin-top:16px" id="fbs-btn" onclick="doFBSetup()">
-            Connect to Firebase →
-          </button>
-          <div class="st" id="fbs-st"></div>
+          <div class="st err" style="display:block">${errMsg}</div>
+          <p style="font-size:13px;color:var(--m);margin-top:12px">Please refresh the page and try again.</p>
+          <button class="btn btn-pri w100" style="margin-top:14px" onclick="location.reload()">Refresh Page</button>
         </div>
       </div>
     </div>`);
 }
 
-window.doFBSetup=async function(){
-  const k=(document.getElementById('fbs-key')?.value||'').trim();
-  const p=(document.getElementById('fbs-pid')?.value||'').trim();
-  const a=(document.getElementById('fbs-appid')?.value||'').trim();
-  if(!k||!p||!a){
-    document.getElementById('fbs-st').className='st err';
-    document.getElementById('fbs-st').textContent='Please fill in all three fields.';
-    return;
-  }
-  const btn=document.getElementById('fbs-btn');
-  btn.innerHTML='<span class="spin"></span> Connecting…';btn.disabled=true;
-  document.getElementById('fbs-st').className='st info';
-  document.getElementById('fbs-st').textContent='Initialising Firebase SDK…';
-  document.getElementById('fbs-st').style.display='block';
-
-  // Populate hidden fields before init
-  const fk=document.getElementById('fb-key');
-  const fp=document.getElementById('fb-pid');
-  const fa=document.getElementById('fb-appid');
-  if(fk) fk.value=k;
-  if(fp) fp.value=p;
-  if(fa) fa.value=a;
-
-  const ok=await initFB(k,p,a);
-  if(!ok){
-    document.getElementById('fbs-st').className='st err';
-    document.getElementById('fbs-st').textContent='SDK failed to initialise. Check your API Key and App ID.';
-    btn.innerHTML='Try Again';btn.disabled=false;return;
-  }
-
-  document.getElementById('fbs-st').textContent='SDK ready. Testing Firestore connection…';
-  saveFBCfg(k,p,a);
-
-  try{
-    const snap=await getDocWithRetry(_fb.doc(db,'settings','app'),5,1500);
-    document.getElementById('fbs-st').className='st ok';
-    document.getElementById('fbs-st').textContent='✅ Connected successfully!';
-    await wait(700);
-    document.getElementById('s-fb-setup')?.remove();
-    // Proceed based on what we found
-    if(!snap.exists()){
-      hideSplash();
-      show('s-firstrun');
-    } else {
-      appCfg=snap.data();
-      hideSplash();
-      el('login-appname').textContent=appCfg.appName||'Self Assessment';
-      const cached=loadTCache();
-      if(cached){teacher=cached;el('tl-name').value=cached.name||'';el('tl-email').value=cached.email||'';}
-      show('s-login-teacher');
-    }
-  }catch(e){
-    const msg=e.message||'';
-    let hint='';
-    if(msg.toLowerCase().includes('offline')){
-      hint=' Firebase SDK connected but Firestore says offline. This usually means Firestore has not been created yet in your Firebase project. Go to Firebase Console → Build → Firestore Database → Create database → Start in test mode.';
-    } else if(msg.toLowerCase().includes('permission')){
-      hint=' Permission denied. Go to Firebase Console → Firestore → Rules and set: allow read, write: if true;';
-    }
-    document.getElementById('fbs-st').className='st err';
-    document.getElementById('fbs-st').textContent='Connection failed: '+msg+hint;
-    btn.innerHTML='Try Again';btn.disabled=false;
-  }
-};
-
-// showInlineConfig removed — replaced by showFBSetup
-
-// Helper: wait ms milliseconds
+// Helper: wait ms
 function wait(ms){return new Promise(r=>setTimeout(r,ms));}
-// saveInlineCfg removed — replaced by doFBSetup
 
-// Helper: try Firestore getDoc up to maxTries times with delay between attempts
+// Helper: getDoc with retry
 async function getDocWithRetry(docRef, maxTries=3, delayMs=800){
   let lastErr;
   for(let i=0;i<maxTries;i++){
-    try{
-      const snap=await _fb.getDoc(docRef);
-      return snap; // success on attempt i+1
-    }catch(e){
-      lastErr=e;
-      // Only wait before retrying, not after last attempt
-      if(i<maxTries-1) await wait(delayMs);
-    }
+    try{ return await _fb.getDoc(docRef); }
+    catch(e){ lastErr=e; if(i<maxTries-1) await wait(delayMs); }
   }
   throw lastErr;
 }
-
-
 
 // Start
 bootstrap();
