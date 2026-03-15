@@ -184,9 +184,10 @@ tr:hover td{background:var(--s2)}
   -webkit-text-fill-color:transparent;background-clip:text}
 .logo-s{font-size:11px;color:var(--m);letter-spacing:2px;text-transform:uppercase;margin-top:3px}
 /* tabs */
-.tabs{display:flex;gap:3px;background:var(--s2);border-radius:10px;padding:3px;margin-bottom:16px}
-.tab{flex:1;padding:8px;text-align:center;font-family:var(--fh);font-size:11px;font-weight:700;
-  border-radius:7px;cursor:pointer;color:var(--m);transition:all .15s;letter-spacing:.3px;text-transform:uppercase}
+.tabs{display:flex;gap:3px;background:var(--s2);border-radius:10px;padding:3px;margin-bottom:16px;flex-wrap:wrap}
+.tab{flex:1;padding:6px 4px;text-align:center;font-family:var(--fh);font-size:10px;font-weight:700;
+  border-radius:7px;cursor:pointer;color:var(--m);transition:all .15s;letter-spacing:.2px;text-transform:uppercase;
+  white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .tab.on{background:var(--s1);color:var(--txt);border:1px solid var(--b)}
 /* home cards */
 .subj-card{background:var(--s1);border:1px solid var(--b);border-radius:var(--r);padding:16px;
