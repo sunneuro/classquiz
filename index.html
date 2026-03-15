@@ -352,16 +352,17 @@ tr:hover td{background:var(--s2)}
         <input type="text" id="aq-subj" placeholder="e.g. Anatomy" autocomplete="off" oninput="acFilter('subj')" onfocus="acShow('subj')" onblur="acHide('subj',300)"/>
         <div class="ac-drop" id="ac-subj"></div>
       </div>
-      <label>Unit / Topic <span class="req">*</span></label>
+      <label>Unit/Topic <span class="req">*</span></label>
       <div class="ac-wrap">
         <input type="text" id="aq-topic" placeholder="e.g. Upper Limb" autocomplete="off" oninput="acFilter('topic')" onfocus="acShow('topic')" onblur="acHide('topic',300)"/>
         <div class="ac-drop" id="ac-topic"></div>
       </div>
-      <label>Test ID <span class="req">*</span></label>
-      <div class="ac-wrap">
-        <input type="text" id="aq-testid" placeholder="e.g. DrAhmed_Oct2025" autocomplete="off" oninput="acFilter('testid')" onfocus="acShow('testid')" onblur="acHide('testid',300)"/>
-        <div class="ac-drop" id="ac-testid"></div>
-      </div>
+      <label>Test ID/Comment <span class="req">*</span></label>
+      <input type="text" id="aq-testid" placeholder="Auto: CourseID_UnitTopic"
+        style="background:var(--s3);color:var(--m)"
+        onclick="this.removeAttribute('readonly');this.style.background='var(--s2)';this.style.color='var(--txt)'"
+        readonly/>
+      <div style="font-size:11px;color:var(--m2);margin-top:4px">Auto-filled from Course ID + Unit/Topic. Tap to edit.</div>
     </div>
     <button class="btn btn-pri w100" onclick="wizNext(1)">Next: Write Question →</button>
     <div class="st" id="wiz0-st"></div>
@@ -427,11 +428,11 @@ tr:hover td{background:var(--s2)}
         <select id="bf-subj" onchange="renderBank()"><option value="">All</option></select>
       </div>
       <div>
-        <label style="margin-top:0">Topic</label>
+        <label style="margin-top:0">Unit/Topic</label>
         <select id="bf-topic" onchange="renderBank()"><option value="">All</option></select>
       </div>
       <div>
-        <label style="margin-top:0">Test ID</label>
+        <label style="margin-top:0">Test ID/Comment</label>
         <select id="bf-testid" onchange="renderBank()"><option value="">All</option></select>
       </div>
       <div>
@@ -474,9 +475,9 @@ tr:hover td{background:var(--s2)}
         <select id="cf-prog" onchange="renderCurate()"><option value="">All</option></select></div>
       <div><label style="margin-top:0">Subject</label>
         <select id="cf-subj" onchange="renderCurate()"><option value="">All</option></select></div>
-      <div><label style="margin-top:0">Topic</label>
+      <div><label style="margin-top:0">Unit/Topic</label>
         <select id="cf-topic" onchange="renderCurate()"><option value="">All</option></select></div>
-      <div><label style="margin-top:0">Test ID</label>
+      <div><label style="margin-top:0">Test ID/Comment</label>
         <select id="cf-testid" onchange="renderCurate()"><option value="">All</option></select></div>
       <div><label style="margin-top:0">Type</label>
         <select id="cf-type" onchange="renderCurate()">
@@ -643,7 +644,9 @@ tr:hover td{background:var(--s2)}
 <!-- RESULT -->
 <div id="s-result" class="screen center">
 <div class="mw" style="align-items:center;display:flex;flex-direction:column">
-  <div style="font-size:10px;color:var(--m);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px">Quiz Complete</div>
+  <div style="font-size:10px;color:var(--m);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">Quiz Complete</div>
+  <div id="r-test-id" style="font-family:var(--fh);font-size:18px;font-weight:700;margin-bottom:4px;text-align:center"></div>
+  <div id="r-session-id" style="font-size:11px;color:var(--m);margin-bottom:14px;text-align:center"></div>
   <div class="sring" id="sring">
     <div class="sinn"><span class="spct" id="rpct">--%</span><span class="slbl">score</span></div>
   </div>
@@ -688,9 +691,9 @@ tr:hover td{background:var(--s2)}
         <select id="rf-prog" onchange="renderResults()"><option value="">All</option></select></div>
       <div><label style="margin-top:0">Subject</label>
         <select id="rf-subj" onchange="renderResults()"><option value="">All</option></select></div>
-      <div><label style="margin-top:0">Topic</label>
+      <div><label style="margin-top:0">Unit/Topic</label>
         <select id="rf-topic" onchange="renderResults()"><option value="">All</option></select></div>
-      <div><label style="margin-top:0">Test ID</label>
+      <div><label style="margin-top:0">Test ID/Comment</label>
         <select id="rf-testid" onchange="renderResults()"><option value="">All</option></select></div>
       <div><label style="margin-top:0">Teacher</label>
         <select id="rf-teacher" onchange="renderResults()"><option value="">All</option></select></div>
@@ -708,7 +711,8 @@ tr:hover td{background:var(--s2)}
     <table>
       <thead><tr>
         <th>#</th><th>Name</th><th>Roll</th><th>Email</th>
-        <th>Programme</th><th>Subject</th><th>Test ID</th><th>Teacher</th>
+        <th>Programme</th><th>Subject</th><th>Unit/Topic</th>
+        <th>Test ID/Comment</th><th>Session ID</th><th>Teacher</th>
         <th>Score</th><th>Time</th><th>Violations</th>
       </tr></thead>
       <tbody id="results-tbody"></tbody>
@@ -815,10 +819,13 @@ let stuName='',stuRoll='',stuEmail='';
 let vioCount=0,offSecs=0,offStart=null;
 let vioTimer=null,vioCd=10,firstVio=true,quizActive=false;
 let reviewMode=false;
+let immRestartTimer=null;
 let lastQType='mcq';   // remembers last used question type across saves
 let lastDiff='medium'; // remembers last used difficulty across saves
 let qParams=null;      // student: parsed session data
-let activeSessionId=null;  // teacher: current session ID
+let activeSessionId=null;
+let activeSessionDisplayId='';
+let activeSessionFileId='';  // teacher: current session ID
 let answersLocked=true;
 let sessionUnsubscribe=null; // Firebase listener unsubscribe
 let lobbyUnsubscribe=null;
@@ -1068,20 +1075,36 @@ window.acFilter=function(key){
   const filtered=src.filter(x=>x.toLowerCase().includes(val));
   const drop=el('ac-'+key);
   if(!drop)return;
-  let html=filtered.map(x=>`<div class="ac-item" onmousedown="acSelect('${key}','${esc(x)}')">${esc(x)}</div>`).join('');
+  let html=filtered.map(x=>'<div class="ac-item" onmousedown="acSelect(\'' + key + '\',\'' + esc(x) + '\')">'+esc(x)+'</div>').join('');
   if(val&&!filtered.find(x=>x.toLowerCase()===val)){
-    html+=`<div class="ac-item new" onmousedown="acSelect('${key}','${gv('aq-'+key)}')">${esc(gv('aq-'+key))} (new)</div>`;
+    html+='<div class="ac-item new" onmousedown="acSelect(\'' + key + '\',\'' + gv('aq-'+key) + '\')">'+esc(gv('aq-'+key))+' (new)</div>';
   }
   drop.innerHTML=html;
   drop.classList.add('show');
+  // Auto-generate Test ID when cid or topic changes
+  autoFillTestId();
 };
+
+function autoFillTestId(){
+  const cid=(el('aq-cid')?.value||'').trim();
+  const topic=(el('aq-topic')?.value||'').trim();
+  const tidInp=el('aq-testid');
+  if(!tidInp)return;
+  if(tidInp.hasAttribute('readonly')){
+    // Only auto-fill if still readonly (not manually edited)
+    const auto=cid&&topic?(cid+'_'+topic.replace(/[\/\\]/g,'-')):cid||topic||'';
+    if(auto) tidInp.value=auto;
+    if(auto) wizData.testid=auto;
+  }
+}
 window.acShow=function(key){acFilter(key);};
 window.acHide=function(key,delay){setTimeout(()=>{const d=el('ac-'+key);if(d)d.classList.remove('show');},delay);};
 window.acSelect=function(key,val){
   const inp=el('aq-'+key);if(inp)inp.value=val;
   const drop=el('ac-'+key);if(drop)drop.classList.remove('show');
-  // cascade: selecting prog filters subj; selecting cid+subj filters topic etc.
   if(key==='prog')acFilterCascade();
+  // Auto-update Test ID when cid or topic selected
+  if(key==='cid'||key==='topic') autoFillTestId();
 };
 function acFilterCascade(){
   // Could filter downstream dropdowns — left simple for now
@@ -1094,7 +1117,7 @@ window.goAddQ=function(){
   editQId=null;
   wizStep=0;
 
-  // Auto-generate Test ID from teacher name + today's date
+  // Auto-generate Test ID/Comment from teacher name + today's date
   // Format: TeacherName_15Jan2026
   function autoTestId(){
     const name=(teacher?.name||'').trim().replace(/\s+/g,'');
@@ -1687,8 +1710,18 @@ window.removeFromLobby=async function(docId){
 window.goLive=async function(){
   if(!fbReady||!activeSessionId)return;
   try{
-    await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{status:'live'});
-    el('session-status-msg').textContent='✅ Test is live! Students are now taking the quiz.';
+    // Generate session ID at the moment of going live
+    const fq=allQuestions.filter(q=>curSel.includes(q.id))[0]||{};
+    const sid=genSessionId(fq.courseId||gv('cs-name'),fq.topicName||'');
+    activeSessionDisplayId=sid.display;
+    activeSessionFileId=sid.filename;
+    await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{
+      status:'live',
+      sessionDisplayId:sid.display,
+      sessionFileId:sid.filename,
+      liveAt:Date.now()
+    });
+    el('session-status-msg').textContent='✅ Test is live! Session: '+sid.display;
     el('btn-go-live').style.display='none';
     el('btn-end-session').style.display='';
     el('btn-go-live-2').style.display='none';
@@ -1937,30 +1970,72 @@ function onFS(){
 }
 function onVis(){
   if(!quizActive)return;
-  if(document.hidden){offStart=Date.now();trigVio();}
-  else{if(offStart){offSecs+=Math.round((Date.now()-offStart)/1000);offStart=null;}}
+  if(document.hidden){
+    offStart=Date.now();
+    // For V4+, start a 2-second timer for immediate restart
+    if(vioCount>=3){
+      clearTimeout(immRestartTimer);
+      immRestartTimer=setTimeout(()=>{
+        if(document.hidden&&quizActive){
+          vioCount++;
+          el('hvio').style.display='';
+          el('hvio').textContent='⚠ '+vioCount+' violations';
+          offSecs+=Math.round((Date.now()-offStart)/1000);
+          offStart=null;
+          restartVio();
+        }
+      },2000);
+    } else {
+      trigVio();
+    }
+  } else {
+    clearTimeout(immRestartTimer);
+    if(offStart){offSecs+=Math.round((Date.now()-offStart)/1000);offStart=null;}
+  }
 }
 
 function trigVio(){
   if(!quizActive)return;
   vioCount++;
   el('hvio').style.display='';
-  el('hvio').textContent=`⚠ ${vioCount} violation${vioCount>1?'s':''}`;
-  const sec=!firstVio;
-  el('ov-vt').textContent=sec?'🚨 Second Violation!':'⚠ Screen Left — Warning!';
-  el('ov-vb').textContent=sec
-    ?'Quiz restarts with remaining time. Violation recorded.'
-    :'Return within 10 seconds or the quiz will restart.';
-  el('ov-vbtn').textContent=sec?'Restart Quiz':'Return to Quiz';
-  el('ov-vbtn').onclick=sec?restartVio:retVio;
-  vioCd=10;el('ov-vc').textContent='10';
+  el('hvio').textContent='⚠ '+vioCount+' violation'+(vioCount>1?'s':'');
+
+  // Escalating protocol:
+  // V1 = 10s warning, can return
+  // V2 = 7s warning, can return
+  // V3 = 4s warning then restart
+  // V4+ = handled by onVis with 2s threshold (immediate restart)
+
+  let cdSecs=10, canReturn=true, title='', body='';
+  if(vioCount===1){
+    cdSecs=10; canReturn=true;
+    title='⚠ Warning 1 of 3 — Screen Left!';
+    body='Return within 10 seconds or the quiz will restart.';
+  } else if(vioCount===2){
+    cdSecs=7; canReturn=true;
+    title='⚠ Warning 2 of 3 — Screen Left Again!';
+    body='Final warning before restart. Return within 7 seconds.';
+  } else if(vioCount===3){
+    cdSecs=4; canReturn=false;
+    title='🚨 Warning 3 — Quiz Restarting!';
+    body='Third violation. Quiz restarts in 4 seconds.';
+  } else {
+    cdSecs=3; canReturn=false;
+    title='🚨 Repeated Violation — Restarting!';
+    body='Violation #'+vioCount+'. Quiz restarting immediately.';
+  }
+
+  el('ov-vt').textContent=title;
+  el('ov-vb').textContent=body;
+  el('ov-vbtn').textContent=canReturn?'Return to Quiz':'OK — Restarting…';
+  el('ov-vbtn').onclick=canReturn?retVio:restartVio;
+  vioCd=cdSecs; el('ov-vc').textContent=cdSecs;
   el('ov-vio').classList.add('on');
   clearInterval(vioTimer);
   vioTimer=setInterval(()=>{
-    vioCd--;el('ov-vc').textContent=vioCd;
-    if(vioCd<=0){clearInterval(vioTimer);restartVio();}
+    vioCd--; el('ov-vc').textContent=vioCd;
+    if(vioCd<=0){clearInterval(vioTimer); restartVio();}
   },1000);
-  firstVio=false;
 }
 
 function retVio(){clearInterval(vioTimer);closeOv('ov-vio');reqFS();}
@@ -2106,6 +2181,8 @@ window.finishQuiz=async function(){
     pct,timeTaken:fmtT(timeTaken),violations:vioCount,offSecs,
     sessionId:qParams?.sessionId||'',
     sessionName:qParams?.sessionName||'',
+    sessionDisplayId:qParams?.sessionDisplayId||'',
+    sessionFileId:qParams?.sessionFileId||'',
     testLabel:qParams?.testLabel||'',
     programmeName:qParams?.programmeName||'',
     courseId:qParams?.courseId||'',
@@ -2139,9 +2216,18 @@ async function showResult(r){
   const color=r.pct>=70?'#6c63ff':r.pct>=50?'#f59e0b':'#ef4444';
   el('sring').style.background=`conic-gradient(${color} ${r.pct*3.6}deg,var(--s2) 0%)`;
   el('rpct').textContent=r.pct+'%';
+  // Show Test ID as title, session ID as subtitle
+  const testTitle=r.testLabel||r.sessionName||'Quiz';
+  const sessionSubtitle=r.sessionDisplayId||r.sessionId||'';
   el('rname').textContent=r.studentName;
-  el('rroll').textContent=`Roll: ${r.roll} | ${r.email}`;
+  el('rroll').textContent='Roll: '+r.roll+' | '+r.email;
   el('rmood').textContent=r.pct>=70?'🎉 Excellent!':r.pct>=50?'👍 Good effort!':'📚 Keep practising!';
+  // Insert test ID above score ring
+  const testIdEl=el('r-test-id');
+  if(testIdEl){
+    testIdEl.textContent=testTitle;
+    el('r-session-id').textContent=sessionSubtitle;
+  }
   el('ratt').textContent=r.attempted;
   el('rcor').textContent=r.correct;
   el('rwrg').textContent=r.wrong;
@@ -2261,6 +2347,9 @@ function populateResultFilters(){
   fillSelect('rf-topic',topics);
   fillSelect('rf-testid',testids);
   fillSelect('rf-teacher',teachers);
+  // Update table min-width for extra columns
+  const tbl=document.querySelector('#s-results table');
+  if(tbl) tbl.style.minWidth='900px';
 }
 
 window.renderResults=function(){
@@ -2273,16 +2362,22 @@ window.renderResults=function(){
     if(topic&&r.topicName!==topic)return false;
     if(testid&&r.testLabel!==testid)return false;
     if(teacher_f&&r.teacherName!==teacher_f)return false;
-    if(srch&&!(r.studentName||'').toLowerCase().includes(srch)&&
-       !(r.roll||'').toLowerCase().includes(srch)&&
-       !(r.email||'').toLowerCase().includes(srch))return false;
+    if(srch){
+      // Search across ALL columns simultaneously
+      const hay=[r.studentName,r.roll,r.email,r.programmeName,
+        r.courseId,r.subjectName,r.topicName,r.testLabel,
+        r.sessionDisplayId,r.teacherName,
+        String(r.pct||''),r.timeTaken,String(r.violations||'')
+      ].join(' ').toLowerCase();
+      if(!hay.includes(srch))return false;
+    }
     return true;
   });
 
   el('rs-tot').textContent=filtered.length;
   if(!filtered.length){
     el('rs-avg').textContent=el('rs-hi').textContent=el('rs-lo').textContent='—';
-    el('results-tbody').innerHTML=`<tr><td colspan="11" style="text-align:center;color:var(--m);padding:24px">No results match.</td></tr>`;
+    el('results-tbody').innerHTML='<tr><td colspan="13" style="text-align:center;color:var(--m);padding:24px">No results match.</td></tr>';
     return;
   }
   const pcts=filtered.map(r=>r.pct);
@@ -2290,34 +2385,44 @@ window.renderResults=function(){
   el('rs-hi').textContent=Math.max(...pcts)+'%';
   el('rs-lo').textContent=Math.min(...pcts)+'%';
 
-  el('results-tbody').innerHTML=filtered.map((r,i)=>`
-    <tr>
-      <td>${i+1}</td>
-      <td><strong>${esc(r.studentName||'—')}</strong></td>
-      <td>${esc(r.roll||'—')}</td>
-      <td style="font-size:11px">${esc(r.email||'—')}</td>
-      <td style="font-size:11px">${esc(r.programmeName||'—')}</td>
-      <td style="font-size:11px">${esc(r.courseId||'')} ${esc(r.subjectName||'—')}</td>
-      <td style="font-size:11px">${esc(r.testLabel||'—')}</td>
-      <td style="font-size:11px">${esc(r.teacherName||'—')}</td>
-      <td style="color:${r.pct>=70?'var(--grn)':r.pct>=50?'var(--warn)':'var(--err)'};font-weight:700">${r.pct}%</td>
-      <td>${esc(r.timeTaken||'—')}</td>
-      <td style="color:${r.violations>0?'var(--warn)':'var(--m)'}">${r.violations||0}</td>
-    </tr>`).join('');
+  el('results-tbody').innerHTML=filtered.map((r,i)=>{
+    const scoreColor=r.pct>=70?'var(--grn)':r.pct>=50?'var(--warn)':'var(--err)';
+    const vioColor=r.violations>0?'var(--warn)':'var(--m)';
+    return '<tr>'
+      +'<td>'+(i+1)+'</td>'
+      +'<td><strong>'+esc(r.studentName||'—')+'</strong></td>'
+      +'<td>'+esc(r.roll||'—')+'</td>'
+      +'<td style="font-size:11px">'+esc(r.email||'—')+'</td>'
+      +'<td style="font-size:11px">'+esc(r.programmeName||'—')+'</td>'
+      +'<td style="font-size:11px">'+esc(r.courseId||'')+' '+esc(r.subjectName||'—')+'</td>'
+      +'<td style="font-size:11px">'+esc(r.topicName||'—')+'</td>'
+      +'<td style="font-size:11px">'+esc(r.testLabel||'—')+'</td>'
+      +'<td style="font-size:11px;color:var(--acc)">'+esc(r.sessionDisplayId||'—')+'</td>'
+      +'<td style="font-size:11px">'+esc(r.teacherName||'—')+'</td>'
+      +'<td style="color:'+scoreColor+';font-weight:700">'+r.pct+'%</td>'
+      +'<td>'+esc(r.timeTaken||'—')+'</td>'
+      +'<td style="color:'+vioColor+'">'+( r.violations||0)+'</td>'
+      +'</tr>';
+  }).join('');
 };
 
 window.dlCSV=function(){
-  const headers=['#','Name','Roll','Email','Programme','Course ID','Subject','Topic','Test ID','Teacher','Attempted','Correct','Wrong','Score %','Time','Violations','Off-screen(s)'];
+  const headers=['#','Name','Roll','Email','Programme','Course ID','Subject',
+    'Unit/Topic','Test ID/Comment','Session ID','Teacher',
+    'Attempted','Correct','Wrong','Score %','Time','Violations','Off-screen(s)'];
   const rows=allResults.map((r,i)=>[
     i+1,r.studentName,r.roll,r.email,
     r.programmeName,r.courseId,r.subjectName,r.topicName,
-    r.testLabel,r.teacherName,
-    r.attempted,r.correct,r.wrong,r.pct+'%',r.timeTaken,r.violations,r.offSecs
+    r.testLabel,r.sessionDisplayId||'',r.teacherName,
+    r.attempted,r.correct,r.wrong,(r.pct||0)+'%',r.timeTaken,r.violations||0,r.offSecs||0
   ]);
-  const csv=[headers,...rows].map(r=>r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+  const csv=[headers,...rows].map(row=>row.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(',')).join('\n');
   const blob=new Blob([csv],{type:'text/csv'});
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');a.href=url;a.download='classquiz_results.csv';a.click();
+  const a=document.createElement('a');
+  // Use session file ID as filename if available
+  const fname=(activeSessionFileId||'SelfAssessment_Results')+'_results.csv';
+  a.href=url;a.download=fname;a.click();
   URL.revokeObjectURL(url);
 };
 
@@ -2418,6 +2523,26 @@ async function getDocWithRetry(docRef, maxTries=3, delayMs=800){
     catch(e){ lastErr=e; if(i<maxTries-1) await wait(delayMs); }
   }
   throw lastErr;
+}
+
+
+function genSessionId(courseId, topicName){
+  const now=new Date();
+  const day=now.getDate();
+  const months=['January','February','March','April','May','June',
+    'July','August','September','October','November','December'];
+  const mon=months[now.getMonth()];
+  const yr=now.getFullYear();
+  let hr=now.getHours();
+  const min=String(now.getMinutes()).padStart(2,'0');
+  const ampm=hr>=12?'PM':'AM';
+  hr=hr%12||12;
+  const hrStr=String(hr).padStart(2,'0');
+  const cid=(courseId||'Quiz').replace(/[^a-zA-Z0-9]/g,'');
+  const top=(topicName||'').replace(/[^a-zA-Z0-9]/g,'');
+  const display=cid+'_'+top+'_'+day+mon+yr+'_'+hrStr+':'+min+ampm;
+  const filename=cid+'_'+top+'_'+day+mon+yr+'_'+hrStr+min+ampm;
+  return {display, filename};
 }
 
 // Start
