@@ -2306,20 +2306,28 @@ async function bootstrap(){
   // Load Firebase config — try config.json first, then localStorage
   let fbCfg = null;
 
-  // Priority 1: config.json sitting next to index.html on GitHub Pages
-  try{
-    const resp = await fetch('./config.json?_='+Date.now()); // cache-bust
-    if(resp.ok){
-      const data = await resp.json();
-      if(data.k && data.p && data.a){
-        fbCfg = data;
-        saveFBCfg(data.k, data.p, data.a); // keep localStorage in sync
-      }
-    }
-  }catch(e){ /* config.json not present — that is fine */ }
+  // Priority 1: localStorage — instant, no network call
+  // config.json is only read if localStorage is empty
+  fbCfg = loadFBCfg();
 
-  // Priority 2: localStorage (entered manually before, or saved above)
-  if(!fbCfg) fbCfg = loadFBCfg();
+  // If nothing in localStorage, try config.json with a 3s timeout
+  if(!fbCfg || !fbCfg.k){
+    try{
+      const ctrl = new AbortController();
+      const t = setTimeout(()=>ctrl.abort(), 3000);
+      const resp = await fetch('./config.json', {signal: ctrl.signal});
+      clearTimeout(t);
+      if(resp.ok){
+        const data = await resp.json();
+        if(data && data.k && data.p && data.a){
+          fbCfg = data;
+          saveFBCfg(data.k, data.p, data.a);
+        }
+      }
+    }catch(e){ /* config.json not found or timed out */ }
+  }
+
+  // (localStorage already checked above)
 
   // Priority 3: show manual entry screen
   if(!fbCfg||!fbCfg.k||!fbCfg.p||!fbCfg.a){
@@ -2336,7 +2344,7 @@ async function bootstrap(){
   if(fp) fp.value=fbCfg.p;
   if(fa) fa.value=fbCfg.a;
 
-  showSplash('Connecting to Firebase…');
+  showSplash('Connecting…');
   const ok = await initFB(fbCfg.k, fbCfg.p, fbCfg.a);
   if(!ok){
     hideSplash();
@@ -2349,7 +2357,7 @@ async function bootstrap(){
   if(sid){
     try{
       showSplash('Loading quiz…');
-      const snap = await getDocWithRetry(_fb.doc(db,'settings','app'),3,1200);
+      const snap = await getDocWithRetry(_fb.doc(db,'settings','app'),2,800);
       if(snap.exists()) appCfg = snap.data();
     }catch(e){ console.warn('appCfg load:',e); }
     initStudentMode();
@@ -2359,7 +2367,7 @@ async function bootstrap(){
   // Teacher mode
   showSplash('Loading app settings…');
   try{
-    const snap = await getDocWithRetry(_fb.doc(db,'settings','app'),3,1500);
+    const snap = await getDocWithRetry(_fb.doc(db,'settings','app'),2,800);
     if(!snap.exists()){
       hideSplash();
       show('s-firstrun');
@@ -2491,20 +2499,19 @@ function wait(ms){return new Promise(r=>setTimeout(r,ms));}
 // saveInlineCfg removed — replaced by doFBSetup
 
 // Helper: try Firestore getDoc up to maxTries times with delay between attempts
-async function getDocWithRetry(docRef, maxTries=4, delayMs=1500){
+async function getDocWithRetry(docRef, maxTries=3, delayMs=800){
   let lastErr;
   for(let i=0;i<maxTries;i++){
     try{
       const snap=await _fb.getDoc(docRef);
-      return snap; // success
+      return snap; // success on attempt i+1
     }catch(e){
       lastErr=e;
-      if(i<maxTries-1){
-        await wait(delayMs);
-      }
+      // Only wait before retrying, not after last attempt
+      if(i<maxTries-1) await wait(delayMs);
     }
   }
-  throw lastErr; // all attempts failed
+  throw lastErr;
 }
 
 
