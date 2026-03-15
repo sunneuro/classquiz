@@ -692,9 +692,10 @@ tr:hover td{background:var(--s2)}
   <div class="tabs">
     <div class="tab on" id="tab-results" onclick="switchResultsTab('results')">Results Table</div>
     <div class="tab" id="tab-leaderboard" onclick="switchResultsTab('leaderboard')">🏆 Leaderboard</div>
+    <div class="tab" id="tab-profiles" onclick="switchResultsTab('profiles')">👤 Student Profiles</div>
   </div>
   <!-- Universal filters -->
-  <div class="card" style="padding:14px">
+  <div id="results-filters" class="card" style="padding:14px">
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
       <div><label style="margin-top:0">Programme</label>
         <select id="rf-prog" onchange="renderResults()"><option value="">All</option></select></div>
@@ -712,13 +713,13 @@ tr:hover td{background:var(--s2)}
     <input type="text" id="rf-search" placeholder="Search student name, roll, or email…" style="margin-top:10px" oninput="renderResults()"/>
   </div>
   <!-- Summary -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px">
+  <div id="results-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px">
     <div class="sbox"><div class="sv ca" id="rs-tot">0</div><div class="sl">Students</div></div>
     <div class="sbox"><div class="sv cg" id="rs-avg">—</div><div class="sl">Average</div></div>
     <div class="sbox"><div class="sv cw" id="rs-hi">—</div><div class="sl">Highest</div></div>
     <div class="sbox"><div class="sv ce" id="rs-lo">—</div><div class="sl">Lowest</div></div>
   </div>
-  <div class="twrap">
+  <div class="twrap" id="results-table-wrap">
     <table>
       <thead id="results-thead"><tr>
         <th>#</th>
@@ -739,7 +740,7 @@ tr:hover td{background:var(--s2)}
       <tbody id="results-tbody"></tbody>
     </table>
   </div>
-  <div class="row" style="flex-wrap:wrap;gap:8px">
+  <div class="row" id="results-actions" style="flex-wrap:wrap;gap:8px">
     <button class="btn btn-ghost" style="flex:1;min-width:120px" onclick="dlCSV()">⬇ Download CSV</button>
     <button class="btn btn-ghost" style="flex:1;min-width:120px" onclick="loadResults(true)">↻ Refresh</button>
   </div>
@@ -808,6 +809,17 @@ tr:hover td{background:var(--s2)}
     <div id="ov-tpl-body"></div>
     <div class="st" id="tpl-st"></div>
   </div>
+
+<!-- STUDENT PROFILES PANEL -->
+<div id="panel-profiles" style="display:none;width:100%;max-width:920px;padding:0 16px 60px">
+  <div class="card" style="margin-bottom:14px;padding:12px 16px">
+    <p style="font-size:12px;color:var(--m);line-height:1.7">
+      Students matched by <strong style="color:var(--txt)">roll number + email</strong>.
+      Use the filters above to narrow which tests are included in the aggregates.
+    </p>
+  </div>
+  <div id="profiles-list"></div>
+</div>
 </div>
 
 <script type="module">
@@ -2512,7 +2524,11 @@ function populateResultFilters(){
   const topics=[...new Set(allResults.map(r=>r.topicName).filter(Boolean))].sort();
   const testids=[...new Set(allResults.map(r=>r.testLabel).filter(Boolean))].sort();
   const teachers=[...new Set(allResults.map(r=>r.teacherName).filter(Boolean))].sort();
-  const sessions=[...new Set(allResults.map(r=>r.sessionDisplayId||r.sessionId).filter(Boolean))].sort().reverse();
+  // Sessions: prefer human-readable sessionDisplayId, fall back to sessionId
+  // Only include sessions that have a readable display ID
+  const sessions=[...new Set(
+    allResults.map(r=>r.sessionDisplayId||'').filter(Boolean)
+  )].sort().reverse();
   fillSelect('rf-prog',progs);
   fillSelect('rf-subj',subjs,x=>x.split('::')[0],x=>x.split('::').join(' — '));
   fillSelect('rf-topic',topics);
@@ -2560,7 +2576,7 @@ window.renderResults=function(){
     if(topic&&r.topicName!==topic)return false;
     if(testid&&r.testLabel!==testid)return false;
     if(teacher_f&&r.teacherName!==teacher_f)return false;
-    if(session_f&&(r.sessionDisplayId||r.sessionId)!==session_f)return false;
+    if(session_f&&r.sessionDisplayId!==session_f)return false;
     if(srch){
       // Search across ALL columns simultaneously
       const hay=[r.studentName,r.roll,r.email,r.programmeName,
@@ -2806,22 +2822,23 @@ function calcPerformance(pct, timeTakenSecs, totalTimeSecs, violations){
 
 
 window.switchResultsTab=function(tab){
-  const isResults=tab==='results';
-  el('tab-results').classList.toggle('on',isResults);
-  el('tab-leaderboard').classList.toggle('on',!isResults);
-  const tbl=document.querySelector('#s-results .mw-lg > *:not(.row):not(.tabs)');
-  // Show/hide panels
-  const resultPanel=el('results-tbody')?.closest('.twrap');
-  const filters=document.querySelector('#s-results .card');
-  const summaryGrid=document.querySelector('#s-results .sgrid')||document.querySelector('#s-results [style*="grid"]');
-  // Simple approach: toggle visibility of main content vs leaderboard
-  document.querySelectorAll('#s-results .twrap, #s-results .card, #s-results .sgrid, #s-results .row').forEach(el_=>{
-    if(el_.closest('#panel-leaderboard'))return;
-    el_.style.display=isResults?'':'none';
+  // Tab buttons
+  ['results','leaderboard','profiles'].forEach(function(t){
+    var tb=el('tab-'+t); if(tb) tb.classList.toggle('on',t===tab);
   });
-  const lb=el('panel-leaderboard');
-  if(lb) lb.style.display=isResults?'none':'';
-  if(!isResults) renderLeaderboard();
+  // Results-only elements — show only on results tab
+  ['results-filters','results-summary','results-table-wrap','results-actions'].forEach(function(id){
+    var e=el(id); if(e) e.style.display=(tab==='results')?'':'none';
+  });
+  // Leaderboard panel
+  var lb=el('panel-leaderboard');
+  if(lb) lb.style.display=(tab==='leaderboard')?'':'none';
+  // Profiles panel
+  var pr=el('panel-profiles');
+  if(pr) pr.style.display=(tab==='profiles')?'':'none';
+  // Render content
+  if(tab==='leaderboard') renderLeaderboard();
+  if(tab==='profiles') renderProfiles();
 };
 
 function renderLeaderboard(){
@@ -2858,6 +2875,129 @@ function renderLeaderboard(){
       +'</div>';
   }).join('');
 }
+
+
+window.renderProfiles=function(){
+  const list=el('profiles-list');
+  if(!list)return;
+
+  // Apply same filters as results table to get relevant subset
+  const prog=gv('rf-prog'),subj=gv('rf-subj'),topic=gv('rf-topic'),
+        testid=gv('rf-testid'),teacher_f=gv('rf-teacher'),
+        session_f=gv('rf-session');
+
+  const relevant=allResults.filter(function(r){
+    if(prog&&r.programmeName!==prog)return false;
+    if(subj&&r.courseId!==subj)return false;
+    if(topic&&r.topicName!==topic)return false;
+    if(testid&&r.testLabel!==testid)return false;
+    if(teacher_f&&r.teacherName!==teacher_f)return false;
+    if(session_f&&r.sessionDisplayId!==session_f)return false;
+    return true;
+  });
+
+  if(!relevant.length){
+    list.innerHTML='<div class="empty"><span class="empty-i">👤</span>No results match the current filters.</div>';
+    return;
+  }
+
+  // Group by roll+email — both must match to count as same student
+  var studentMap={};
+  relevant.forEach(function(r){
+    var key=(r.roll||'')+'||'+(r.email||'');
+    if(!studentMap[key]){
+      studentMap[key]={
+        name:r.studentName||'—',
+        roll:r.roll||'—',
+        email:r.email||'—',
+        results:[]
+      };
+    }
+    studentMap[key].results.push(r);
+  });
+
+  // Calculate aggregates and sort by avg performance desc
+  var students=Object.values(studentMap).map(function(s){
+    var n=s.results.length;
+    var avgScore=Math.round(s.results.reduce(function(a,r){return a+(r.pct||0);},0)/n);
+    var avgPerf=Math.round(
+      s.results.reduce(function(a,r){
+        var p=r.performanceScore!=null?r.performanceScore:(function(){
+          var m=(r.timeTaken||'').match(/(\d+)m\s*(\d+)s/);
+          var t=m?parseInt(m[1])*60+parseInt(m[2]):0;
+          return calcPerformance(r.pct,t,(r.sessionTotalTime||15)*60,r.violations);
+        })();
+        return a+p;
+      },0)/n * 10
+    )/10;
+    return {name:s.name,roll:s.roll,email:s.email,results:s.results,n:n,avgScore:avgScore,avgPerf:avgPerf};
+  }).sort(function(a,b){return b.avgPerf-a.avgPerf;});
+
+  list.innerHTML=students.map(function(s,idx){
+    var scoreColor=s.avgScore>=70?'var(--grn)':s.avgScore>=50?'var(--warn)':'var(--err)';
+    var perfColor=s.avgPerf>=90?'var(--grn)':s.avgPerf>=75?'var(--acc)':s.avgPerf>=60?'var(--warn)':'var(--err)';
+    var rowId='profile-row-'+idx;
+    var detailId='profile-detail-'+idx;
+    // Individual test rows
+    var testRows=s.results.slice().sort(function(a,b){return (a.ts||0)-(b.ts||0);}).map(function(r,i){
+      var rp=r.performanceScore!=null?r.performanceScore:(function(){
+        var m=(r.timeTaken||'').match(/(\d+)m\s*(\d+)s/);
+        var t=m?parseInt(m[1])*60+parseInt(m[2]):0;
+        return calcPerformance(r.pct,t,(r.sessionTotalTime||15)*60,r.violations);
+      })();
+      var rsc=r.pct>=70?'var(--grn)':r.pct>=50?'var(--warn)':'var(--err)';
+      return '<tr style="background:var(--s3)">'
+        +'<td style="font-size:11px;color:var(--m);padding-left:32px">'+(i+1)+'</td>'
+        +'<td style="font-size:11px">'+esc(r.sessionDisplayId||r.testLabel||'—')+'</td>'
+        +'<td style="font-size:11px">'+esc(r.teacherName||'—')+'</td>'
+        +'<td style="color:'+rsc+';font-weight:600">'+r.pct+'%</td>'
+        +'<td style="color:var(--acc);font-weight:600">'+rp+'</td>'
+                +'<td style="color:'+(r.violations>0?'var(--warn)':'var(--m)')+'">'+( r.violations||0)+'</td>'
+        +'</tr>';
+    }).join('');
+
+    return '<div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">'
+      // Header row — clickable to expand
+      +'<div style="display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer" onclick="toggleProfile(this.dataset.id)" data-id="'+detailId+'">'  
+        +'<div style="flex:1">'
+          +'<div style="font-family:var(--fh);font-size:15px;font-weight:700">'+esc(s.name)+'</div>'
+          +'<div style="font-size:11px;color:var(--m);margin-top:2px">'+esc(s.roll)+' · '+esc(s.email)+' · '+s.n+' test'+(s.n!==1?'s':'')+'</div>'
+        +'</div>'
+        +'<div style="text-align:center;min-width:60px">'
+          +'<div style="font-size:11px;color:var(--m)">Avg Score</div>'
+          +'<div style="font-family:var(--fh);font-size:18px;font-weight:700;color:'+scoreColor+'">'+s.avgScore+'%</div>'
+        +'</div>'
+        +'<div style="text-align:center;min-width:70px">'
+          +'<div style="font-size:11px;color:var(--m)">Avg Performance</div>'
+          +'<div style="font-family:var(--fh);font-size:18px;font-weight:700;color:'+perfColor+'">'+s.avgPerf+'</div>'
+        +'</div>'
+        +'<div style="font-size:16px;color:var(--m)">▾</div>'
+      +'</div>'
+      // Expandable detail
+      +'<div id="'+detailId+'" style="display:none;border-top:1px solid var(--b)">'
+        +'<table style="width:100%;min-width:500px">'
+          +'<thead><tr>'
+            +'<th style="padding-left:32px">#</th>'
+            +'<th>Session / Test ID</th>'
+            +'<th>Teacher</th>'
+            +'<th>Score%</th>'
+            +'<th>Performance</th>'
+            +'<th>Violations</th>'
+          +'</tr></thead>'
+          +'<tbody>'+testRows+'</tbody>'
+        +'</table>'
+      +'</div>'
+    +'</div>';
+  }).join('');
+};
+
+window.toggleProfile=function(idOrEl){
+  var id=typeof idOrEl==='string'?idOrEl:(idOrEl.dataset?idOrEl.dataset.id:null);
+  if(!id)return;
+  var el_=el(id);
+  if(!el_)return;
+  el_.style.display=el_.style.display==='none'?'':'none';
+};
 
 // Start
 bootstrap();
