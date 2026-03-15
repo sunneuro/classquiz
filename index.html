@@ -2388,7 +2388,14 @@ window.shareRes=function(){
   const pct=el('rpct').textContent;
   const cor=el('rcor').textContent;
   const sessionId=qParams?.sessionDisplayId||qParams?.sessionName||'Self Assessment';
-  const t='📝 '+sessionId+'\n👤 '+stuName+' ('+stuRoll+')\n📧 '+stuEmail+'\n✅ '+cor+'/'+quizQs.length+' correct\n📊 '+pct+'\n⏱ '+el('rtim').textContent;
+  var vioCount_=parseInt(el('hvio')?.textContent||'0')||0;
+  var perfEl=el('sring')?.querySelector('.spct');
+  var perf=perfEl?perfEl.textContent:'';
+  // Integrity multiplier text for violations
+  var intMap={0:'none — full score',1:'−5%',2:'−10%',3:'−20%',4:'−25%'};
+  var intPenalty=vioCount_>=5?'−45%':(intMap[vioCount_]||'−45%');
+  var vioLine=vioCount_>0?('\n⚠ Violations: '+vioCount_+' (integrity penalty: '+intPenalty+')'):'\n✅ No violations';
+  var t='📝 '+sessionId+'\n👤 '+stuName+' ('+stuRoll+')\n✅ '+cor+'/'+quizQs.length+' correct  📊 '+pct+'\n⏱ '+el('rtim').textContent+vioLine+(perf?'\n🏆 Performance: '+perf:'');
   if(navigator.share){
     navigator.share({title:sessionId, text:t}).catch(()=>{});
   } else {
