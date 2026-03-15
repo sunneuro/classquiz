@@ -2306,28 +2306,20 @@ async function bootstrap(){
   // Load Firebase config — try config.json first, then localStorage
   let fbCfg = null;
 
-  // Priority 1: localStorage — instant, no network call
-  // config.json is only read if localStorage is empty
-  fbCfg = loadFBCfg();
-
-  // If nothing in localStorage, try config.json with a 3s timeout
-  if(!fbCfg || !fbCfg.k){
-    try{
-      const ctrl = new AbortController();
-      const t = setTimeout(()=>ctrl.abort(), 3000);
-      const resp = await fetch('./config.json', {signal: ctrl.signal});
-      clearTimeout(t);
-      if(resp.ok){
-        const data = await resp.json();
-        if(data && data.k && data.p && data.a){
-          fbCfg = data;
-          saveFBCfg(data.k, data.p, data.a);
-        }
+  // Priority 1: config.json sitting next to index.html on GitHub Pages
+  try{
+    const resp = await fetch('./config.json');
+    if(resp.ok){
+      const data = await resp.json();
+      if(data.k && data.p && data.a){
+        fbCfg = data;
+        saveFBCfg(data.k, data.p, data.a); // keep localStorage in sync
       }
-    }catch(e){ /* config.json not found or timed out */ }
-  }
+    }
+  }catch(e){ /* config.json not present — that is fine */ }
 
-  // (localStorage already checked above)
+  // Priority 2: localStorage (entered manually before, or saved above)
+  if(!fbCfg) fbCfg = loadFBCfg();
 
   // Priority 3: show manual entry screen
   if(!fbCfg||!fbCfg.k||!fbCfg.p||!fbCfg.a){
