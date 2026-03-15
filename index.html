@@ -210,6 +210,11 @@ tr:hover td{background:var(--s2)}
 .empty-i{font-size:36px;margin-bottom:10px;display:block;opacity:.5}
 .live-dot{width:7px;height:7px;border-radius:50%;background:var(--grn);animation:pulse 1.5s infinite;display:inline-block;margin-right:4px}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+.th-sort{cursor:pointer;user-select:none;white-space:nowrap}
+.th-sort:hover{color:var(--txt)}
+.th-sort .arr{margin-left:4px;opacity:0.5;font-size:9px}
+.th-sort.active{color:var(--acc)}
+.th-sort.active .arr{opacity:1}
 .spin{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;
   border-radius:50%;animation:rot .7s linear infinite;display:inline-block}
 @keyframes rot{to{transform:rotate(360deg)}}
@@ -684,6 +689,10 @@ tr:hover td{background:var(--s2)}
     <h3 style="flex:1">All Results</h3>
     <div style="font-size:11px;color:var(--m)" id="results-refreshed"></div>
   </div>
+  <div class="tabs">
+    <div class="tab on" id="tab-results" onclick="switchResultsTab('results')">Results Table</div>
+    <div class="tab" id="tab-leaderboard" onclick="switchResultsTab('leaderboard')">🏆 Leaderboard</div>
+  </div>
   <!-- Universal filters -->
   <div class="card" style="padding:14px">
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
@@ -709,11 +718,21 @@ tr:hover td{background:var(--s2)}
   </div>
   <div class="twrap">
     <table>
-      <thead><tr>
-        <th>#</th><th>Name</th><th>Roll</th><th>Email</th>
-        <th>Programme</th><th>Subject</th><th>Unit/Topic</th>
-        <th>Test ID/Comment</th><th>Session ID</th><th>Teacher</th>
-        <th>Score</th><th>Time</th><th>Violations</th>
+      <thead id="results-thead"><tr>
+        <th>#</th>
+        <th class="th-sort" onclick="sortResults('studentName')">Name <span class="arr">↕</span></th>
+        <th class="th-sort" onclick="sortResults('roll')">Roll <span class="arr">↕</span></th>
+        <th>Email</th>
+        <th class="th-sort" onclick="sortResults('performanceScore')">Perf.Score <span class="arr">↕</span></th>
+        <th class="th-sort" onclick="sortResults('pct')">Score% <span class="arr">↕</span></th>
+        <th class="th-sort" onclick="sortResults('timeTaken')">Time <span class="arr">↕</span></th>
+        <th class="th-sort" onclick="sortResults('violations')">Violations <span class="arr">↕</span></th>
+        <th class="th-sort" onclick="sortResults('programmeName')">Programme <span class="arr">↕</span></th>
+        <th class="th-sort" onclick="sortResults('subjectName')">Subject <span class="arr">↕</span></th>
+        <th class="th-sort" onclick="sortResults('topicName')">Unit/Topic <span class="arr">↕</span></th>
+        <th class="th-sort" onclick="sortResults('testLabel')">Test ID/Comment <span class="arr">↕</span></th>
+        <th>Session ID</th>
+        <th class="th-sort" onclick="sortResults('teacherName')">Teacher <span class="arr">↕</span></th>
       </tr></thead>
       <tbody id="results-tbody"></tbody>
     </table>
@@ -722,6 +741,19 @@ tr:hover td{background:var(--s2)}
     <button class="btn btn-ghost" style="flex:1;min-width:120px" onclick="dlCSV()">⬇ Download CSV</button>
     <button class="btn btn-ghost" style="flex:1;min-width:120px" onclick="loadResults(true)">↻ Refresh</button>
   </div>
+</div>
+
+<!-- LEADERBOARD PANEL -->
+<div id="panel-leaderboard" style="display:none;width:100%;max-width:920px;padding:0 16px 60px">
+  <div class="card" style="margin-bottom:14px">
+    <h2>Performance Score Formula</h2>
+    <p style="font-size:12px;color:var(--m);line-height:1.8">
+      <strong style="color:var(--txt)">Performance = min(Score% + SpeedBonus, 100) × IntegrityMultiplier</strong><br>
+      SpeedBonus = (min(allottedTime/timeTaken, 2.0) − 1.0) × 10 &nbsp;→&nbsp; max +10 points for finishing in half the time or less<br>
+      IntegrityMultiplier: 0 violations=1.00 &nbsp;·&nbsp; 1=0.95 &nbsp;·&nbsp; 2=0.90 &nbsp;·&nbsp; 3=0.80 &nbsp;·&nbsp; 4=0.75 &nbsp;·&nbsp; 5+=0.55
+    </p>
+  </div>
+  <div id="leaderboard-list"></div>
 </div>
 </div>
 
@@ -954,6 +986,8 @@ async function goHome(){
 window.goBank=async function(){await loadAllQuestions();populateBankFilters();renderBank();show('s-bank');};
 window.goCurate=async function(){await loadAllQuestions();populateCurateFilters();renderCurate();show('s-curate');};
 let resultsRefreshInt=null;
+let sortCol='ts';
+let sortDir='desc'; // asc or desc
 window.goResults=async function(){
   clearInterval(resultsRefreshInt);
   await loadResults(false);
@@ -1304,6 +1338,10 @@ window.saveQuestion=async function(){
     addedByEmail:teacher.email,
     ts:Date.now()
   };
+  // Calculate performance score
+  const totalTimeSecs=(qParams?.time||15)*60;
+  rec.performanceScore=calcPerformance(rec.pct, timeTaken, totalTimeSecs, rec.violations);
+  rec.sessionTotalTime=qParams?.time||15;
   const btn=el('btn-save-q');
   btn.innerHTML='<span class="spin"></span> Saving…';btn.disabled=true;
   try{
@@ -2083,29 +2121,38 @@ function renderQ(){
   if(q.type==='mcq'||q.type==='tf'){
     html+=`<div class="opts">`;
     (q.options||[]).forEach((o,i)=>{
-      const sel=answers[curQ]===String(i)?'sel':'';
-      const clickable=reviewMode?'':'clickable';
-      const onclickAttr=reviewMode?'':' onclick="pickOpt('+i+')"';
-      const yourAns=(reviewMode&&answers[curQ]===String(i))
-        ?'<span style="font-size:10px;color:var(--acc)">Your answer</span>':'';
+      const isAnswered=answers[curQ]!==undefined;
+      const isSel=answers[curQ]===String(i);
+      // Lock answer once selected — cannot change during review OR active quiz
+      const clickable=(!isAnswered&&!reviewMode)?'clickable':'';
+      const onclickAttr=(!isAnswered&&!reviewMode)?' onclick="pickOpt('+i+')"':'';
+      const lockedBadge=isSel?'<span style="font-size:10px;color:var(--acc);margin-left:auto">✓ Your answer</span>':'';
       const ltr=q.type==='mcq'?'ABCD'[i]:o.charAt(0);
-      html+='<button class="opt '+sel+' '+clickable+'"'+onclickAttr+'>'
+      // Greyed out non-selected options when answer is locked
+      const greyStyle=(isAnswered&&!isSel)?'opacity:0.45;':'';
+      html+='<button class="opt '+( isSel?'sel':'')+' '+clickable+'" style="'+greyStyle+'"'+onclickAttr+'>'
         +'<span class="oltr">'+ltr+'</span>'
         +'<span style="flex:1">'+esc(o)+'</span>'
-        +yourAns
+        +lockedBadge
         +'</button>';
     });
     html+=`</div>`;
-    if(reviewMode&&answers[curQ]===undefined){
-      html+=`<div style="font-size:12px;color:var(--m);text-align:center;margin-top:12px">You did not answer this question</div>`;
+    if(answers[curQ]===undefined){
+      if(reviewMode){
+        html+='<div style="font-size:12px;color:var(--m);text-align:center;margin-top:12px">You did not answer this question</div>';
+      }
+    } else {
+      // Answer is locked — show notice during active quiz too
+      html+='<div style="margin-top:10px;text-align:center;font-size:11px;color:var(--m2);'
+        +'padding:6px 10px;background:var(--s2);border-radius:6px">'
+        +(reviewMode?'🔒 Review mode — answers cannot be changed':'🔒 Answer locked — you can review but not change')
+        +'</div>';
     }
   }
 
-  if(reviewMode){
-    html+=`<div style="margin-top:14px;text-align:center;font-size:12px;color:var(--m2);padding:10px;
-      background:var(--s2);border-radius:8px">
-      🔒 Review mode — answers cannot be changed
-    </div>`;
+  if(reviewMode&&answers[curQ]===undefined){
+    html+='<div style="margin-top:14px;text-align:center;font-size:12px;color:var(--m2);padding:10px;'
+      +'background:var(--s2);border-radius:8px">🔒 Review mode — answers cannot be changed</div>';
   }
 
   // Next / Submit button embedded in question body — 28px below last option
@@ -2141,7 +2188,13 @@ function renderDots(){
 }
 
 window.jumpQ=function(i){curQ=i;renderQ();renderDots();};
-window.pickOpt=function(i){if(reviewMode)return;answers[curQ]=String(i);renderQ();renderDots();};
+window.pickOpt=function(i){
+  // Never allow changing an already-set answer
+  if(reviewMode)return;
+  if(answers[curQ]!==undefined)return; // answer already locked
+  answers[curQ]=String(i);
+  renderQ();renderDots();
+};
 window.navQ=function(d){curQ=Math.max(0,Math.min(quizQs.length-1,curQ+d));renderQ();renderDots();};
 
 /* ═══════════════════════════════════════════
@@ -2352,11 +2405,33 @@ function populateResultFilters(){
   if(tbl) tbl.style.minWidth='900px';
 }
 
+window.sortResults=function(col){
+  if(sortCol===col){
+    sortDir=sortDir==='asc'?'desc':'asc';
+  } else {
+    sortCol=col;
+    sortDir=col==='pct'||col==='performanceScore'?'desc':'asc'; // default desc for scores
+  }
+  // Update header arrows
+  document.querySelectorAll('.th-sort').forEach(th=>{
+    th.classList.remove('active');
+    const arr=th.querySelector('.arr');
+    if(arr)arr.textContent='↕';
+  });
+  const activeTh=document.querySelector('.th-sort[onclick*="\'' + col + '\'"]');
+  if(activeTh){
+    activeTh.classList.add('active');
+    const arr=activeTh.querySelector('.arr');
+    if(arr)arr.textContent=sortDir==='asc'?'↑':'↓';
+  }
+  renderResults();
+};
+
 window.renderResults=function(){
   const prog=gv('rf-prog'),subj=gv('rf-subj'),topic=gv('rf-topic'),
         testid=gv('rf-testid'),teacher_f=gv('rf-teacher'),
         srch=(gv('rf-search')||'').toLowerCase();
-  const filtered=allResults.filter(r=>{
+  let filtered=allResults.filter(r=>{
     if(prog&&r.programmeName!==prog)return false;
     if(subj&&r.courseId!==subj)return false;
     if(topic&&r.topicName!==topic)return false;
@@ -2374,6 +2449,23 @@ window.renderResults=function(){
     return true;
   });
 
+  // Sort
+  filtered.sort((a,b)=>{
+    let va=a[sortCol],vb=b[sortCol];
+    // Parse time strings like "5m 30s" to seconds for proper numeric sort
+    if(sortCol==='timeTaken'){
+      const toSec=s=>{if(!s)return 0;const m=s.match(/(\d+)m\s*(\d+)s/);return m?parseInt(m[1])*60+parseInt(m[2]):0;};
+      va=toSec(va);vb=toSec(vb);
+    }
+    if(typeof va==='string') va=va.toLowerCase();
+    if(typeof vb==='string') vb=vb.toLowerCase();
+    if(va===undefined||va===null||va==='')return 1;
+    if(vb===undefined||vb===null||vb==='')return -1;
+    if(va<vb)return sortDir==='asc'?-1:1;
+    if(va>vb)return sortDir==='asc'?1:-1;
+    return 0;
+  });
+
   el('rs-tot').textContent=filtered.length;
   if(!filtered.length){
     el('rs-avg').textContent=el('rs-hi').textContent=el('rs-lo').textContent='—';
@@ -2388,33 +2480,45 @@ window.renderResults=function(){
   el('results-tbody').innerHTML=filtered.map((r,i)=>{
     const scoreColor=r.pct>=70?'var(--grn)':r.pct>=50?'var(--warn)':'var(--err)';
     const vioColor=r.violations>0?'var(--warn)':'var(--m)';
+    const perf=r.performanceScore!=null?r.performanceScore:
+      calcPerformance(r.pct,
+        (()=>{const m=(r.timeTaken||'').match(/(\d+)m\s*(\d+)s/);return m?parseInt(m[1])*60+parseInt(m[2]):0;})(),
+        (r.sessionTotalTime||15)*60, r.violations);
+    const perfColor=perf>=90?'var(--grn)':perf>=75?'var(--acc)':perf>=60?'var(--warn)':'var(--err)';
     return '<tr>'
       +'<td>'+(i+1)+'</td>'
       +'<td><strong>'+esc(r.studentName||'—')+'</strong></td>'
       +'<td>'+esc(r.roll||'—')+'</td>'
       +'<td style="font-size:11px">'+esc(r.email||'—')+'</td>'
+      +'<td style="color:'+perfColor+';font-weight:700;font-size:15px">'+perf+'</td>'
+      +'<td style="color:'+scoreColor+';font-weight:700">'+r.pct+'%</td>'
+      +'<td>'+esc(r.timeTaken||'—')+'</td>'
+      +'<td style="color:'+vioColor+'">'+( r.violations||0)+'</td>'
       +'<td style="font-size:11px">'+esc(r.programmeName||'—')+'</td>'
       +'<td style="font-size:11px">'+esc(r.courseId||'')+' '+esc(r.subjectName||'—')+'</td>'
       +'<td style="font-size:11px">'+esc(r.topicName||'—')+'</td>'
       +'<td style="font-size:11px">'+esc(r.testLabel||'—')+'</td>'
       +'<td style="font-size:11px;color:var(--acc)">'+esc(r.sessionDisplayId||'—')+'</td>'
       +'<td style="font-size:11px">'+esc(r.teacherName||'—')+'</td>'
-      +'<td style="color:'+scoreColor+';font-weight:700">'+r.pct+'%</td>'
-      +'<td>'+esc(r.timeTaken||'—')+'</td>'
-      +'<td style="color:'+vioColor+'">'+( r.violations||0)+'</td>'
       +'</tr>';
   }).join('');
 };
 
 window.dlCSV=function(){
-  const headers=['#','Name','Roll','Email','Programme','Course ID','Subject',
-    'Unit/Topic','Test ID/Comment','Session ID','Teacher',
-    'Attempted','Correct','Wrong','Score %','Time','Violations','Off-screen(s)'];
+  const headers=['#','Name','Roll','Email','Performance Score','Score %','Time','Violations',
+    'Programme','Course ID','Subject','Unit/Topic','Test ID/Comment','Session ID','Teacher',
+    'Attempted','Correct','Wrong','Off-screen(s)'];
   const rows=allResults.map((r,i)=>[
     i+1,r.studentName,r.roll,r.email,
     r.programmeName,r.courseId,r.subjectName,r.topicName,
-    r.testLabel,r.sessionDisplayId||'',r.teacherName,
-    r.attempted,r.correct,r.wrong,(r.pct||0)+'%',r.timeTaken,r.violations||0,r.offSecs||0
+    (r.performanceScore!=null?r.performanceScore:(()=>{
+      const m=(r.timeTaken||'').match(/(\d+)m\s*(\d+)s/);
+      const t=m?parseInt(m[1])*60+parseInt(m[2]):0;
+      return calcPerformance(r.pct,t,(r.sessionTotalTime||15)*60,r.violations);
+    })()), (r.pct||0)+'%', r.timeTaken, r.violations||0,
+    r.programmeName, r.courseId, r.subjectName, r.topicName,
+    r.testLabel, r.sessionDisplayId||'', r.teacherName,
+    r.attempted, r.correct, r.wrong, r.offSecs||0
   ]);
   const csv=[headers,...rows].map(row=>row.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(',')).join('\n');
   const blob=new Blob([csv],{type:'text/csv'});
@@ -2543,6 +2647,82 @@ function genSessionId(courseId, topicName){
   const display=cid+'_'+top+'_'+day+mon+yr+'_'+hrStr+':'+min+ampm;
   const filename=cid+'_'+top+'_'+day+mon+yr+'_'+hrStr+min+ampm;
   return {display, filename};
+}
+
+
+function calcPerformance(pct, timeTakenSecs, totalTimeSecs, violations){
+  // Score component
+  const score = pct || 0;
+  
+  // Speed bonus: min(totalTime/timeTaken, 2.0) - 1.0) × 10 → range 0 to +10
+  let speedBonus = 0;
+  if(timeTakenSecs > 0 && totalTimeSecs > 0){
+    const ratio = Math.min(totalTimeSecs / timeTakenSecs, 2.0);
+    speedBonus = Math.max(0, (ratio - 1.0) * 10);
+  }
+  
+  // Integrity multiplier
+  const v = violations || 0;
+  const multiplier = v===0?1.00 : v===1?0.95 : v===2?0.90 : v===3?0.80 : v===4?0.75 : 0.55;
+  
+  // Final score
+  const base = Math.min(score + speedBonus, 100);
+  return Math.round(base * multiplier * 10) / 10; // 1 decimal place
+}
+
+
+window.switchResultsTab=function(tab){
+  const isResults=tab==='results';
+  el('tab-results').classList.toggle('on',isResults);
+  el('tab-leaderboard').classList.toggle('on',!isResults);
+  const tbl=document.querySelector('#s-results .mw-lg > *:not(.row):not(.tabs)');
+  // Show/hide panels
+  const resultPanel=el('results-tbody')?.closest('.twrap');
+  const filters=document.querySelector('#s-results .card');
+  const summaryGrid=document.querySelector('#s-results .sgrid')||document.querySelector('#s-results [style*="grid"]');
+  // Simple approach: toggle visibility of main content vs leaderboard
+  document.querySelectorAll('#s-results .twrap, #s-results .card, #s-results .sgrid, #s-results .row').forEach(el_=>{
+    if(el_.closest('#panel-leaderboard'))return;
+    el_.style.display=isResults?'':'none';
+  });
+  const lb=el('panel-leaderboard');
+  if(lb) lb.style.display=isResults?'none':'';
+  if(!isResults) renderLeaderboard();
+};
+
+function renderLeaderboard(){
+  const list=el('leaderboard-list');
+  if(!list)return;
+  if(!allResults.length){
+    list.innerHTML='<div class="empty"><span class="empty-i">🏆</span>No results yet.</div>';
+    return;
+  }
+  // Calculate performance for all results and sort
+  const ranked=allResults.map(r=>{
+    const timeSec=(()=>{const m=(r.timeTaken||'').match(/(\d+)m\s*(\d+)s/);return m?parseInt(m[1])*60+parseInt(m[2]):0;})();
+    const perf=r.performanceScore!=null?r.performanceScore:
+      calcPerformance(r.pct, timeSec, (r.sessionTotalTime||15)*60, r.violations);
+    return {...r, perf};
+  }).sort((a,b)=>b.perf-a.perf);
+
+  const medals=['🥇','🥈','🥉'];
+  list.innerHTML=ranked.map((r,i)=>{
+    const medal=i<3?medals[i]:' '+(i+1)+'.';
+    const perfColor=r.perf>=90?'var(--grn)':r.perf>=75?'var(--acc)':r.perf>=60?'var(--warn)':'var(--err)';
+    return '<div class="card" style="padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:14px">' 
+      +'<div style="font-size:'+(i<3?'28px':'16px')+';min-width:36px;text-align:center">'+medal+'</div>'
+      +'<div style="flex:1">'
+        +'<div style="font-family:var(--fh);font-size:15px;font-weight:700">'+esc(r.studentName||'—')+'</div>'
+        +'<div style="font-size:11px;color:var(--m);margin-top:2px">'
+          +esc(r.roll||'')+' · '+esc(r.testLabel||'')+' · '+esc(r.teacherName||'')+
+        '</div>'
+      +'</div>'
+      +'<div style="text-align:right">'
+        +'<div style="font-family:var(--fh);font-size:22px;font-weight:800;color:'+perfColor+'">'+r.perf+'</div>'
+        +'<div style="font-size:10px;color:var(--m)">Score:'+r.pct+'% · Vio:'+( r.violations||0)+'</div>'
+      +'</div>'
+      +'</div>';
+  }).join('');
 }
 
 // Start
