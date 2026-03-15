@@ -780,10 +780,10 @@ async function initFB(key,pid,aid){
   const a = aid  || (document.getElementById('fb-appid')?.value||'').trim();
   if(!k||!p||!a) return false;
   try{
-    const {initializeApp,getApps,deleteApp}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+    const {initializeApp,getApps,deleteApp}=await import('https://cdn.jsdelivr.net/npm/firebase@10.12.0/app/+esm');
     const {getFirestore,collection,addDoc,getDocs,query,orderBy,where,
            doc,setDoc,getDoc,updateDoc,deleteDoc,onSnapshot,limit}=
-      await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+      await import('https://cdn.jsdelivr.net/npm/firebase@10.12.0/firestore/+esm');
     getApps().forEach(a=>{try{deleteApp(a)}catch(e){}});
     const app=initializeApp({apiKey:k,authDomain:`${p}.firebaseapp.com`,
       projectId:p,storageBucket:`${p}.appspot.com`,appId:a});
@@ -1513,7 +1513,7 @@ window.showLoadTemplate=async function(){
   try{
     const snap=await _fb.getDocs(_fb.query(_fb.collection(db,'templates'),_fb.orderBy('ts','desc')));
     const tpls=snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(!tpls.length){el('ov-tpl-body').innerHTML='<div class="ovb">No templates saved yet.</div><button class="btn btn-ghost w100" onclick="closeOv(\'ov-template\')">Close</button>';return;}
+    if(!tpls.length){el('ov-tpl-body').innerHTML='<div class="ovb">No templates saved yet.</div><button class="btn btn-ghost w100" onclick="closeOv('ov-template')">Close</button>';return;}
     el('ov-tpl-body').innerHTML=tpls.map(t=>`
       <div style="display:flex;align-items:center;gap:8px;padding:8px;background:var(--s2);border-radius:8px;margin-bottom:6px">
         <div style="flex:1">
@@ -1836,23 +1836,16 @@ function startSessionPoller(){
 function listenForSessionStart(){startSessionPoller();}
 
 function showTapToBegin(){
-  // Replace waiting screen content with a tap button
-  // This tap is required by browsers to allow fullscreen
   el('wait-title').textContent=qParams.sessionName||'Quiz';
   const waitDiv=document.querySelector('#s-stu-wait > div');
-  if(waitDiv){
-    waitDiv.innerHTML=\`
-      <div style="font-size:48px;margin-bottom:20px">🚀</div>
-      <h2 style="font-family:var(--fh);font-size:22px;margin-bottom:10px">Test is Live!</h2>
-      <p style="font-size:14px;color:var(--m);margin-bottom:28px">Your teacher has started the session.</p>
-      <button class="btn btn-grn" onclick="beginQuizFromTap()"
-        style="font-size:16px;padding:16px 32px;border-radius:12px">
-        Tap to Begin →
-      </button>
-      <p style="font-size:11px;color:var(--m2);margin-top:16px">
-        Quiz will go fullscreen when you tap
-      </p>\`;
-  }
+  if(!waitDiv)return;
+  var h='';
+  h+='<div style="font-size:48px;margin-bottom:20px">&#x1F680;</div>';
+  h+='<h2 style="font-family:var(--fh);font-size:22px;margin-bottom:10px">Test is Live!</h2>';
+  h+='<p style="font-size:14px;color:var(--m);margin-bottom:28px">Your teacher has started the session.</p>';
+  h+='<button class="btn btn-grn" onclick="beginQuizFromTap()" style="font-size:16px;padding:16px 32px;border-radius:12px">Tap to Begin &rarr;</button>';
+  h+='<p style="font-size:11px;color:var(--m2);margin-top:16px">Quiz will go fullscreen when you tap</p>';
+  waitDiv.innerHTML=h;
 }
 
 window.beginQuizFromTap=function(){
