@@ -746,7 +746,7 @@ tr:hover td{background:var(--s2)}
 <!-- LEADERBOARD PANEL -->
 <div id="panel-leaderboard" style="display:none;width:100%;max-width:920px;padding:0 16px 60px">
   <div class="card" style="margin-bottom:14px">
-    <h2>Performance Score Formula</h2>
+    <h2>Performance Formula</h2>
     <p style="font-size:12px;color:var(--m);line-height:1.8">
       <strong style="color:var(--txt)">Performance = min(Score% + SpeedBonus, 100) × IntegrityMultiplier</strong><br>
       SpeedBonus = (min(allottedTime/timeTaken, 2.0) − 1.0) × 10 &nbsp;→&nbsp; max +10 points for finishing in half the time or less<br>
@@ -986,8 +986,7 @@ async function goHome(){
 window.goBank=async function(){await loadAllQuestions();populateBankFilters();renderBank();show('s-bank');};
 window.goCurate=async function(){await loadAllQuestions();populateCurateFilters();renderCurate();show('s-curate');};
 let resultsRefreshInt=null;
-window.sortCol='ts';
-window.sortDir='desc';
+window._sort={col:'ts',dir:'desc'}; // unified sort state
 window.goResults=async function(){
   clearInterval(resultsRefreshInt);
   await loadResults(false);
@@ -1093,7 +1092,7 @@ async function loadResults(force){
     allResults=snap.docs.map(d=>({id:d.id,...d.data()}));
     // Ensure every record has a numeric performanceScore for sorting
     allResults.forEach(r=>{
-      if(r.performanceScore==null){
+      if(r.performanceScore==null||typeof r.performanceScore!=='number'){
         const m=(r.timeTaken||'').match(/(\d+)m\s*(\d+)s/);
         const t=m?parseInt(m[1])*60+parseInt(m[2]):0;
         r.performanceScore=calcPerformance(r.pct,t,(r.sessionTotalTime||15)*60,r.violations);
@@ -1346,7 +1345,7 @@ window.saveQuestion=async function(){
     addedByEmail:teacher.email,
     ts:Date.now()
   };
-  // Calculate performance score
+  // Calculate performance
   const totalTimeSecs=(qParams?.time||15)*60;
   rec.performanceScore=calcPerformance(rec.pct, timeTaken, totalTimeSecs, rec.violations);
   rec.sessionTotalTime=qParams?.time||15;
@@ -2423,27 +2422,26 @@ function populateResultFilters(){
 }
 
 window.sortResults=function(col){
-  // Toggle direction if same column, else set new column with sensible default
-  if(sortCol===col){
-    sortDir=(sortDir==='asc')?'desc':'asc';
+  var s=window._sort;
+  if(s.col===col){
+    s.dir=(s.dir==='asc')?'desc':'asc';
   } else {
-    sortCol=col;
-    // Scores and numeric rankings default to descending (highest first)
-    sortDir=(col==='pct'||col==='performanceScore'||col==='violations')?'desc':'asc';
+    s.col=col;
+    // Numeric/score columns default to descending (highest first)
+    s.dir=(col==='pct'||col==='performanceScore'||col==='violations')?'desc':'asc';
   }
-  // Update all header arrows
+  // Update header arrows — reset all then set active
   document.querySelectorAll('.th-sort').forEach(function(th){
     th.classList.remove('active');
     var arr=th.querySelector('.arr');
     if(arr) arr.textContent='↕';
   });
-  // Find active header by checking onclick attribute
   document.querySelectorAll('.th-sort').forEach(function(th){
     var oc=th.getAttribute('onclick')||'';
-    if(oc.indexOf("'"+col+"'")>=0 || oc.indexOf('"'+col+'"')>=0){
+    if(oc.indexOf("'"+col+"'")>=0){
       th.classList.add('active');
       var arr=th.querySelector('.arr');
-      if(arr) arr.textContent=(window.sortDir==='asc')?'↑':'↓';
+      if(arr) arr.textContent=(s.dir==='asc')?'↑':'↓';
     }
   });
   renderResults();
@@ -2472,26 +2470,28 @@ window.renderResults=function(){
 
   // Sort
   // Numeric columns — always compare as numbers
-  const numericCols=['pct','performanceScore','violations','offSecs','attempted','correct','wrong'];
-  const _sc=window.sortCol; const _sd=window.sortDir;
-  filtered.sort((a,b)=>{
-    let va=a[_sc],vb=b[_sc];
-    // Parse time strings "5m 30s" → seconds
-    if(_sc==='timeTaken'){
-      const toSec=s=>{if(!s)return 0;const m=s.match(/(\d+)m\s*(\d+)s/);return m?parseInt(m[1])*60+parseInt(m[2]):0;};
-      va=toSec(va); vb=toSec(vb);
-    } else if(numericCols.includes(_sc)){
-      va=parseFloat(va)||0;
-      vb=parseFloat(vb)||0;
+  // Sort using unified state object — no closure ambiguity
+  var _s=window._sort;
+  var _sc=_s.col;
+  var _sd=_s.dir;
+  var toSec=function(s){if(!s)return 0;var m=s.match(/(\d+)m\s*(\d+)s/);return m?parseInt(m[1])*60+parseInt(m[2]):0;};
+  var numericCols={'pct':1,'performanceScore':1,'violations':1,'offSecs':1,'attempted':1,'correct':1,'wrong':1};
+  filtered.sort(function(a,b){
+    var va,vb;
+    if(_sc==='performanceScore'){
+      // Compute fresh if missing to guarantee numeric value
+      va=typeof a.performanceScore==='number'?a.performanceScore:0;
+      vb=typeof b.performanceScore==='number'?b.performanceScore:0;
+    } else if(_sc==='timeTaken'){
+      va=toSec(a[_sc]); vb=toSec(b[_sc]);
+    } else if(numericCols[_sc]){
+      va=Number(a[_sc])||0; vb=Number(b[_sc])||0;
     } else {
-      // String comparison
-      va=String(va||'').toLowerCase();
-      vb=String(vb||'').toLowerCase();
+      va=String(a[_sc]||'').toLowerCase();
+      vb=String(b[_sc]||'').toLowerCase();
     }
-    if(va===''||va==null)return 1;
-    if(vb===''||vb==null)return -1;
-    if(va<vb)return _sd==='asc'?-1:1;
-    if(va>vb)return _sd==='asc'?1:-1;
+    if(va<vb) return _sd==='asc'?-1:1;
+    if(va>vb) return _sd==='asc'?1:-1;
     return 0;
   });
 
