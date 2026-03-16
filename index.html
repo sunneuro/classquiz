@@ -1395,10 +1395,6 @@ window.saveQuestion=async function(){
     addedByEmail:teacher.email,
     ts:Date.now()
   };
-  // Calculate performance
-  const totalTimeSecs=(qParams?.time||15)*60;
-  rec.performanceScore=calcPerformance(rec.pct, timeTaken, totalTimeSecs, rec.violations);
-  rec.sessionTotalTime=qParams?.time||15;
   const btn=el('btn-save-q');
   btn.innerHTML='<span class="spin"></span> Saving…';btn.disabled=true;
   try{
