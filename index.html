@@ -216,6 +216,13 @@ tr:hover td{background:var(--s2)}
 .th-sort .arr{margin-left:4px;opacity:0.5;font-size:9px}
 .th-sort.active{color:var(--acc)}
 .th-sort.active .arr{opacity:1}
+@keyframes fireColor{
+  0%{color:#f59e0b}
+  25%{color:#ef4444}
+  50%{color:#f97316}
+  75%{color:#a855f7}
+  100%{color:#eab308}
+}
 .spin{width:15px;height:15px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;
   border-radius:50%;animation:rot .7s linear infinite;display:inline-block}
 @keyframes rot{to{transform:rotate(360deg)}}
@@ -273,8 +280,14 @@ tr:hover td{background:var(--s2)}
 <div class="mw" style="max-width:420px">
   <div class="logo"><div class="logo-t" id="login-appname">Self Assessment</div><div class="logo-s">Teacher Login</div></div>
   <div class="card">
+    <label>Salutation <span class="req">*</span></label>
+    <select id="tl-sal" style="margin-bottom:8px">
+      <option value="Dr.">Dr.</option>
+      <option value="Mr.">Mr.</option>
+      <option value="Ms.">Ms.</option>
+    </select>
     <label>Your Full Name <span class="req">*</span></label>
-    <input type="text" id="tl-name" placeholder="e.g. Dr Ahmed Khan" autocomplete="name"/>
+    <input type="text" id="tl-name" placeholder="e.g. Ahmed Khan" autocomplete="name"/>
     <label>Your Email <span class="req">*</span></label>
     <input type="email" id="tl-email" placeholder="your@email.com" autocomplete="email"/>
     <label>Password <span class="req">*</span></label>
@@ -304,9 +317,9 @@ tr:hover td{background:var(--s2)}
   <!-- Quick actions -->
   <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px">
     <button class="btn btn-pri" onclick="goAddQ()" style="flex-direction:column;padding:16px 10px;gap:6px;border-radius:var(--r)">
-      <span style="font-size:22px">✏️</span><span>Add Questions</span></button>
+      <span style="font-size:22px">✏️</span><span>Create Question Paper</span></button>
     <button class="btn btn-ghost" onclick="goBank()" style="flex-direction:column;padding:16px 10px;gap:6px;border-radius:var(--r)">
-      <span style="font-size:22px">📚</span><span>Question Bank</span></button>
+      <span style="font-size:22px">📚</span><span>Master Question Bank</span></button>
     <button class="btn btn-grn" onclick="goCurate()" style="flex-direction:column;padding:16px 10px;gap:6px;border-radius:var(--r)">
       <span style="font-size:22px">🚀</span><span>Launch Quiz</span></button>
     <button class="btn btn-info" onclick="goResults()" style="flex-direction:column;padding:16px 10px;gap:6px;border-radius:var(--r)">
@@ -330,7 +343,7 @@ tr:hover td{background:var(--s2)}
 <div class="mw">
   <div class="row" style="margin-bottom:16px">
     <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
-    <h3 style="flex:1">Add Questions</h3>
+    <h3 style="flex:1">Create Question Paper</h3>
     <span id="addq-count-badge" style="font-size:12px;color:var(--grn)"></span>
   </div>
   <!-- Step indicator -->
@@ -370,7 +383,7 @@ tr:hover td{background:var(--s2)}
         readonly/>
       <div style="font-size:11px;color:var(--m2);margin-top:4px">Auto-filled from Course ID + Unit/Topic. Tap to edit.</div>
     </div>
-    <button class="btn btn-pri w100" onclick="wizNext(1)">Next: Write Question →</button>
+    <button class="btn btn-pri w100" onclick="wizNext(1)">Next: Write Your Own Question →</button>
     <div class="st" id="wiz0-st"></div>
   </div>
   <!-- STEP 2: Question -->
@@ -419,7 +432,7 @@ tr:hover td{background:var(--s2)}
 <div class="mw-lg">
   <div class="row" style="margin-bottom:14px">
     <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
-    <h3 style="flex:1">Question Bank</h3>
+    <h3 style="flex:1">Master Question Bank</h3>
     <span id="bank-total" style="font-size:12px;color:var(--m)"></span>
   </div>
   <!-- Hierarchy filters -->
@@ -462,7 +475,7 @@ tr:hover td{background:var(--s2)}
     <input type="text" id="bf-search" placeholder="Search question text…" style="margin-top:10px" oninput="renderBank()"/>
   </div>
   <div id="bank-list"></div>
-  <button class="btn btn-grn w100" style="margin-top:8px" onclick="goCurate()">Curate &amp; Launch Quiz →</button>
+  <button class="btn btn-grn w100" style="margin-top:8px" onclick="goCurate()">Launch Quiz →</button>
 </div>
 </div>
 
@@ -727,10 +740,10 @@ tr:hover td{background:var(--s2)}
         <th class="th-sort" onclick="sortResults('studentName')">Name <span class="arr">↕</span></th>
         <th class="th-sort" onclick="sortResults('roll')">Roll <span class="arr">↕</span></th>
         <th>Email</th>
-        <th class="th-sort" onclick="sortResults('performanceScore')">Performance <span class="arr">↕</span></th>
-        <th class="th-sort" onclick="sortResults('pct')">Score% <span class="arr">↕</span></th>
-        <th class="th-sort" onclick="sortResults('timeTaken')">Time <span class="arr">↕</span></th>
-        <th class="th-sort" onclick="sortResults('violations')">Violations <span class="arr">↕</span></th>
+        <th class="th-sort" onclick="sortResults('performanceScore')" style="text-align:center">Performance <span class="arr">↕</span></th>
+        <th class="th-sort" onclick="sortResults('pct')" style="text-align:center">Score% <span class="arr">↕</span></th>
+        <th class="th-sort" onclick="sortResults('timeTaken')" style="text-align:center">Time <span class="arr">↕</span></th>
+        <th class="th-sort" onclick="sortResults('violations')" style="text-align:center">Violations <span class="arr">↕</span></th>
         <th class="th-sort" onclick="sortResults('programmeName')">Programme <span class="arr">↕</span></th>
         <th class="th-sort" onclick="sortResults('subjectName')">Subject <span class="arr">↕</span></th>
         <th class="th-sort" onclick="sortResults('topicName')">Unit/Topic <span class="arr">↕</span></th>
@@ -943,6 +956,7 @@ window.doFirstRun=async function(){
 };
 
 window.doLogin=async function(){
+  const sal=gv('tl-sal')||'Dr.';
   const name=gv('tl-name'),email=gv('tl-email'),pw=gv('tl-pw');
   if(!name||!email||!pw){setSt('tl-st','err','Please fill in all fields.');return;}
   if(!fbReady){setSt('tl-st','err','Firebase not connected. Check your config.json file.');return;}
@@ -951,7 +965,7 @@ window.doLogin=async function(){
   const isAdmin=email===appCfg.adminEmail&&h===appCfg.adminHash;
   const isTeacher=h===appCfg.teacherHash;
   if(!isAdmin&&!isTeacher){setSt('tl-st','err','Incorrect password.');return;}
-  teacher={name,email,isAdmin};
+  teacher={name,email,isAdmin,salutation:sal,displayName:sal+' '+name};
   saveTCache(teacher);
   goHome();
 };
@@ -989,7 +1003,7 @@ window.doForgot=function(){
 ═══════════════════════════════════════════ */
 async function goHome(){
   el('home-appname').textContent=appCfg?.appName||'ClassQuiz';
-  el('home-welcome').textContent='Hello, '+teacher.name.split(' ')[0];
+  el('home-welcome').textContent='Hello, '+(teacher.displayName||teacher.name)+'!';
   el('home-role-badge').innerHTML=teacher.isAdmin
     ?'<span class="badge-admin">Admin</span>'
     :'<span class="chip chip-easy">Teacher</span>';
@@ -1394,22 +1408,38 @@ window.saveQuestion=async function(){
     }else{
       await _fb.addDoc(_fb.collection(db,'questions'),q);
     }
-    // Update local cache
-    await loadAllQuestions();
-    // Show success and reset for next question (keep location)
-    setSt('wiz2-st','ok','✅ Question saved! Add another or go back.');
-    const count=(parseInt(el('addq-count-badge').textContent)||0)+1;
-    el('addq-count-badge').textContent=count+' saved';
+    // Update local cache (non-blocking — don't await to avoid hanging)
+    loadAllQuestions().catch(e=>console.warn('Cache refresh:',e));
     // Remember type and difficulty for next question
     lastQType=wizData.type;
     lastDiff=wizData.diff;
-    // Reset question text only — keep type and difficulty
-    el('aq-text').value='';
-    setQType(lastQType);
-    setDiff(lastDiff);
-    showWizStep(1); // jump back to step 2 for next question in same test
-  }catch(e){setSt('wiz2-st','err','Save failed: '+e.message);}
-  btn.innerHTML='Save &amp; Add Another';btn.disabled=false;
+    // Update counter badge
+    const count=(parseInt(el('addq-count-badge').textContent)||0)+1;
+    el('addq-count-badge').textContent=count+' saved';
+    // Immediately update acData with any new entries so next question shows them
+    ['prog','cid','subj','topic','testid'].forEach(key=>{
+      const fieldMap={prog:'prog',cid:'cid',subj:'subj',topic:'topic',testid:'testid'};
+      const dataMap={prog:q.programmeName,cid:q.courseId,subj:q.subjectName,topic:q.topicName,testid:q.testLabel};
+      const val=dataMap[key];
+      if(val&&!acData[key].includes(val)){
+        acData[key]=[...acData[key],val].sort();
+      }
+    });
+    // Reset button immediately
+    btn.innerHTML='Save &amp; Add Another';btn.disabled=false;
+    // Show brief success then navigate to step 2
+    setSt('wiz2-st','ok','✅ Saved! Ready for next question.');
+    setTimeout(()=>{
+      el('aq-text').value='';
+      setQType(lastQType);
+      setDiff(lastDiff);
+      el('wiz2-st').className='st'; // clear status
+      showWizStep(1);
+    }, 800);
+  }catch(e){
+    setSt('wiz2-st','err','Save failed: '+e.message);
+    btn.innerHTML='Save &amp; Add Another';btn.disabled=false;
+  }
 };
 
 /* ═══════════════════════════════════════════
@@ -2009,12 +2039,28 @@ function showTapToBegin(){
   el('wait-title').textContent=qParams.sessionName||'Quiz';
   const waitDiv=document.querySelector('#s-stu-wait > div');
   if(!waitDiv)return;
-  var h='';
-  h+='<div style="font-size:48px;margin-bottom:20px">🚀</div>';
-  h+='<h2 style="font-family:var(--fh);font-size:22px;margin-bottom:10px">Test is Live!</h2>';
-  h+='<p style="font-size:14px;color:var(--m);margin-bottom:28px">Your teacher has started the session.</p>';
-  h+='<button class="btn btn-grn" onclick="beginQuizFromTap()" style="font-size:16px;padding:16px 32px;border-radius:12px">Tap to Begin &rarr;</button>';
-  h+='<p style="font-size:11px;color:var(--m2);margin-top:16px">Quiz will go fullscreen when you tap</p>';
+  var h='<div style="max-width:480px;margin:0 auto;padding:0 8px">';
+  // Fire-colored animated title
+  h+='<div style="font-family:var(--fh);font-size:clamp(22px,5vw,34px);font-weight:800;'
+   +'text-align:center;margin-bottom:20px;animation:fireColor 2s infinite alternate;'
+   +'letter-spacing:-1px">Welcome to Agni Pariksha</div>';
+  // Instructions card
+  h+='<div style="background:var(--s1);border:1px solid var(--b);border-radius:12px;'
+   +'padding:16px 18px;margin-bottom:22px;text-align:left">';
+  h+='<div style="font-size:13px;line-height:2.1;color:var(--txt)">';
+  h+='<div>🖥️ &nbsp;Exam will start in <strong>full screen mode</strong>.</div>';
+  h+='<div>🔒 &nbsp;<strong>You cannot change a previously selected answer.</strong></div>';
+  h+='<div>📵 &nbsp;No negative marking but off-screen time is recorded as a <strong>violation</strong>.</div>';
+  h+='<div>⚠️ &nbsp;Violations add a penalty reducing your <strong>Performance rank</strong>.</div>';
+  h+='<div>🔄 &nbsp;2nd and subsequent violations trigger a countdown and <strong>restart the session</strong>, losing your progress.</div>';
+  h+='</div></div>';
+  // Tap to begin button
+  h+='<button class="btn btn-grn w100" onclick="beginQuizFromTap()" '
+   +'style="font-size:16px;padding:16px;border-radius:12px;letter-spacing:.5px">'
+   +'🚀 &nbsp;Tap to Start Exam</button>';
+  h+='<p style="font-size:11px;color:var(--m2);text-align:center;margin-top:12px">'
+   +'Quiz will enter fullscreen when you tap</p>';
+  h+='</div>';
   waitDiv.innerHTML=h;
 }
 
@@ -2641,10 +2687,10 @@ window.renderResults=function(){
       +'<td><strong>'+esc(r.studentName||'—')+'</strong></td>'
       +'<td>'+esc(r.roll||'—')+'</td>'
       +'<td style="font-size:11px">'+esc(r.email||'—')+'</td>'
-      +'<td style="color:'+perfColor+';font-weight:700;font-size:15px">'+perf+'</td>'
-      +'<td style="color:'+scoreColor+';font-weight:700">'+r.pct+'%</td>'
-      +'<td>'+esc(r.timeTaken||'—')+'</td>'
-      +'<td style="color:'+vioColor+'">'+( r.violations||0)+'</td>'
+      +'<td style="color:'+perfColor+';font-weight:700;font-size:15px;text-align:center">'+perf+'</td>'
+      +'<td style="color:'+scoreColor+';font-weight:700;text-align:center">'+r.pct+'%</td>'
+      +'<td style="text-align:center">'+esc(r.timeTaken||'—')+'</td>'
+      +'<td style="color:'+vioColor+';text-align:center">'+( r.violations||0)+'</td>'
       +'<td style="font-size:11px">'+esc(r.programmeName||'—')+'</td>'
       +'<td style="font-size:11px">'+esc(r.courseId||'')+' '+esc(r.subjectName||'—')+'</td>'
       +'<td style="font-size:11px">'+esc(r.topicName||'—')+'</td>'
@@ -2863,17 +2909,25 @@ function renderLeaderboard(){
   list.innerHTML=ranked.map((r,i)=>{
     const medal=i<3?medals[i]:' '+(i+1)+'.';
     const perfColor=r.perf>=90?'var(--grn)':r.perf>=75?'var(--acc)':r.perf>=60?'var(--warn)':'var(--err)';
-    return '<div class="card" style="padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:14px">' 
+    const scoreColor=r.pct>=70?'var(--grn)':r.pct>=50?'var(--warn)':'var(--err)';
+    return '<div class="card" style="padding:12px 16px;margin-bottom:8px;display:flex;align-items:center;gap:14px">'
       +'<div style="font-size:'+(i<3?'28px':'16px')+';min-width:36px;text-align:center">'+medal+'</div>'
       +'<div style="flex:1">'
         +'<div style="font-family:var(--fh);font-size:15px;font-weight:700">'+esc(r.studentName||'—')+'</div>'
-        +'<div style="font-size:11px;color:var(--m);margin-top:2px">'
-          +esc(r.roll||'')+' · '+esc(r.testLabel||'')+' · '+esc(r.teacherName||'')+
-        '</div>'
+        +'<div style="font-size:11px;color:var(--m);margin-top:3px">'
+          +esc(r.roll||'')+' &nbsp;·&nbsp; '
+          +'<span style="color:var(--acc)">'+esc(r.programmeName||'')+'</span>'
+          +' &nbsp;·&nbsp; '+esc(r.testLabel||'')
+        +'</div>'
       +'</div>'
       +'<div style="text-align:right">'
         +'<div style="font-family:var(--fh);font-size:22px;font-weight:800;color:'+perfColor+'">'+r.perf+'</div>'
-        +'<div style="font-size:10px;color:var(--m)">Score:'+r.pct+'% · Vio:'+( r.violations||0)+'</div>'
+        +'<div style="font-size:13px;margin-top:3px">'
+          +'<span style="color:'+scoreColor+'"><strong>'+r.pct+'%</strong></span>'
+          +' &nbsp;<span style="font-size:11px;color:var(--m)">score</span>'
+          +' &nbsp;&nbsp;<span style="color:'+(r.violations>0?'var(--warn)':'var(--m)')+'"><strong>'+(r.violations||0)+'</strong></span>'
+          +' &nbsp;<span style="font-size:11px;color:var(--m)">vio</span>'
+        +'</div>'
       +'</div>'
       +'</div>';
   }).join('');
