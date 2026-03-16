@@ -2655,58 +2655,31 @@ window.renderResults=function(){
   }).join('');
 };
 
-window.dlCSV = function() {
-  const headers = [
-    '#', 'Name', 'Roll', 'Email', 'Performance Score', 'Raw Score %', 
-    'Time Taken', 'Violations', 'Programme', 'Course ID', 'Subject', 
-    'Unit/Topic', 'Test ID/Comment', 'Session ID', 'Teacher',
-    'Attempted', 'Correct', 'Wrong', 'Off-screen seconds'
-  ];
-
-  const rows = allResults.map((r, i) => {
-    // Ensure performance is always a number
-    let perf = r.performanceScore;
-    if (typeof perf !== 'number') {
-      const timeMatch = (r.timeTaken || '').match(/(\d+)m\s*(\d+)s/);
-      const timeSec = timeMatch ? parseInt(timeMatch[1]) * 60 + parseInt(timeMatch[2]) : 0;
-      const totalSec = (r.sessionTotalTime || 15) * 60;
-      perf = calcPerformance(r.pct || 0, timeSec, totalSec, r.violations || 0);
-    }
-
+window.dlCSV=function(){
+  const headers=['#','Name','Roll','Email','Performance','Score %','Time','Violations',
+    'Programme','Course ID','Subject','Unit/Topic','Test ID/Comment','Session ID','Teacher',
+    'Attempted','Correct','Wrong','Off-screen(s)'];
+  const rows=allResults.map((r,i)=>{
+    const perf=r.performanceScore!=null?r.performanceScore:(()=>{
+      const m=(r.timeTaken||'').match(/(\d+)m\s*(\d+)s/);
+      const t=m?parseInt(m[1])*60+parseInt(m[2]):0;
+      return calcPerformance(r.pct,t,(r.sessionTotalTime||15)*60,r.violations);
+    })();
     return [
-      i + 1,
-      r.studentName || '—',
-      r.roll || '—',
-      r.email || '—',
-      perf,                          // Performance Score
-      (r.pct || 0) + '%',            // Raw Score %
-      r.timeTaken || '—',            // Time Taken
-      r.violations || 0,             // Violations
-      r.programmeName || '—',        // Programme
-      r.courseId || '—',             // Course ID
-      r.subjectName || '—',          // Subject
-      r.topicName || '—',            // Unit/Topic
-      r.testLabel || '—',            // Test ID/Comment
-      r.sessionDisplayId || r.sessionId || '—',  // Session ID
-      r.teacherName || '—',          // Teacher
-      r.attempted || 0,              // Attempted
-      r.correct || 0,                // Correct
-      r.wrong || 0,                  // Wrong
-      r.offSecs || 0                 // Off-screen seconds
+      i+1, r.studentName, r.roll, r.email,
+      perf, (r.pct||0)+'%', r.timeTaken, r.violations||0,
+      r.programmeName, r.courseId, r.subjectName, r.topicName,
+      r.testLabel, r.sessionDisplayId||'', r.teacherName,
+      r.attempted, r.correct, r.wrong, r.offSecs||0
     ];
   });
-
-  const csv = [headers, ...rows]
-    .map(row => row.map(c => `"${String(c == null ? '' : c).replace(/"/g, '""')}"`).join(','))
-    .join('\n');
-
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  const fname = (activeSessionFileId || 'QuizApp_Results') + '_results.csv';
-  a.href = url;
-  a.download = fname;
-  a.click();
+  const csv=[headers,...rows].map(row=>row.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  // Use session file ID as filename if available
+  const fname=(activeSessionFileId||'SelfAssessment_Results')+'_results.csv';
+  a.href=url;a.download=fname;a.click();
   URL.revokeObjectURL(url);
 };
 
