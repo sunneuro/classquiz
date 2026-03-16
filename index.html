@@ -346,11 +346,10 @@ tr:hover td{background:var(--s2)}
     <h3 style="flex:1">Create Question Paper</h3>
     <span id="addq-count-badge" style="font-size:12px;color:var(--grn)"></span>
   </div>
-  <!-- Step indicator -->
+  <!-- Step indicator — 2 steps -->
   <div class="step-indicator" id="step-ind">
     <div class="step-pip active" id="pip-0"></div>
     <div class="step-pip" id="pip-1"></div>
-    <div class="step-pip" id="pip-2"></div>
   </div>
   <!-- STEP 1: Location -->
   <div class="wiz-step active" id="wiz-0">
@@ -376,17 +375,18 @@ tr:hover td{background:var(--s2)}
         <input type="text" id="aq-topic" placeholder="e.g. Upper Limb" autocomplete="off" oninput="acFilter('topic')" onfocus="acShow('topic')" onblur="acHide('topic',300)"/>
         <div class="ac-drop" id="ac-topic"></div>
       </div>
-      <label>Test ID/Comment <span class="req">*</span></label>
-      <input type="text" id="aq-testid" placeholder="Auto: CourseID_UnitTopic"
-        style="background:var(--s3);color:var(--m)"
-        onclick="this.removeAttribute('readonly');this.style.background='var(--s2)';this.style.color='var(--txt)'"
-        readonly/>
-      <div style="font-size:11px;color:var(--m2);margin-top:4px">Auto-filled from Course ID + Unit/Topic. Tap to edit.</div>
+      <label>Test ID/Comment</label>
+      <input type="text" id="aq-testid" readonly
+        style="background:var(--s3);color:var(--m);cursor:default"
+        placeholder="Auto: CourseID_UnitTopic_Date"/>
+      <div style="font-size:11px;color:var(--m2);margin-top:4px">
+        🔒 Auto-assigned from Course ID + Unit/Topic + timestamp
+      </div>
     </div>
     <button class="btn btn-pri w100" onclick="wizNext(1)">Next: Write Your Own Question →</button>
     <div class="st" id="wiz0-st"></div>
   </div>
-  <!-- STEP 2: Question -->
+  <!-- STEP 2: Question + Difficulty + Save (all in one) -->
   <div class="wiz-step" id="wiz-1">
     <div class="card">
       <h2>Step 2 — Write Question</h2>
@@ -399,29 +399,18 @@ tr:hover td{background:var(--s2)}
       <label>Question Text <span class="req">*</span></label>
       <textarea id="aq-text" placeholder="Type your question here…" rows="3"></textarea>
       <div id="aq-answer-fields"></div>
-    </div>
-    <div class="row" style="gap:8px">
-      <button class="btn btn-ghost" style="flex:1" onclick="wizBack(0)">← Back</button>
-      <button class="btn btn-pri" style="flex:1" onclick="wizNext(2)">Next: Properties →</button>
-    </div>
-    <div class="st" id="wiz1-st"></div>
-  </div>
-  <!-- STEP 3: Properties + Save -->
-  <div class="wiz-step" id="wiz-2">
-    <div class="card">
-      <h2>Step 3 — Properties &amp; Preview</h2>
-      <label>Difficulty</label>
-      <div style="display:flex;gap:8px">
+      <label style="margin-top:16px">Difficulty</label>
+      <div style="display:flex;gap:8px;margin-top:6px">
         <button class="btn btn-sm w100 btn-ghost" id="diff-easy" onclick="setDiff('easy')">Easy</button>
         <button class="btn btn-sm w100" id="diff-medium" onclick="setDiff('medium')" style="background:var(--warn);color:#fff;border:none">Medium</button>
         <button class="btn btn-sm w100 btn-ghost" id="diff-hard" onclick="setDiff('hard')">Hard</button>
       </div>
-      <div style="margin-top:16px" id="preview-card"></div>
     </div>
-    <div class="row" style="gap:8px">
-      <button class="btn btn-ghost" style="flex:1" onclick="wizBack(1)">← Back</button>
-      <button class="btn btn-grn" style="flex:1" id="btn-save-q" onclick="saveQuestion()">Save &amp; Add Another</button>
+    <div class="row" style="gap:8px;margin-top:10px">
+      <button class="btn btn-ghost" style="flex:1" onclick="wizBack(0)">← Back</button>
+      <button class="btn btn-grn" style="flex:2" id="btn-save-q" onclick="saveQuestion()">💾 Save &amp; Add Another</button>
     </div>
+    <div class="st" id="wiz1-st"></div>
     <div class="st" id="wiz2-st"></div>
   </div>
 </div>
@@ -828,7 +817,7 @@ tr:hover td{background:var(--s2)}
 <div id="panel-profiles" style="display:none;width:100%;max-width:920px;padding:0 16px 60px">
   <div class="card" style="margin-bottom:14px;padding:12px 16px">
     <p style="font-size:12px;color:var(--m);line-height:1.7">
-      Students matched by <strong style="color:var(--txt)">roll number + email</strong>.
+      Students matched by <strong style="color:var(--txt)">roll number</strong> only.
       Use the filters above to narrow which tests are included in the aggregates.
     </p>
   </div>
@@ -1176,17 +1165,26 @@ window.acFilter=function(key){
   autoFillTestId();
 };
 
+function autoGenTestId(cid, topic){
+  const now=new Date();
+  const day=now.getDate();
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const mon=months[now.getMonth()];
+  const yr=now.getFullYear();
+  let hr=now.getHours();
+  const min=String(now.getMinutes()).padStart(2,'0');
+  const ampm=hr>=12?'PM':'AM';
+  hr=hr%12||12;
+  const c=(cid||'').replace(/[^a-zA-Z0-9]/g,'');
+  const t=(topic||'').replace(/[^a-zA-Z0-9]/g,'');
+  return c+(t?'_'+t:'')+'_'+day+mon+yr+'_'+String(hr).padStart(2,'0')+':'+min+ampm;
+}
+
 function autoFillTestId(){
+  // Legacy — kept for acFilter calls but no longer needed
   const cid=(el('aq-cid')?.value||'').trim();
   const topic=(el('aq-topic')?.value||'').trim();
-  const tidInp=el('aq-testid');
-  if(!tidInp)return;
-  if(tidInp.hasAttribute('readonly')){
-    // Only auto-fill if still readonly (not manually edited)
-    const auto=cid&&topic?(cid+'_'+topic.replace(/[\/\\]/g,'-')):cid||topic||'';
-    if(auto) tidInp.value=auto;
-    if(auto) wizData.testid=auto;
-  }
+  // Don't auto-fill during typing — only generated on Next button click
 }
 window.acShow=function(key){acFilter(key);};
 window.acHide=function(key,delay){setTimeout(()=>{const d=el('ac-'+key);if(d)d.classList.remove('show');},delay);};
@@ -1207,6 +1205,7 @@ function acFilterCascade(){
 window.goAddQ=function(){
   editQId=null;
   wizStep=0;
+  // Clear Test ID — will be generated fresh when Next is clicked
 
   // Auto-generate Test ID/Comment from teacher name + today's date
   // Format: TeacherName_15Jan2026
@@ -1223,8 +1222,9 @@ window.goAddQ=function(){
   el('addq-count-badge').textContent='';
   // Clear fields except testid which gets the auto value
   ['prog','cid','subj','topic'].forEach(k=>{const i=el('aq-'+k);if(i)i.value='';});
+  // Test ID auto-generated on Next click — clear it now
   const testidInp=el('aq-testid');
-  if(testidInp) testidInp.value=wizData.testid;
+  if(testidInp) testidInp.value='';
   el('aq-text').value='';
   setQType(lastQType);
   setDiff(lastDiff);
@@ -1235,7 +1235,7 @@ window.goAddQ=function(){
 function showWizStep(n){
   wizStep=n;
   document.querySelectorAll('.wiz-step').forEach((s,i)=>s.classList.toggle('active',i===n));
-  ['pip-0','pip-1','pip-2'].forEach((id,i)=>{
+  ['pip-0','pip-1'].forEach((id,i)=>{
     const pip=el(id);
     if(!pip)return;
     pip.classList.remove('done','active');
@@ -1243,30 +1243,22 @@ function showWizStep(n){
     else if(i===n)pip.classList.add('active');
   });
   if(n===1) renderWizLocSummary();
-  if(n===2) renderPreview();
 }
 
 window.wizNext=function(to){
   if(to===1){
-    // validate step 0
-    const prog=gv('aq-prog'),cid=gv('aq-cid'),subj=gv('aq-subj'),
-          topic=gv('aq-topic'),testid=gv('aq-testid');
-    if(!prog||!cid||!subj||!topic||!testid){
-      setSt('wiz0-st','err','Please fill in all location fields.');return;
+    // Validate Step 1 location fields
+    const prog=gv('aq-prog'),cid=gv('aq-cid'),subj=gv('aq-subj'),topic=gv('aq-topic');
+    if(!prog||!cid||!subj||!topic){
+      setSt('wiz0-st','err','Please fill in Programme, Course ID, Subject and Unit/Topic.');return;
     }
     wizData.prog=prog;wizData.cid=cid;wizData.subj=subj;
-    wizData.topic=topic;wizData.testid=testid;
+    wizData.topic=topic;
+    // Auto-generate Test ID as CourseID_UnitTopic_timestamp — always fresh
+    wizData.testid=autoGenTestId(cid,topic);
+    const tidInp=el('aq-testid');
+    if(tidInp) tidInp.value=wizData.testid;
     el('wiz0-st').className='st';
-  }
-  if(to===2){
-    // validate step 1
-    const text=gv('aq-text');
-    if(!text){setSt('wiz1-st','err','Please enter question text.');return;}
-    if(wizData.type==='mcq'){
-      const opts=['A','B','C','D'].map((_,i)=>(el('ao'+i)?.value||'').trim());
-      if(!opts[0]||!opts[1]){setSt('wiz1-st','err','Please fill in at least options A and B.');return;}
-    }
-    el('wiz1-st').className='st';
   }
   showWizStep(to);
 };
@@ -1371,8 +1363,14 @@ function renderPreview(){
 }
 
 window.saveQuestion=async function(){
-  if(!fbReady){setSt('wiz2-st','err','Firebase not connected.');return;}
+  // Validate before saving
   const text=gv('aq-text');
+  if(!text){setSt('wiz1-st','err','Please enter question text.');return;}
+  if(wizData.type==='mcq'){
+    const opts=['A','B','C','D'].map((_,i)=>(el('ao'+i)?.value||'').trim());
+    if(!opts[0]||!opts[1]){setSt('wiz1-st','err','Please fill in at least options A and B.');return;}
+  }
+  if(!fbReady){setSt('wiz1-st','err','Firebase not connected.');return;}
   let options=[],correctIndex=0,answer='';
   if(wizData.type==='mcq'){
     options=['A','B','C','D'].map((_,i)=>(el('ao'+i)?.value||'').trim()).filter(Boolean);
@@ -1424,16 +1422,16 @@ window.saveQuestion=async function(){
     // Reset button immediately
     btn.innerHTML='Save &amp; Add Another';btn.disabled=false;
     // Show brief success then navigate to step 2
-    setSt('wiz2-st','ok','✅ Saved! Ready for next question.');
+    setSt('wiz1-st','ok','✅ Saved! Ready for next question.');
     setTimeout(()=>{
       el('aq-text').value='';
       setQType(lastQType);
       setDiff(lastDiff);
-      el('wiz2-st').className='st'; // clear status
+      el('wiz1-st').className='st'; // clear status
       showWizStep(1);
     }, 800);
   }catch(e){
-    setSt('wiz2-st','err','Save failed: '+e.message);
+    setSt('wiz1-st','err','Save failed: '+e.message);
     btn.innerHTML='Save &amp; Add Another';btn.disabled=false;
   }
 };
@@ -2037,9 +2035,9 @@ function showTapToBegin(){
   if(!waitDiv)return;
   var h='<div style="max-width:480px;margin:0 auto;padding:0 8px">';
   // Fire-colored animated title
-  h+='<div style="font-family:var(--fh);font-size:clamp(22px,5vw,34px);font-weight:800;'
-   +'text-align:center;margin-bottom:20px;animation:fireColor 2s infinite alternate;'
-   +'letter-spacing:-1px">Welcome to Agni Pariksha</div>';
+  h+='<div style="font-family:var(--fh);font-size:clamp(30px,9vw,52px);font-weight:800;'
+   +'text-align:center;margin-bottom:22px;animation:fireColor 2s infinite alternate;'
+   +'letter-spacing:-2px;text-shadow:0 0 20px rgba(245,158,11,0.4)">Welcome to Agni Pariksha</div>';
   // Instructions card
   h+='<div style="background:var(--s1);border:1px solid var(--b);border-radius:12px;'
    +'padding:16px 18px;margin-bottom:22px;text-align:left">';
@@ -2954,20 +2952,32 @@ window.renderProfiles=function(){
     return;
   }
 
-  // Group by roll+email — both must match to count as same student
+  // Group by roll number only — roll is the unique student identifier
   var studentMap={};
   relevant.forEach(function(r){
-    var key=(r.roll||'')+'||'+(r.email||'');
-    if(!studentMap[key]){
-      studentMap[key]={
-        name:r.studentName||'—',
-        roll:r.roll||'—',
-        email:r.email||'—',
+    var roll=(r.roll||'').trim();
+    if(!roll)return; // skip records with no roll number
+    if(!studentMap[roll]){
+      studentMap[roll]={
+        roll:roll,
+        name:r.studentName||'—',   // use most recent name
+        email:r.email||'—',        // use most recent email (informational only)
         results:[]
       };
     }
-    studentMap[key].results.push(r);
+    // Always update name/email to most recent entry
+    if(r.ts && (!studentMap[roll]._lastTs || r.ts > studentMap[roll]._lastTs)){
+      studentMap[roll].name = r.studentName||studentMap[roll].name;
+      studentMap[roll].email = r.email||studentMap[roll].email;
+      studentMap[roll]._lastTs = r.ts;
+    }
+    studentMap[roll].results.push(r);
   });
+
+  if(!Object.keys(studentMap).length){
+    list.innerHTML='<div class="empty"><span class="empty-i">👤</span>No student data found. Results must include roll numbers.</div>';
+    return;
+  }
 
   // Calculate aggregates and sort by avg performance desc
   var students=Object.values(studentMap).map(function(s){
@@ -2983,7 +2993,11 @@ window.renderProfiles=function(){
         return a+p;
       },0)/n * 10
     )/10;
-    return {name:s.name,roll:s.roll,email:s.email,results:s.results,n:n,avgScore:avgScore,avgPerf:avgPerf};
+    return {
+      name:s.name, roll:s.roll, email:s.email,
+      results:s.results, n:n,
+      avgScore:avgScore, avgPerf:avgPerf
+    };
   }).sort(function(a,b){return b.avgPerf-a.avgPerf;});
 
   list.innerHTML=students.map(function(s,idx){
