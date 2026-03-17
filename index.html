@@ -289,7 +289,10 @@ tr:hover td{background:var(--s2)}
     <label>Your Full Name <span class="req">*</span></label>
     <input type="text" id="tl-name" placeholder="e.g. Ahmed Khan" autocomplete="name"/>
     <label>Your Email <span class="req">*</span></label>
-    <input type="email" id="tl-email" placeholder="your@email.com" autocomplete="email"/>
+    <input type="email" id="tl-email" placeholder="your@email.com" autocomplete="email"
+      oninput="document.getElementById('tl-email-warn').style.display='none';document.getElementById('tl-email-warn').dataset.dismissed=''"/>
+    <div id="tl-email-warn" style="display:none;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);
+      border-radius:8px;padding:8px 12px;font-size:12px;color:#fbbf24;margin-top:6px"></div>
     <label>Password <span class="req">*</span></label>
     <input type="password" id="tl-pw" placeholder="Teacher or Admin password" autocomplete="current-password"/>
     <div style="margin-top:16px" class="col">
@@ -601,7 +604,10 @@ tr:hover td{background:var(--s2)}
     <label>Roll Number <span class="req">*</span></label>
     <input type="text" id="sl-roll" placeholder="e.g. 2024-CS-045" autocomplete="off"/>
     <label>Email Address <span class="req">*</span></label>
-    <input type="email" id="sl-email" placeholder="student@email.com" autocomplete="off"/>
+    <input type="email" id="sl-email" placeholder="student@email.com" autocomplete="off"
+      oninput="document.getElementById('sl-email-warn').style.display='none';document.getElementById('sl-email-warn').dataset.dismissed=''"/>
+    <div id="sl-email-warn" style="display:none;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);
+      border-radius:8px;padding:8px 12px;font-size:12px;color:#fbbf24;margin-top:6px"></div>
     <div style="margin-top:16px">
       <button class="btn btn-grn w100" onclick="stuJoin()">Join Session →</button>
     </div>
@@ -950,6 +956,12 @@ window.doLogin=async function(){
   if(!name||!email||!pw){setSt('tl-st','err','Please fill in all fields.');return;}
   if(!fbReady){setSt('tl-st','err','Firebase not connected. Check your config.json file.');return;}
   if(!appCfg){setSt('tl-st','err','App settings not loaded.');return;}
+  // Check email typo — block if unacknowledged suggestion
+  var tlWarn=document.getElementById('tl-email-warn');
+  var tlDismissed=tlWarn&&tlWarn.dataset.dismissed==='1';
+  if(!tlDismissed&&checkEmailTypo('tl-email','tl-email-warn')){}
+  else if(!tlDismissed&&document.getElementById('tl-email-warn').style.display!=='none')return;
+
   const h=hashStr(pw);
   const isAdmin=email===appCfg.adminEmail&&h===appCfg.adminHash;
   const isTeacher=h===appCfg.teacherHash;
@@ -1949,6 +1961,13 @@ window.stuJoin=async function(){
   if(!name){alert('Please enter your full name.');el('sl-name').focus();return;}
   if(!roll){alert('Please enter your roll number.');el('sl-roll').focus();return;}
   if(!email||!email.includes('@')){alert('Please enter a valid email.');el('sl-email').focus();return;}
+  // Check email typo
+  var slWarn=document.getElementById('sl-email-warn');
+  var slDismissed=slWarn&&slWarn.dataset.dismissed==='1';
+  if(!slDismissed){
+    var blocked=!checkEmailTypo('sl-email','sl-email-warn');
+    if(blocked)return; // show suggestion, wait for acknowledgement
+  }
 
   // Check session status
   const status=qParams?.status;
@@ -2869,8 +2888,11 @@ window.switchResultsTab=function(tab){
   ['results','leaderboard','profiles'].forEach(function(t){
     var tb=el('tab-'+t); if(tb) tb.classList.toggle('on',t===tab);
   });
-  // Results-only elements — show only on results tab
-  ['results-filters','results-summary','results-table-wrap','results-actions'].forEach(function(id){
+  // Filter card visible on all tabs (needed for filtering profiles/leaderboard too)
+  var fc=el('results-filters');
+  if(fc) fc.style.display='';
+  // Results-only elements
+  ['results-summary','results-table-wrap','results-actions'].forEach(function(id){
     var e=el(id); if(e) e.style.display=(tab==='results')?'':'none';
   });
   // Leaderboard panel
@@ -2879,9 +2901,15 @@ window.switchResultsTab=function(tab){
   // Profiles panel
   var pr=el('panel-profiles');
   if(pr) pr.style.display=(tab==='profiles')?'':'none';
-  // Render content
-  if(tab==='leaderboard') renderLeaderboard();
-  if(tab==='profiles') renderProfiles();
+  // Render content — load results first if empty
+  if(tab==='leaderboard'){
+    if(!allResults.length) loadResults(false).then(renderLeaderboard);
+    else renderLeaderboard();
+  }
+  if(tab==='profiles'){
+    if(!allResults.length) loadResults(false).then(renderProfiles);
+    else renderProfiles();
+  }
 };
 
 function renderLeaderboard(){
@@ -3064,6 +3092,75 @@ window.toggleProfile=function(idOrEl){
   var el_=el(id);
   if(!el_)return;
   el_.style.display=el_.style.display==='none'?'':'none';
+};
+
+
+// ── Email typo detection ──
+var KNOWN_DOMAINS=['gmail.com','yahoo.com','hotmail.com','outlook.com',
+  'icloud.com','live.com','curaj.ac.in'];
+
+function levenshtein(a,b){
+  var m=a.length,n=b.length;
+  var dp=[];
+  for(var i=0;i<=m;i++){dp[i]=[i];}
+  for(var j=0;j<=n;j++){dp[0][j]=j;}
+  for(var i=1;i<=m;i++){
+    for(var j=1;j<=n;j++){
+      dp[i][j]=a[i-1]===b[j-1]?dp[i-1][j-1]:
+        1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+    }
+  }
+  return dp[m][n];
+}
+
+function suggestEmail(email){
+  email=(email||'').trim().toLowerCase();
+  var at=email.lastIndexOf('@');
+  if(at<1)return null;
+  var user=email.slice(0,at);
+  var domain=email.slice(at+1);
+  if(!domain)return null;
+  // Find closest known domain
+  var best=null,bestDist=99;
+  KNOWN_DOMAINS.forEach(function(d){
+    var dist=levenshtein(domain,d);
+    if(dist>0&&dist<=2&&dist<bestDist){
+      bestDist=dist;best=d;
+    }
+  });
+  if(!best)return null;
+  return user+'@'+best;
+}
+
+function checkEmailTypo(inputId, warningId, onConfirm){
+  var email=document.getElementById(inputId)?.value?.trim()||'';
+  var suggestion=suggestEmail(email);
+  var warn=document.getElementById(warningId);
+  if(!warn)return true; // no warning element — allow through
+  if(!suggestion){warn.style.display='none';return true;}
+  // Show suggestion
+  warn.style.display='block';
+  warn.innerHTML='⚠ Did you mean <strong>'+esc(suggestion)+'</strong>? '
+    +'<button class="btn btn-sm btn-pri" style="padding:4px 10px;margin:0 6px" '
+    +'onclick="applyEmailSuggestion(this)" data-input="'+inputId+'" data-warn="'+warningId+'" data-val="'+suggestion+'">✓ Use this</button>'
+    +'<button class="btn btn-sm btn-ghost" style="padding:4px 10px" '
+    +'onclick="dismissEmailWarning(this)" data-warn="'+warningId+'">Keep as typed</button>';
+  return false; // block until acknowledged
+}
+
+window.applyEmailSuggestion=function(btn){
+  var inputId=btn.dataset.input;
+  var warningId=btn.dataset.warn;
+  var suggestion=btn.dataset.val;
+  var inp=document.getElementById(inputId);
+  if(inp)inp.value=suggestion;
+  var warn=document.getElementById(warningId);
+  if(warn){warn.style.display='none';warn.dataset.dismissed='1';}
+};
+window.dismissEmailWarning=function(btn){
+  var warningId=btn.dataset.warn;
+  var warn=document.getElementById(warningId);
+  if(warn){warn.style.display='none';warn.dataset.dismissed='1';}
 };
 
 // Start
