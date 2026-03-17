@@ -3002,6 +3002,7 @@ async function bootstrap(){
   }
 
   hideSplash();
+  appCfg.appName = "ClassQuiz"; /* force application name */
   el('login-appname').textContent = appCfg.appName||'ClassQuiz';
   const cached = loadTCache();
   if(cached){
