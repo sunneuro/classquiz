@@ -2139,9 +2139,6 @@ async function initStudentMode(){
 
   hideSplash();
   el('stu-appname-top').textContent = appCfg?.appName || 'ClassQuiz';
-
-  /* override student title */
-  el('stu-appname-top').textContent = "Test Your Knowledge";
   el('stu-session-title').textContent=qParams.sessionName||qParams.testLabel||'Quiz';
   el('stu-session-meta').textContent=
     `${(qParams.qs||[]).length} questions • ${qParams.time||15} minutes`;
