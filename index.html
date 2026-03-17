@@ -356,6 +356,18 @@ tr:hover td{background:var(--s2)}
   </div>
   <!-- STEP 1: Location -->
   <div class="wiz-step active" id="wiz-0">
+    <!-- Resume draft section -->
+    <div id="wiz-draft-resume" class="card" style="margin-bottom:10px;padding:12px 14px;background:rgba(108,99,255,.06);border:1px solid rgba(108,99,255,.2);display:none">
+      <div class="row" style="align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:180px">
+          <label style="margin-top:0;font-size:12px;color:var(--acc);font-weight:700">📂 Resume a Draft</label>
+          <select id="wiz-draft-sel" onchange="loadSelectedDraft()" style="margin-top:4px">
+            <option value="">— Select a draft to resume —</option>
+          </select>
+        </div>
+        <button class="btn btn-ghost btn-sm" style="align-self:flex-end" onclick="el('wiz-draft-resume').style.display='none'">✕</button>
+      </div>
+    </div>
     <div class="card">
       <h2>Step 1 — Where does this question belong?</h2>
       <label>Programme <span class="req">*</span></label>
@@ -428,9 +440,12 @@ tr:hover td{background:var(--s2)}
 <!-- QUESTION BANK -->
 <div id="s-bank" class="screen center">
 <div class="mw-lg">
-  <div class="row" style="margin-bottom:14px">
+  <div class="row" style="margin-bottom:10px;gap:8px;flex-wrap:wrap">
     <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
-    <h3 style="flex:1">Master Question Bank</h3>
+    <button class="btn btn-ghost btn-sm" onclick="show('s-addq');showWizStep(1)">✏️ Create Question Paper</button>
+    <button class="btn btn-ghost btn-sm" onclick="show('s-curate');renderCurate()">📋 Curate Quiz</button>
+    <div style="flex:1"></div>
+    <h3 style="font-size:14px">Master Question Bank</h3>
     <span id="bank-total" style="font-size:12px;color:var(--m)"></span>
   </div>
   <!-- Hierarchy filters -->
@@ -472,6 +487,17 @@ tr:hover td{background:var(--s2)}
     </div>
     <input type="text" id="bf-search" placeholder="Search question text…" style="margin-top:10px" oninput="renderBank()"/>
   </div>
+  <!-- Bulk action bar — visible when in addToDraft mode OR always for selection -->
+  <div id="bank-bulk-bar" style="display:none;margin-bottom:10px">
+    <div class="card" style="padding:10px 14px;background:rgba(108,99,255,.07);border:1px solid rgba(108,99,255,.2)">
+      <div class="row" style="flex-wrap:wrap;gap:8px;align-items:center">
+        <span id="bank-sel-count" style="font-size:12px;color:var(--acc);font-weight:600;flex:1">0 selected</span>
+        <button class="btn btn-ghost btn-sm" onclick="bankSelAll()">Select All</button>
+        <button class="btn btn-ghost btn-sm" onclick="bankDeselAll()">Deselect All</button>
+        <button class="btn btn-pri btn-sm" onclick="bankAddSelected()">➕ Add Selected to Quiz</button>
+      </div>
+    </div>
+  </div>
   <div id="bank-list"></div>
   <button class="btn btn-grn w100" style="margin-top:8px" onclick="goCurate()">Launch Quiz →</button>
 </div>
@@ -481,9 +507,11 @@ tr:hover td{background:var(--s2)}
 <div id="s-curate" class="screen center">
 <div class="mw-lg">
   <!-- Launch button at top -->
-  <div class="row" style="margin-bottom:14px;gap:8px">
+  <div class="row" style="margin-bottom:10px;gap:8px;flex-wrap:wrap">
     <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
-    <h3 style="flex:1">Curate Quiz</h3>
+    <button class="btn btn-ghost btn-sm" onclick="show('s-addq');showWizStep(1)">✏️ Create Question Paper</button>
+    <button class="btn btn-ghost btn-sm" onclick="show('s-bank');renderBank()">📚 Master Question Bank</button>
+    <div style="flex:1"></div>
     <button class="btn btn-grn" onclick="goLaunch()" style="padding:8px 18px">🚀 Launch Quiz →</button>
   </div>
   <!-- Draft info bar -->
@@ -731,15 +759,15 @@ tr:hover td{background:var(--s2)}
   <div id="results-filters" class="card" style="padding:14px">
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
       <div><label style="margin-top:0">Programme</label>
-        <select id="rf-prog" onchange="renderResults()"><option value="">All</option></select></div>
+        <select id="rf-prog" onchange="renderActiveTab()"><option value="">All</option></select></div>
       <div><label style="margin-top:0">Subject</label>
-        <select id="rf-subj" onchange="renderResults()"><option value="">All</option></select></div>
+        <select id="rf-subj" onchange="renderActiveTab()"><option value="">All</option></select></div>
       <div><label style="margin-top:0">Unit/Topic</label>
-        <select id="rf-topic" onchange="renderResults()"><option value="">All</option></select></div>
+        <select id="rf-topic" onchange="renderActiveTab()"><option value="">All</option></select></div>
       <div><label style="margin-top:0">Test ID/Comment</label>
-        <select id="rf-testid" onchange="renderResults()"><option value="">All</option></select></div>
+        <select id="rf-testid" onchange="renderActiveTab()"><option value="">All</option></select></div>
       <div><label style="margin-top:0">Teacher</label>
-        <select id="rf-teacher" onchange="renderResults()"><option value="">All</option></select></div>
+        <select id="rf-teacher" onchange="renderActiveTab()"><option value="">All</option></select></div>
       <div><label style="margin-top:0">Session ID</label>
         <select id="rf-session" onchange="renderActiveTab()"><option value="">All Sessions</option></select></div>
     </div>
@@ -1259,8 +1287,9 @@ window.goAddQ=function(){
 
   wizData={prog:'',cid:'',subj:'',topic:'',testid:autoTestId(),type:'mcq',diff:'medium'};
   el('addq-count-badge').textContent='';
-  // Clear fields except testid which gets the auto value
   ['prog','cid','subj','topic'].forEach(k=>{const i=el('aq-'+k);if(i)i.value='';});
+  // Load existing drafts for this teacher
+  loadTeacherDrafts();
   // Test ID auto-generated on Next click — clear it now
   const testidInp=el('aq-testid');
   if(testidInp) testidInp.value='';
@@ -1530,38 +1559,100 @@ function bankFilterFn(q){
   return true;
 }
 
+let bankSel=new Set(); // selected question IDs in bank
+let bankMode='';         // 'addToDraft' when opened from Create Question Paper
+
 window.renderBank=function(){
   const qs=allQuestions.filter(bankFilterFn);
-  el('bank-total').textContent=`${qs.length} of ${allQuestions.length} questions`;
+  el('bank-total').textContent=qs.length+' of '+allQuestions.length+' questions';
   const list=el('bank-list');
+  // Show bulk bar
+  const bar=el('bank-bulk-bar');
+  if(bar) bar.style.display='';
+  updateBankSelCount();
   if(!qs.length){
-    list.innerHTML=`<div class="empty"><span class="empty-i">${allQuestions.length?'🔍':'📭'}</span>${allQuestions.length?'No match.':'No questions yet.'}</div>`;
+    list.innerHTML='<div class="empty"><span class="empty-i">'+(allQuestions.length?'🔍':'📭')+'</span>'+(allQuestions.length?'No match.':'No questions yet.')+'</div>';
     return;
   }
-  list.innerHTML=qs.map(q=>`
-    <div class="qi">
-      <div class="qi-row">
-        <div class="qi-body">
-          <div class="qi-meta">
-            <span class="chip chip-${q.type}">${q.type==='mcq'?'MCQ':'T/F'}</span>
-            <span class="chip chip-${q.difficulty}">${q.difficulty}</span>
-            <span class="qi-tag">${esc(q.courseId)} ${esc(q.subjectName)}</span>
-            <span class="qi-tag">${esc(q.topicName)}</span>
-            <span class="qi-tag" style="color:var(--acc)">${esc(q.testLabel)}</span>
-            <span class="qi-tag">${esc(q.addedBy)}</span>
-          </div>
-          <div class="qi-text">${esc(q.text)}</div>
-          ${q.type==='mcq'
-            ?`<div style="font-size:11px;color:var(--m);margin-top:4px">${(q.options||[]).map((o,i)=>`<span style="${i===q.correctIndex?'color:var(--grn);font-weight:600':''}">${'ABCD'[i]}. ${esc(o)}</span>`).join(' &nbsp;')}</div>`
-            :`<div style="font-size:11px;color:var(--grn);margin-top:4px;font-weight:600">Answer: ${esc(q.answer)}</div>`
-          }
-        </div>
-        <div style="display:flex;flex-direction:column;gap:5px;margin-left:4px">
-          <button class="btn-icon" onclick="editQ('${q.id}')">✏️</button>
-          <button class="btn-icon" onclick="deleteQ('${q.id}')" style="color:var(--err)">🗑</button>
-        </div>
-      </div>
-    </div>`).join('');
+  list.innerHTML=qs.map(function(q){
+    const sel=bankSel.has(q.id);
+    const opts=q.type==='mcq'
+      ?'<div style="font-size:11px;color:var(--m);margin-top:4px">'
+        +(q.options||[]).map(function(o,i){
+          return '<span style="'+(i===q.correctIndex?'color:var(--grn);font-weight:600':'')+'">'+'ABCD'[i]+'. '+esc(o)+'</span>';
+        }).join(' &nbsp;')+'</div>'
+      :'<div style="font-size:11px;color:var(--grn);margin-top:4px;font-weight:600">Answer: '+esc(q.answer)+'</div>';
+    return '<div class="qi'+(sel?' sel':'')+'" id="bq-'+q.id+'" data-id="'+q.id+'">'
+      +'<div class="qi-row" style="align-items:flex-start">'
+        +'<div style="padding:4px 10px 0 2px;cursor:pointer" onclick="bankAction(this,0)">'
+          +'<div class="chk'+(sel?' on':'')+'" id="bchk-'+q.id+'">&#x2713;</div>'
+        +'</div>'
+        +'<div class="qi-body" style="flex:1">'
+          +'<div class="qi-meta">'
+            +'<span class="chip chip-'+q.type+'">'+(q.type==='mcq'?'MCQ':'T/F')+'</span>'
+            +'<span class="chip chip-'+(q.difficulty||'medium')+'">'+(q.difficulty||'medium')+'</span>'
+            +'<span class="qi-tag">'+esc(q.courseId)+' '+esc(q.subjectName)+'</span>'
+            +'<span class="qi-tag">'+esc(q.topicName)+'</span>'
+            +'<span class="qi-tag" style="color:var(--acc)">'+esc(q.testLabel)+'</span>'
+          +'</div>'
+          +'<div class="qi-text" style="margin-top:6px">'+esc(q.text)+'</div>'
+          +opts
+        +'</div>'
+        +'<div style="display:flex;flex-direction:column;gap:5px;margin-left:8px;flex-shrink:0">'
+          +'<button class="btn-icon" title="Add to Quiz" onclick="bankAction(this,1)" style="color:var(--grn);font-size:14px">➕</button>'
+          +'<button class="btn-icon" title="Edit" onclick="bankAction(this,2)">✏️</button>'
+          +'<button class="btn-icon" title="Delete" onclick="bankAction(this,3)" style="color:var(--err)">🗑</button>'
+        +'</div>'
+      +'</div>'
+    +'</div>';
+  }).join('');
+};
+
+function updateBankSelCount(){
+  const c=el('bank-sel-count');
+  if(c) c.textContent=bankSel.size+' selected';
+}
+
+window.bankToggle=function(id){
+  if(bankSel.has(id)){bankSel.delete(id);}else{bankSel.add(id);}
+  const bq=el('bq-'+id);
+  if(bq) bq.classList.toggle('sel',bankSel.has(id));
+  const chk=el('bchk-'+id);
+  if(chk) chk.classList.toggle('on',bankSel.has(id));
+  updateBankSelCount();
+};
+
+window.bankSelAll=function(){
+  allQuestions.filter(bankFilterFn).forEach(q=>bankSel.add(q.id));
+  renderBank();
+};
+
+window.bankDeselAll=function(){
+  bankSel.clear();
+  renderBank();
+};
+
+window.bankAddOne=function(id){
+  // Add single question to current quiz (curSel)
+  if(!curSel.includes(id)) curSel.push(id);
+  bankSel.add(id);
+  const bq=el('bq-'+id);
+  if(bq) bq.classList.add('sel');
+  const chk=el('bchk-'+id);
+  if(chk) chk.classList.add('on');
+  updateBankSelCount();
+  setSt('bank-add-st','ok','✅ Added to quiz! Go to Curate Quiz to review.');
+  setTimeout(()=>{const s=el('bank-add-st');if(s)s.className='st';},2500);
+};
+
+window.bankAddSelected=function(){
+  if(!bankSel.size){alert('Select at least one question first.');return;}
+  let added=0;
+  bankSel.forEach(function(id){
+    if(!curSel.includes(id)){curSel.push(id);added++;}
+  });
+  setSt('bank-add-st','ok','✅ '+added+' question(s) added to quiz.');
+  setTimeout(()=>{const s=el('bank-add-st');if(s)s.className='st';},2500);
 };
 
 window.editQ=async function(id){
@@ -3319,12 +3410,11 @@ async function clearDraft(){
 
 
 window.saveAndGoBank=async function(){
-  // Save current question if text is filled, then go to bank
   const text=gv('aq-text');
   if(text){await saveQuestionSilent();}
-  // Go to bank with "add to draft" mode active
   bankMode='addToDraft';
   show('s-bank');
+  await loadAllQuestions();
   renderBank();
 };
 
@@ -3507,6 +3597,68 @@ window.renderActiveTab=function(){
   if(id==='tab-leaderboard') renderLeaderboard();
   else if(id==='tab-profiles') renderProfiles();
   else renderResults();
+};
+
+
+// Load all drafts for this teacher into the Step 1 dropdown
+async function loadTeacherDrafts(){
+  if(!fbReady||!teacher?.email)return;
+  try{
+    const snap=await _fb.getDocs(_fb.query(
+      _fb.collection(db,'drafts'),
+      _fb.where('teacherEmail','==',teacher.email),
+      _fb.where('status','==','draft')
+    ));
+    const drafts=snap.docs.map(d=>({id:d.id,...d.data()}));
+    const sel=el('wiz-draft-sel');
+    const wrap=el('wiz-draft-resume');
+    if(!sel||!wrap)return;
+    if(!drafts.length){wrap.style.display='none';return;}
+    sel.innerHTML='<option value="">— Select a draft to resume —</option>'
+      +drafts.map(function(d){
+        const m=d.meta||{};
+        const label=(m.cid||'')+(m.topic?' / '+m.topic:'')+(d.questions?' ('+d.questions.length+' q)':'');
+        return '<option value="'+d.id+'">'+esc(label)+'</option>';
+      }).join('');
+    wrap.style.display='';
+  }catch(e){console.warn('Load drafts:',e);}
+}
+
+window.loadSelectedDraft=async function(){
+  const sel=el('wiz-draft-sel');
+  if(!sel||!sel.value)return;
+  const draftId=sel.value;
+  try{
+    const doc=await _fb.getDoc(_fb.doc(db,'drafts',draftId));
+    if(!doc.exists())return;
+    const data=doc.data();
+    const m=data.meta||{};
+    // Pre-fill all fields
+    ['prog','cid','subj','topic'].forEach(function(k){
+      const inp=el('aq-'+k);
+      if(inp) inp.value=m[k]||'';
+    });
+    const tidInp=el('aq-testid');
+    if(tidInp) tidInp.value=m.testid||'';
+    wizData={...m,type:wizData.type||'mcq',diff:wizData.diff||'medium'};
+    // Load draft questions
+    curDraft=data.questions||[];
+    curDraftId=draftId;
+    curDraftMeta=m;
+    el('addq-count-badge').textContent=curDraft.length+' in draft';
+    setSt('wiz0-st','ok','✅ Draft loaded: '+curDraft.length+' question(s). Click Next to continue writing.');
+  }catch(e){setSt('wiz0-st','err','Failed to load draft: '+e.message);}
+};
+
+
+window.bankAction=function(btn,action){
+  var el_=btn.closest('[data-id]');
+  var id=el_?el_.dataset.id:'';
+  if(!id)return;
+  if(action===0) bankToggle(id);
+  else if(action===1) bankAddOne(id);
+  else if(action===2) editQ(id);
+  else if(action===3) deleteQ(id);
 };
 
 // Start
