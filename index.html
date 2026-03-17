@@ -915,6 +915,7 @@ async function initFB(key,pid,aid){
    STATE
 ═══════════════════════════════════════════ */
 let appCfg={appName: "ClassQuiz"};       // {appName,adminEmail,adminPasswordHash,teacherPasswordHash}
+window.appCfg = appCfg;   /* expose it for debugging */
 let teacher=null;      // {name,email,isAdmin}
 let allQuestions=[];   // cached from Firebase
 let allResults=[];     // cached from Firebase
