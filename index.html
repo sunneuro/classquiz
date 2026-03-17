@@ -244,7 +244,7 @@ tr:hover td{background:var(--s2)}
 
 <!-- SPLASH -->
 <div id="s-splash" style="display:flex;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;gap:16px">
-  <div style="font-family:'Syne',sans-serif;font-size:34px;font-weight:800;background:linear-gradient(135deg,#6c63ff,#ff6584);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Self Assessment</div>
+  <div style="font-family:'Syne',sans-serif;font-size:34px;font-weight:800;background:linear-gradient(135deg,#6c63ff,#ff6584);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">ClassQuiz</div>
   <div id="splash-msg" style="font-size:13px;color:#7070a0">Loading…</div>
   <div style="width:32px;height:32px;border:3px solid rgba(108,99,255,.2);border-top-color:#6c63ff;border-radius:50%;animation:rot .7s linear infinite"></div>
 </div>
@@ -252,7 +252,7 @@ tr:hover td{background:var(--s2)}
 <!-- FIRST TIME SETUP -->
 <div id="s-firstrun" class="screen center">
 <div class="mw">
-  <div class="logo"><div class="logo-t">Self Assessment</div><div class="logo-s">First Time Setup</div></div>
+  <div class="logo"><div class="logo-t">ClassQuiz</div><div class="logo-s">First Time Setup</div></div>
   <div class="card card-acc">
     <h2>Welcome — Create Admin Account</h2>
     <p style="font-size:13px;color:var(--m);margin-bottom:16px;line-height:1.7">This is a one-time setup. You are creating the admin account. Keep your credentials safe.</p>
@@ -278,7 +278,7 @@ tr:hover td{background:var(--s2)}
 <!-- LOGIN -->
 <div id="s-login-teacher" class="screen center">
 <div class="mw" style="max-width:420px">
-  <div class="logo"><div class="logo-t" id="login-appname">Self Assessment</div><div class="logo-s">Teacher Login</div></div>
+  <div class="logo"><div class="logo-t" id="login-appname">ClassQuiz</div><div class="logo-s">Teacher Login</div></div>
   <div class="card">
     <label>Salutation <span class="req">*</span></label>
     <select id="tl-sal" style="margin-bottom:8px">
@@ -646,7 +646,7 @@ tr:hover td{background:var(--s2)}
 <div id="s-stu-login" class="screen" style="align-items:center;justify-content:center;padding:40px 16px">
 <div class="mw" style="max-width:380px">
   <div style="text-align:center;margin-bottom:24px">
-    <div class="logo-s" style="margin-bottom:5px" id="stu-appname-top">Self Assessment</div>
+    <div class="logo-s" style="margin-bottom:5px" id="stu-appname-top">ClassQuiz</div>
     <h1 id="stu-session-title" style="font-size:22px;margin-bottom:5px"></h1>
     <p id="stu-session-meta" style="font-size:13px;color:var(--m)"></p>
   </div>
@@ -914,7 +914,7 @@ async function initFB(key,pid,aid){
 /* ═══════════════════════════════════════════
    STATE
 ═══════════════════════════════════════════ */
-let appCfg=null;       // {appName,adminEmail,adminPasswordHash,teacherPasswordHash}
+let appCfg={appName: "ClassQuiz"};       // {appName,adminEmail,adminPasswordHash,teacherPasswordHash}
 let teacher=null;      // {name,email,isAdmin}
 let allQuestions=[];   // cached from Firebase
 let allResults=[];     // cached from Firebase
@@ -2747,7 +2747,7 @@ function showAnswerReview(){
 window.shareRes=function(){
   const pct=el('rpct').textContent;
   const cor=el('rcor').textContent;
-  const sessionId=qParams?.sessionDisplayId||qParams?.sessionName||'Self Assessment';
+  const sessionId=qParams?.sessionDisplayId||qParams?.sessionName||'ClassQuiz';
   var vioCount_=parseInt(el('hvio')?.textContent||'0')||0;
   var perfEl=el('sring')?.querySelector('.spct');
   var perf=perfEl?perfEl.textContent:'';
@@ -2994,7 +2994,7 @@ async function bootstrap(){
   }
 
   hideSplash();
-  el('login-appname').textContent = appCfg.appName||'Self Assessment';
+  el('login-appname').textContent = appCfg.appName||'ClassQuiz';
   const cached = loadTCache();
   if(cached){
     teacher = cached;
@@ -3012,7 +3012,7 @@ function showFBSetup(errMsg){
       <div style="max-width:420px;width:100%;text-align:center">
         <div style="font-family:'Syne',sans-serif;font-size:32px;font-weight:800;
           background:linear-gradient(135deg,#6c63ff,#ff6584);-webkit-background-clip:text;
-          -webkit-text-fill-color:transparent;background-clip:text;margin-bottom:24px">Self Assessment</div>
+          -webkit-text-fill-color:transparent;background-clip:text;margin-bottom:24px">ClassQuiz</div>
         <div class="card">
           <div class="st err" style="display:block">${errMsg}</div>
           <p style="font-size:13px;color:var(--m);margin-top:12px">Please refresh the page and try again.</p>
