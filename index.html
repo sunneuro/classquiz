@@ -413,6 +413,12 @@ tr:hover td{background:var(--s2)}
       <button class="btn btn-ghost" style="flex:1" onclick="wizBack(0)">← Back</button>
       <button class="btn btn-grn" style="flex:2" id="btn-save-q" onclick="saveQuestion()">💾 Save &amp; Add Another</button>
     </div>
+    <div class="row" style="gap:8px;margin-top:8px">
+      <button class="btn btn-ghost w100" onclick="saveAndGoBank()">📚 Save &amp; Add from Question Bank</button>
+    </div>
+    <div class="row" style="gap:8px;margin-top:8px">
+      <button class="btn btn-pri w100" onclick="saveAndCurate()">📋 Save &amp; Curate Question Paper →</button>
+    </div>
     <div class="st" id="wiz1-st"></div>
     <div class="st" id="wiz2-st"></div>
   </div>
@@ -474,43 +480,28 @@ tr:hover td{background:var(--s2)}
 <!-- CURATE -->
 <div id="s-curate" class="screen center">
 <div class="mw-lg">
-  <div class="row" style="margin-bottom:14px">
+  <!-- Launch button at top -->
+  <div class="row" style="margin-bottom:14px;gap:8px">
     <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
     <h3 style="flex:1">Curate Quiz</h3>
-    <span id="cur-sel-count" style="font-size:12px;color:var(--acc);font-weight:600"></span>
+    <button class="btn btn-grn" onclick="goLaunch()" style="padding:8px 18px">🚀 Launch Quiz →</button>
   </div>
-  <!-- Same hierarchy filters -->
-  <div class="card" style="padding:14px">
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
-      <div><label style="margin-top:0">Programme</label>
-        <select id="cf-prog" onchange="renderCurate()"><option value="">All</option></select></div>
-      <div><label style="margin-top:0">Subject</label>
-        <select id="cf-subj" onchange="renderCurate()"><option value="">All</option></select></div>
-      <div><label style="margin-top:0">Unit/Topic</label>
-        <select id="cf-topic" onchange="renderCurate()"><option value="">All</option></select></div>
-      <div><label style="margin-top:0">Test ID/Comment</label>
-        <select id="cf-testid" onchange="renderCurate()"><option value="">All</option></select></div>
-      <div><label style="margin-top:0">Type</label>
-        <select id="cf-type" onchange="renderCurate()">
-          <option value="">All</option><option value="mcq">MCQ</option><option value="tf">True/False</option>
-        </select></div>
-      <div><label style="margin-top:0">Difficulty</label>
-        <select id="cf-diff" onchange="renderCurate()">
-          <option value="">All</option><option value="easy">Easy</option>
-          <option value="medium">Medium</option><option value="hard">Hard</option>
-        </select></div>
+  <!-- Draft info bar -->
+  <div id="cur-draft-info" class="card" style="padding:10px 14px;margin-bottom:10px;background:rgba(108,99,255,.07);border:1px solid rgba(108,99,255,.2)">
+    <div class="row" style="flex-wrap:wrap;gap:8px;align-items:center">
+      <div style="flex:1">
+        <span style="font-size:12px;color:var(--m)">Current paper: </span>
+        <strong id="cur-draft-label" style="font-size:13px;color:var(--acc)">—</strong>
+        <span id="cur-sel-count" style="font-size:12px;color:var(--m);margin-left:10px"></span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="showSaveTemplate()">💾 Save Template</button>
+      <button class="btn btn-ghost btn-sm" onclick="showLoadTemplate()">📂 Load Template</button>
     </div>
-    <input type="text" id="cf-search" placeholder="Search…" style="margin-top:10px" oninput="renderCurate()"/>
   </div>
-  <div class="row" style="margin-bottom:12px;gap:8px;flex-wrap:wrap">
-    <button class="btn btn-ghost btn-sm" onclick="curSelAll()">Select All Visible</button>
-    <button class="btn btn-ghost btn-sm" onclick="curDeselAll()">Deselect All</button>
-    <button class="btn btn-ghost btn-sm" onclick="showSaveTemplate()">💾 Save Template</button>
-    <button class="btn btn-ghost btn-sm" onclick="showLoadTemplate()">📂 Load Template</button>
-  </div>
+  <!-- Question list -->
   <div id="cur-list"></div>
   <!-- Session settings -->
-  <div class="card" style="margin-top:10px">
+  <div class="card" style="margin-top:14px">
     <h2>Session Settings</h2>
     <label>Session Name</label>
     <input type="text" id="cs-name" placeholder="e.g. Chapter 3 Mid-Term"/>
@@ -519,8 +510,41 @@ tr:hover td{background:var(--s2)}
     <label>Questions per student (0 = all selected)</label>
     <input type="number" id="cs-count" value="0" min="0"/>
   </div>
-  <button class="btn btn-grn w100" onclick="goLaunch()">Launch Quiz →</button>
+  <!-- Launch button at bottom -->
+  <button class="btn btn-grn w100" style="margin-top:12px" onclick="goLaunch()">🚀 Launch Quiz →</button>
   <div class="st" id="cur-st"></div>
+</div>
+</div>
+
+<!-- Hidden curate filter fields for compatibility -->
+<select id="cf-prog" style="display:none"><option value=""></option></select>
+<select id="cf-subj" style="display:none"><option value=""></option></select>
+<select id="cf-topic" style="display:none"><option value=""></option></select>
+<select id="cf-testid" style="display:none"><option value=""></option></select>
+<select id="cf-type" style="display:none"><option value=""></option></select>
+<select id="cf-diff" style="display:none"><option value=""></option></select>
+<input id="cf-search" style="display:none"/>
+<!-- EDIT QUESTION MODAL -->
+<div class="ov" id="ov-edit-q">
+<div class="ov-card" style="max-width:540px;width:94%">
+  <div class="row" style="margin-bottom:14px">
+    <h2 style="flex:1">Edit Question</h2>
+    <button class="btn btn-ghost btn-sm" onclick="closeOv('ov-edit-q')">✕</button>
+  </div>
+  <label>Question Text <span class="req">*</span></label>
+  <textarea id="eq-text" rows="3" placeholder="Question text…"></textarea>
+  <div id="eq-answer-fields" style="margin-top:10px"></div>
+  <label style="margin-top:14px">Difficulty</label>
+  <div style="display:flex;gap:8px;margin-top:6px">
+    <button class="btn btn-sm w100 btn-ghost" id="eq-diff-easy" onclick="setEditDiff('easy')">Easy</button>
+    <button class="btn btn-sm w100" id="eq-diff-medium" onclick="setEditDiff('medium')" style="background:var(--warn);color:#fff;border:none">Medium</button>
+    <button class="btn btn-sm w100 btn-ghost" id="eq-diff-hard" onclick="setEditDiff('hard')">Hard</button>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-edit-q')">Cancel</button>
+    <button class="btn btn-grn" style="flex:2" onclick="saveEditQuestion()">💾 Save Changes</button>
+  </div>
+  <div class="st" id="eq-st"></div>
 </div>
 </div>
 
@@ -717,9 +741,9 @@ tr:hover td{background:var(--s2)}
       <div><label style="margin-top:0">Teacher</label>
         <select id="rf-teacher" onchange="renderResults()"><option value="">All</option></select></div>
       <div><label style="margin-top:0">Session ID</label>
-        <select id="rf-session" onchange="renderResults()"><option value="">All Sessions</option></select></div>
+        <select id="rf-session" onchange="renderActiveTab()"><option value="">All Sessions</option></select></div>
     </div>
-    <input type="text" id="rf-search" placeholder="Search student name, roll, or email…" style="margin-top:10px" oninput="renderResults()"/>
+    <input type="text" id="rf-search" placeholder="Search student name, roll, or email…" style="margin-top:10px" oninput="renderActiveTab()"/>
   </div>
   <!-- Summary -->
   <div id="results-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px">
@@ -867,6 +891,9 @@ let teacher=null;      // {name,email,isAdmin}
 let allQuestions=[];   // cached from Firebase
 let allResults=[];     // cached from Firebase
 let curSel=[];         // selected question IDs for curation
+let curDraft=[];       // questions for current paper (temp, not in Bank yet)
+let curDraftId=null;   // Firebase draft doc ID
+let curDraftMeta={};   // {prog,cid,subj,topic,testid} for current paper
 let quizQs=[];         // final quiz question array
 let answers={};
 let curQ=0,timeLeft=0,timerInt=null;
@@ -1257,17 +1284,34 @@ function showWizStep(n){
   if(n===1) renderWizLocSummary();
 }
 
-window.wizNext=function(to){
+window.wizNext=async function(to){
   if(to===1){
-    // Validate Step 1 location fields
     const prog=gv('aq-prog'),cid=gv('aq-cid'),subj=gv('aq-subj'),topic=gv('aq-topic');
     if(!prog||!cid||!subj||!topic){
       setSt('wiz0-st','err','Please fill in Programme, Course ID, Subject and Unit/Topic.');return;
     }
-    wizData.prog=prog;wizData.cid=cid;wizData.subj=subj;
-    wizData.topic=topic;
-    // Auto-generate Test ID as CourseID_UnitTopic_timestamp — always fresh
-    wizData.testid=autoGenTestId(cid,topic);
+    wizData.prog=prog;wizData.cid=cid;wizData.subj=subj;wizData.topic=topic;
+    // Check for existing draft for this cid+topic
+    const existing=await loadDraftForMeta(cid,topic);
+    if(existing&&existing.questions&&existing.questions.length>0){
+      const cont=confirm('You have an existing draft for '+cid+' / '+topic+' with '+existing.questions.length+' question(s). OK to continue, Cancel to start fresh.');
+      if(cont){
+        curDraft=existing.questions;
+        curDraftMeta=existing.meta;
+        wizData.testid=existing.meta.testid||autoGenTestId(cid,topic);
+      }else{
+        // Start fresh — delete old draft
+        await clearDraft();
+        wizData.testid=autoGenTestId(cid,topic);
+        curDraft=[];
+        curDraftMeta={prog,cid,subj,topic,testid:wizData.testid};
+      }
+    }else{
+      wizData.testid=autoGenTestId(cid,topic);
+      curDraftId=null;
+      curDraft=[];
+      curDraftMeta={prog,cid,subj,topic,testid:wizData.testid};
+    }
     const tidInp=el('aq-testid');
     if(tidInp) tidInp.value=wizData.testid;
     el('wiz0-st').className='st';
@@ -1408,40 +1452,42 @@ window.saveQuestion=async function(){
   const btn=el('btn-save-q');
   btn.innerHTML='<span class="spin"></span> Saving…';btn.disabled=true;
   try{
-    if(editQId){
-      await _fb.setDoc(_fb.doc(db,'questions',editQId),q);
-      editQId=null;
-    }else{
-      await _fb.addDoc(_fb.collection(db,'questions'),q);
-    }
-    // Update local cache (non-blocking — don't await to avoid hanging)
-    loadAllQuestions().catch(e=>console.warn('Cache refresh:',e));
-    // Remember type and difficulty for next question
-    lastQType=wizData.type;
-    lastDiff=wizData.diff;
-    // Update counter badge
-    const count=(parseInt(el('addq-count-badge').textContent)||0)+1;
-    el('addq-count-badge').textContent=count+' saved';
-    // Immediately update acData with any new entries so next question shows them
+    // Assign temp ID for draft tracking
+    const tempId='draft_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);
+    q.tempId=tempId;
+    q.inDraft=true; // marks as not yet in Master Bank
+
+    // Add to current draft array
+    curDraft.push(q);
+    curDraftMeta={
+      prog:q.programmeName,cid:q.courseId,
+      subj:q.subjectName,topic:q.topicName,testid:q.testLabel
+    };
+
+    // Save to Firebase drafts collection (persistent across sessions)
+    await saveDraft();
+
+    // Update acData immediately
     ['prog','cid','subj','topic','testid'].forEach(key=>{
-      const fieldMap={prog:'prog',cid:'cid',subj:'subj',topic:'topic',testid:'testid'};
-      const dataMap={prog:q.programmeName,cid:q.courseId,subj:q.subjectName,topic:q.topicName,testid:q.testLabel};
+      const dataMap={prog:q.programmeName,cid:q.courseId,subj:q.subjectName,
+        topic:q.topicName,testid:q.testLabel};
       const val=dataMap[key];
-      if(val&&!acData[key].includes(val)){
+      if(val&&acData[key]&&!acData[key].includes(val)){
         acData[key]=[...acData[key],val].sort();
       }
     });
-    // Reset button immediately
+
+    lastQType=wizData.type; lastDiff=wizData.diff;
+    const count=curDraft.length;
+    el('addq-count-badge').textContent=count+' in draft';
     btn.innerHTML='Save &amp; Add Another';btn.disabled=false;
-    // Show brief success then navigate to step 2
-    setSt('wiz1-st','ok','✅ Saved! Ready for next question.');
+    setSt('wiz1-st','ok','✅ Added to draft ('+count+' questions). Not in Master Bank yet.');
     setTimeout(()=>{
       el('aq-text').value='';
-      setQType(lastQType);
-      setDiff(lastDiff);
-      el('wiz1-st').className='st'; // clear status
+      setQType(lastQType);setDiff(lastDiff);
+      el('wiz1-st').className='st';
       showWizStep(1);
-    }, 800);
+    },800);
   }catch(e){
     setSt('wiz1-st','err','Save failed: '+e.message);
     btn.innerHTML='Save &amp; Add Another';btn.disabled=false;
@@ -1581,28 +1627,49 @@ function curateFiltFn(q){
 }
 
 window.renderCurate=function(){
-  const qs=allQuestions.filter(curateFiltFn);
-  el('cur-sel-count').textContent=`${curSel.length} selected`;
   const list=el('cur-list');
-  if(!qs.length){list.innerHTML=`<div class="empty"><span class="empty-i">🔍</span>No questions match.</div>`;return;}
-  list.innerHTML=qs.map(q=>{
-    const on=curSel.includes(q.id);
-    const selCls=on?'sel':'';
-    const chkCls=on?'on':'';
+  if(!list)return;
+
+  // Show draft questions — combine curDraft + bank questions selected via curSel
+  // curDraft = new questions (not in bank yet)
+  // curSel = IDs of bank questions selected
+  const bankQs=allQuestions.filter(q=>curSel.includes(q.id));
+  const allPaper=[...curDraft,...bankQs];
+
+  // Update header info
+  const draftLabel=el('cur-draft-label');
+  if(draftLabel){
+    const meta=curDraftMeta;
+    draftLabel.textContent=meta.testid||(meta.cid&&meta.topic?(meta.cid+' / '+meta.topic):'No active paper');
+  }
+  el('cur-sel-count').textContent=allPaper.length+' question'+(allPaper.length!==1?'s':'');
+
+  if(!allPaper.length){
+    list.innerHTML='<div class="empty"><span class="empty-i">📋</span>'
+      +'No questions in this paper yet. Create questions or add from Master Question Bank.</div>';
+    return;
+  }
+
+  list.innerHTML=allPaper.map(function(q,idx){
     const typLbl=q.type==='mcq'?'MCQ':'T/F';
-    return '<div class="qi '+selCls+'" data-qid="'+q.id+'" onclick="togCurById(this)">'
+    const isNew=!!q.inDraft; // new question not yet in bank
+    const qKey=isNew?q.tempId:q.id;
+    return '<div class="qi sel" style="position:relative">'
       +'<div class="qi-row">'
-        +'<div class="chk '+chkCls+'" id="cc-'+q.id+'">&#x2713;</div>'
         +'<div class="qi-body">'
           +'<div class="qi-meta">'
             +'<span class="chip chip-'+q.type+'">'+typLbl+'</span>'
-            +'<span class="chip chip-'+q.difficulty+'">'+q.difficulty+'</span>'
-            +'<span class="qi-tag">'+esc(q.courseId)+'</span>'
-            +'<span class="qi-tag">'+esc(q.topicName)+'</span>'
-            +'<span class="qi-tag" style="color:var(--acc)">'+esc(q.testLabel)+'</span>'
+            +'<span class="chip chip-'+(q.difficulty||'medium')+'">'+(q.difficulty||'medium')+'</span>'
+            +(isNew?'<span class="chip" style="background:rgba(16,185,129,.15);color:#10b981">New</span>':'')
           +'</div>'
-          +'<div class="qi-text">'+esc(q.text)+'</div>'
+          +'<div class="qi-text" style="margin-top:6px">'+esc(q.text)+'</div>'
         +'</div>'
+      +'</div>'
+      +'<div style="display:flex;gap:8px;margin-top:8px;padding-top:8px;border-top:1px solid var(--b)">'
+        +'<button class="btn btn-ghost btn-sm" style="flex:1" '
+        +'onclick="qEditBtn(this)" data-k="'+qKey+'" data-n="'+isNew+'">✏️ Edit</button>'
+        +'<button class="btn btn-sm" style="flex:1;background:rgba(239,68,68,.1);color:var(--err);border:1px solid rgba(239,68,68,.2)" '
+        +'onclick="qRemoveBtn(this)" data-k="'+qKey+'" data-n="'+isNew+'">🗑️ Remove</button>'
       +'</div>'
     +'</div>';
   }).join('');
@@ -1696,23 +1763,58 @@ window.loadTemplate=async function(id){
    LAUNCH
 ═══════════════════════════════════════════ */
 window.goLaunch=async function(){
-  if(!curSel.length){setSt('cur-st','err','Please select at least one question.');return;}
+  // Combine draft + selected bank questions
+  const bankQs=allQuestions.filter(q=>curSel.includes(q.id));
+  const allPaper=[...curDraft,...bankQs];
+  if(!allPaper.length){setSt('cur-st','err','No questions in this paper. Add questions first.');return;}
   if(!fbReady){setSt('cur-st','err','Firebase not connected.');return;}
-  const sessionName=gv('cs-name')||'Quiz';
+
+  const lBtn=document.querySelector('#s-curate .btn-grn');
+  if(lBtn){lBtn.disabled=true;lBtn.innerHTML='<span class="spin"></span> Launching…';}
+
+  const sessionName=gv('cs-name')||curDraftMeta.testid||'Quiz';
   const time=parseInt(gv('cs-time'))||15;
   const count=parseInt(gv('cs-count'))||0;
-  const selectedQs=allQuestions.filter(q=>curSel.includes(q.id));
-  if(!selectedQs.length){setSt('cur-st','err','Selected questions not found.');return;}
+
+  // Step 1: Save all DRAFT questions to Master Bank with Test ID stamp
+  const finalTestId=curDraftMeta.testid||autoGenTestId(curDraftMeta.cid||'',curDraftMeta.topic||'');
+  const savedQIds=[];
+  try{
+    for(const q of curDraft){
+      const qFinal={...q};
+      delete qFinal.tempId;
+      delete qFinal.inDraft;
+      qFinal.testLabel=finalTestId;
+      const ref=await _fb.addDoc(_fb.collection(db,'questions'),qFinal);
+      savedQIds.push(ref.id);
+    }
+    // Also tag bank questions with this Test ID if not already
+    for(const q of bankQs){
+      savedQIds.push(q.id);
+    }
+  }catch(e){
+    setSt('cur-st','err','Failed to save questions: '+e.message);
+    if(lBtn){lBtn.disabled=false;lBtn.innerHTML='🚀 Launch Quiz →';}
+    return;
+  }
+
+  // Step 2: Reload questions so we have the saved IDs
+  await loadAllQuestions();
+  const selectedQs=allQuestions.filter(q=>savedQIds.includes(q.id)||bankQs.some(b=>b.id===q.id));
+  const launchQs=selectedQs.length?selectedQs:allPaper;
+
+  // Step 3: Clear draft
+  await clearDraft();
 
   activeSessionId=uid16();
   answersLocked=true;
 
   // Pick metadata from first question
-  const fq=selectedQs[0];
+  const fq=launchQs[0]||allPaper[0];
   try{
     await _fb.setDoc(_fb.doc(db,'sessions',activeSessionId),{
       sessionName,time,count,
-      qs:selectedQs,
+      qs:launchQs.length?launchQs:allPaper,
       status:'waiting', // waiting | live | ended
       answersLocked:true,
       programmeName:fq.programmeName||'',
@@ -1749,6 +1851,7 @@ window.goLaunch=async function(){
 
   // Start listening to lobby
   startLobbyListener();
+  if(lBtn){lBtn.disabled=false;lBtn.innerHTML='🚀 Launch Quiz →';}
   launchTab('qr');
   show('s-launch');
 };
@@ -3161,6 +3264,249 @@ window.dismissEmailWarning=function(btn){
   var warningId=btn.dataset.warn;
   var warn=document.getElementById(warningId);
   if(warn){warn.style.display='none';warn.dataset.dismissed='1';}
+};
+
+
+// ── Draft (question paper in progress) utilities ──
+async function saveDraft(){
+  if(!fbReady||!curDraftMeta.cid)return;
+  const data={
+    meta:curDraftMeta,
+    questions:curDraft,
+    teacherEmail:teacher.email,
+    teacherName:teacher.name,
+    status:'draft',
+    ts:Date.now()
+  };
+  try{
+    if(curDraftId){
+      await _fb.setDoc(_fb.doc(db,'drafts',curDraftId),data);
+    }else{
+      const ref=await _fb.addDoc(_fb.collection(db,'drafts'),data);
+      curDraftId=ref.id;
+    }
+  }catch(e){console.warn('Draft save:',e);}
+}
+
+async function loadDraftForMeta(cid,topic){
+  // Find existing draft for this teacher + courseId + topic
+  if(!fbReady)return null;
+  try{
+    const snap=await _fb.getDocs(_fb.query(
+      _fb.collection(db,'drafts'),
+      _fb.where('teacherEmail','==',teacher.email),
+      _fb.where('meta.cid','==',cid),
+      _fb.where('status','==','draft')
+    ));
+    const matching=snap.docs.filter(d=>d.data().meta.topic===topic);
+    if(matching.length){
+      const doc=matching[0];
+      curDraftId=doc.id;
+      return doc.data();
+    }
+  }catch(e){console.warn('Load draft:',e);}
+  return null;
+}
+
+async function clearDraft(){
+  if(fbReady&&curDraftId){
+    try{
+      await _fb.deleteDoc(_fb.doc(db,'drafts',curDraftId));
+    }catch(e){}
+  }
+  curDraft=[];curDraftId=null;curDraftMeta={};
+}
+
+
+window.saveAndGoBank=async function(){
+  // Save current question if text is filled, then go to bank
+  const text=gv('aq-text');
+  if(text){await saveQuestionSilent();}
+  // Go to bank with "add to draft" mode active
+  bankMode='addToDraft';
+  show('s-bank');
+  renderBank();
+};
+
+window.saveAndCurate=async function(){
+  // Save current question if text is filled, then go to curate
+  const text=gv('aq-text');
+  if(text){await saveQuestionSilent();}
+  goCurate();
+};
+
+// Save current question silently (no navigation)
+async function saveQuestionSilent(){
+  const text=gv('aq-text');
+  if(!text)return;
+  const btn=el('btn-save-q');
+  const origText=btn.innerHTML;
+  btn.disabled=true;
+  let options=[],correctIndex=0,answer='';
+  if(wizData.type==='mcq'){
+    options=['A','B','C','D'].map((_,i)=>(el('ao'+i)?.value||'').trim()).filter(Boolean);
+    correctIndex=parseInt(document.querySelector('input[name="acr"]:checked')?.value||0);
+    correctIndex=Math.min(correctIndex,options.length-1);
+    answer='ABCD'[correctIndex];
+  }else{
+    answer=document.querySelector('input[name="atf"]:checked')?.value||'True';
+    options=['True','False'];
+  }
+  const q={
+    text,type:wizData.type,options,correctIndex,answer,
+    difficulty:wizData.diff,
+    programmeName:wizData.prog,courseId:wizData.cid,
+    subjectName:wizData.subj,topicName:wizData.topic,
+    testLabel:wizData.testid,
+    addedBy:teacher.name,addedByEmail:teacher.email,
+    tempId:'draft_'+Date.now(),inDraft:true,ts:Date.now()
+  };
+  curDraft.push(q);
+  curDraftMeta={prog:q.programmeName,cid:q.courseId,subj:q.subjectName,
+    topic:q.topicName,testid:q.testLabel};
+  await saveDraft();
+  el('addq-count-badge').textContent=curDraft.length+' in draft';
+  btn.innerHTML=origText;btn.disabled=false;
+  el('aq-text').value='';
+  setQType(wizData.type);setDiff(wizData.diff);
+}
+
+// Go to Curate with draft pre-loaded
+window.goCurate=function(){
+  // Load draft questions into curSel equivalent for curate
+  show('s-curate');
+  renderCurate();
+};
+
+
+let editingQKey=null;
+let editingQIsNew=false;
+let editQDiff='medium';
+
+window.openEditQ=function(qKey,isNew){
+  editingQKey=qKey;
+  editingQIsNew=isNew;
+  // Find the question
+  let q=null;
+  if(isNew){
+    q=curDraft.find(x=>x.tempId===qKey);
+  }else{
+    q=allQuestions.find(x=>x.id===qKey);
+    // Also check bank questions in curSel
+    if(!q) q=allQuestions.find(x=>x.id===qKey);
+  }
+  if(!q)return;
+  editQDiff=q.difficulty||'medium';
+  el('eq-text').value=q.text||'';
+  // Render answer fields in modal
+  const aWrap=el('eq-answer-fields');
+  if(q.type==='mcq'){
+    let html='';
+    (q.options||[]).forEach(function(opt,i){
+      html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+        +'<input type="radio" name="eqcr" value="'+i+'"'+(q.correctIndex===i?' checked':'')+'>'
+        +'<input type="text" id="eq-opt'+i+'" value="'+esc(opt)+'" placeholder="Option '+('ABCD'[i])+'" style="flex:1">'
+        +'</div>';
+    });
+    // Ensure 4 options
+    for(let i=(q.options||[]).length;i<4;i++){
+      html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+        +'<input type="radio" name="eqcr" value="'+i+'">'
+        +'<input type="text" id="eq-opt'+i+'" value="" placeholder="Option '+('ABCD'[i])+'" style="flex:1">'
+        +'</div>';
+    }
+    if(aWrap) aWrap.innerHTML=html;
+  }else{
+    if(aWrap) aWrap.innerHTML=
+      '<div style="display:flex;gap:10px">'
+      +'<label><input type="radio" name="eqtf" value="True"'+(q.answer==='True'?' checked':'')+' style="margin-right:4px">True</label>'
+      +'<label><input type="radio" name="eqtf" value="False"'+(q.answer==='False'?' checked':'')+' style="margin-right:4px">False</label>'
+      +'</div>';
+  }
+  setEditDiff(editQDiff);
+  el('ov-edit-q').classList.add('on');
+};
+
+window.setEditDiff=function(d){
+  editQDiff=d;
+  ['easy','medium','hard'].forEach(function(x){
+    const btn=el('eq-diff-'+x);
+    if(!btn)return;
+    if(x===d){
+      btn.className='btn btn-sm w100';
+      btn.style.background=x==='easy'?'var(--grn)':x==='medium'?'var(--warn)':'var(--err)';
+      btn.style.color='#fff';btn.style.border='none';
+    }else{
+      btn.className='btn btn-sm w100 btn-ghost';
+      btn.style.background='';btn.style.color='';btn.style.border='';
+    }
+  });
+};
+
+window.saveEditQuestion=async function(){
+  const text=el('eq-text')?.value?.trim();
+  if(!text){setSt('eq-st','err','Question text required.');return;}
+  const btn=document.querySelector('#ov-edit-q .btn-grn');
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
+
+  let q=null;
+  if(editingQIsNew){
+    q=curDraft.find(x=>x.tempId===editingQKey);
+  }else{
+    q=allQuestions.find(x=>x.id===editingQKey);
+  }
+  if(!q){setSt('eq-st','err','Question not found.');if(btn){btn.disabled=false;btn.textContent='💾 Save Changes';}return;}
+
+  // Update question fields
+  q.text=text;
+  q.difficulty=editQDiff;
+  if(q.type==='mcq'){
+    q.options=['A','B','C','D'].map((_,i)=>(el('eq-opt'+i)?.value||'').trim()).filter(Boolean);
+    q.correctIndex=parseInt(document.querySelector('input[name="eqcr"]:checked')?.value||0);
+    q.answer='ABCD'[q.correctIndex];
+  }else{
+    q.answer=document.querySelector('input[name="eqtf"]:checked')?.value||'True';
+  }
+
+  if(editingQIsNew){
+    // Update in curDraft and save draft to Firebase
+    const idx=curDraft.findIndex(x=>x.tempId===editingQKey);
+    if(idx>=0) curDraft[idx]=q;
+    await saveDraft();
+  }else{
+    // Update in Master Bank immediately
+    try{
+      await _fb.setDoc(_fb.doc(db,'questions',editingQKey),q);
+      await loadAllQuestions();
+    }catch(e){setSt('eq-st','err','Update failed: '+e.message);if(btn){btn.disabled=false;btn.textContent='💾 Save Changes';}return;}
+  }
+
+  closeOv('ov-edit-q');
+  renderCurate();
+  if(btn){btn.disabled=false;btn.textContent='💾 Save Changes';}
+};
+
+window.qEditBtn=function(btn){openEditQ(btn.dataset.k, btn.dataset.n==='true');};
+window.qRemoveBtn=function(btn){removeFromPaper(btn.dataset.k, btn.dataset.n==='true');};
+window.removeFromPaper=function(qKey,isNew){
+  if(!confirm('Remove this question from the paper?'))return;
+  if(isNew){
+    curDraft=curDraft.filter(x=>x.tempId!==qKey);
+    saveDraft();
+  }else{
+    curSel=curSel.filter(x=>x!==qKey);
+  }
+  renderCurate();
+};
+
+
+window.renderActiveTab=function(){
+  const active=document.querySelector('.tab.on');
+  if(!active)return renderResults();
+  const id=active.id||'';
+  if(id==='tab-leaderboard') renderLeaderboard();
+  else if(id==='tab-profiles') renderProfiles();
+  else renderResults();
 };
 
 // Start
