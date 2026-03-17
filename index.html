@@ -2138,6 +2138,7 @@ async function initStudentMode(){
   }
 
   hideSplash();
+  appCfg.appName = "Self Assessment";
   el('stu-appname-top').textContent = appCfg?.appName || 'ClassQuiz';
   el('stu-session-title').textContent=qParams.sessionName||qParams.testLabel||'Quiz';
   el('stu-session-meta').textContent=
