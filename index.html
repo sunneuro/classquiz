@@ -2138,8 +2138,8 @@ async function initStudentMode(){
   }
 
   hideSplash();
-  el('stu-appname-top').textContent=appCfg?.appName||'ClassQuiz';
-  el('stu-session-title').textContent=qParams.sessionName||qParams.testLabel||'Assess Yourself';
+  el('stu-appname-top').textContent=appCfg?.appName||'Self Assessment';
+  el('stu-session-title').textContent=qParams.sessionName||qParams.testLabel||'Quiz';
   el('stu-session-meta').textContent=
     `${(qParams.qs||[]).length} questions • ${qParams.time||15} minutes`;
   el('stu-login-card').style.display='';
