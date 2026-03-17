@@ -2975,7 +2975,10 @@ async function bootstrap(){
     try{
       showSplash('Loading quiz…');
       const snap = await getDocWithRetry(_fb.doc(db,'settings','app'),2,800);
-      if(snap.exists()) appCfg = snap.data();
+      if(snap.exists()){
+        appCfg = snap.data();
+        appCfg.appName = "ClassQuiz";
+      } 
     }catch(e){ console.warn('appCfg load:',e); }
     initStudentMode();
     return;
@@ -2991,6 +2994,7 @@ async function bootstrap(){
       return;
     }
     appCfg = snap.data();
+    appCfg.appName = "ClassQuiz"; 
   }catch(e){
     hideSplash();
     showFBSetup('Could not load app: '+e.message);
