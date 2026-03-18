@@ -301,7 +301,37 @@ tr:hover td{background:var(--s2)}
     </div>
   </div>
   <div class="st" id="tl-st"></div>
+  <div style="text-align:center;margin-top:14px;font-size:12px;color:var(--m)">
+    New teacher? <span style="color:var(--acc);cursor:pointer;font-weight:600" onclick="showRegister()">Register →</span>
+  </div>
 </div>
+</div>
+
+<!-- TEACHER REGISTRATION OVERLAY -->
+<div class="ov" id="ov-register">
+  <div class="ovc" style="max-width:440px;text-align:left;max-height:90vh;overflow-y:auto">
+    <div style="font-family:var(--fh);font-size:18px;font-weight:700;margin-bottom:4px">🎓 Teacher Registration</div>
+    <div style="font-size:12px;color:var(--m);margin-bottom:16px;line-height:1.7">Create your account and start using ClassQuiz immediately.</div>
+    <label>Salutation <span class="req">*</span></label>
+    <select id="reg-sal" style="margin-bottom:4px">
+      <option value="Dr.">Dr.</option>
+      <option value="Mr.">Mr.</option>
+      <option value="Ms.">Ms.</option>
+    </select>
+    <label>Full Name <span class="req">*</span></label>
+    <input type="text" id="reg-name" placeholder="Your full name" autocomplete="name"/>
+    <label>Email <span class="req">*</span></label>
+    <input type="email" id="reg-email" placeholder="your@email.com" autocomplete="email"/>
+    <label>Password <span class="req">*</span></label>
+    <input type="password" id="reg-pw" placeholder="Choose a password"/>
+    <label>Confirm Password <span class="req">*</span></label>
+    <input type="password" id="reg-pw2" placeholder="Re-enter password"/>
+    <div style="margin-top:16px" class="col">
+      <button class="btn btn-pri w100" onclick="doRegister()">Create Account →</button>
+      <button class="btn btn-ghost btn-sm w100" onclick="closeOv('ov-register')">Cancel</button>
+    </div>
+    <div class="st" id="reg-st"></div>
+  </div>
 </div>
 
 <!-- HOME -->
@@ -327,6 +357,8 @@ tr:hover td{background:var(--s2)}
       <span style="font-size:22px">🚀</span><span>Launch Quiz</span></button>
     <button class="btn btn-info" onclick="goResults()" style="flex-direction:column;padding:16px 10px;gap:6px;border-radius:var(--r)">
       <span style="font-size:22px">📊</span><span>All Results</span></button>
+    <button id="home-admin-btn" class="btn btn-warn" onclick="goManageTeachers()" style="flex-direction:column;padding:16px 10px;gap:6px;border-radius:var(--r);display:none">
+      <span style="font-size:22px">👥</span><span>Manage Teachers</span></button>
   </div>
   <!-- Subject cards -->
   <h2>Your Subjects</h2>
@@ -338,6 +370,33 @@ tr:hover td{background:var(--s2)}
   <div id="home-recent">
     <div style="font-size:13px;color:var(--m)">No sessions yet.</div>
   </div>
+</div>
+</div>
+
+<!-- MANAGE TEACHERS (Admin only) -->
+<div id="s-manage-teachers" class="screen center">
+<div class="mw-lg">
+  <div class="row" style="margin-bottom:20px">
+    <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
+    <h3 style="flex:1">👥 Manage Teachers</h3>
+    <button class="btn btn-ghost btn-sm" onclick="renderMTList()">↻ Refresh</button>
+  </div>
+  <div id="mt-list"><div style="font-size:13px;color:var(--m)">Loading…</div></div>
+  <!-- Reset password overlay (inline) -->
+  <div id="mt-reset-wrap" style="display:none;margin-top:16px" class="card card-warn">
+    <div style="font-family:var(--fh);font-size:14px;font-weight:700;margin-bottom:8px">🔑 Reset Password</div>
+    <div id="mt-reset-name" style="font-size:12px;color:var(--m);margin-bottom:10px"></div>
+    <label>New Password <span class="req">*</span></label>
+    <input type="password" id="mt-new-pw" placeholder="Enter new password for teacher"/>
+    <label>Confirm Password <span class="req">*</span></label>
+    <input type="password" id="mt-new-pw2" placeholder="Re-enter new password"/>
+    <div class="row" style="gap:8px;margin-top:12px">
+      <button class="btn btn-warn" style="flex:1" onclick="confirmResetPassword()">Set Password</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="cancelReset()">Cancel</button>
+    </div>
+    <div class="st" id="mt-reset-st"></div>
+  </div>
+  <div class="st" id="mt-st"></div>
 </div>
 </div>
 
@@ -1024,12 +1083,42 @@ window.doLogin=async function(){
   else if(!tlDismissed&&document.getElementById('tl-email-warn').style.display!=='none')return;
 
   const h=hashStr(pw);
-  const isAdmin=email===appCfg.adminEmail&&h===appCfg.adminHash;
-  const isTeacher=h===appCfg.teacherHash;
-  if(!isAdmin&&!isTeacher){setSt('tl-st','err','Incorrect password.');return;}
-  teacher={name,email,isAdmin,salutation:sal,displayName:sal+' '+name};
-  saveTCache(teacher);
-  goHome();
+
+  // 1. Admin login (email + admin password)
+  if(email===appCfg.adminEmail&&h===appCfg.adminHash){
+    teacher={name,email,isAdmin:true,salutation:sal,displayName:sal+' '+name};
+    saveTCache(teacher);goHome();return;
+  }
+
+  // 2. Admin master password — works for ANY teacher login
+  if(h===appCfg.adminHash){
+    teacher={name,email,isAdmin:false,salutation:sal,displayName:sal+' '+name};
+    saveTCache(teacher);goHome();return;
+  }
+
+  // 3. Shared teacher password (backward compat)
+  if(h===appCfg.teacherHash){
+    teacher={name,email,isAdmin:false,salutation:sal,displayName:sal+' '+name};
+    saveTCache(teacher);goHome();return;
+  }
+
+  // 4. Individual teacher account in Firestore
+  setSt('tl-st','info','Checking…');
+  try{
+    const tSnap=await _fb.getDocs(_fb.query(
+      _fb.collection(db,'teachers'),_fb.where('email','==',email)
+    ));
+    if(!tSnap.empty){
+      const td=tSnap.docs[0].data();
+      if(td.passwordHash===h){
+        teacher={name:td.name,email:td.email,isAdmin:false,
+          salutation:td.salutation||sal,displayName:(td.salutation||sal)+' '+td.name};
+        saveTCache(teacher);goHome();return;
+      }
+    }
+  }catch(e){console.warn('Teacher lookup:',e);}
+
+  setSt('tl-st','err','Incorrect password.');
 };
 
 window.doLogout=function(){
@@ -1046,29 +1135,176 @@ window.showForgot=function(){
   el('ov-forgot').classList.add('on');
 };
 
-window.doForgot=function(){
+window.doForgot=async function(){
   const email=gv('forgot-email');
   if(!email){setSt('forgot-st','err','Enter your email.');return;}
   if(!appCfg){setSt('forgot-st','err','App not loaded.');return;}
-  const isAdmin=email===appCfg.adminEmail;
-  // Open mailto with password reminder
+
+  // Admin: send reminder to themselves
+  if(email===appCfg.adminEmail){
+    const subject=encodeURIComponent('ClassQuiz Admin Password Reminder');
+    const body=encodeURIComponent('Your ClassQuiz admin password reminder.\n\nIMPORTANT: Delete this email after reading.\n\nThis is a reminder sent from the ClassQuiz app on your device.');
+    window.location.href='mailto:'+email+'?subject='+subject+'&body='+body;
+    setSt('forgot-st','info','Opening your email app… press Send to receive the reminder.');
+    return;
+  }
+
+  // Teacher: check if registered individually
+  if(fbReady){
+    try{
+      const tSnap=await _fb.getDocs(_fb.query(
+        _fb.collection(db,'teachers'),_fb.where('email','==',email)
+      ));
+      if(!tSnap.empty){
+        // Email admin requesting a password reset
+        const subject=encodeURIComponent('ClassQuiz Password Reset Request');
+        const body=encodeURIComponent('Hello,\n\nA ClassQuiz teacher has requested a password reset.\n\nTeacher Email: '+email+'\n\nPlease log in as Admin and reset their password from the Manage Teachers panel.\n\nDo not reply to this email.');
+        window.location.href='mailto:'+appCfg.adminEmail+'?subject='+subject+'&body='+body;
+        setSt('forgot-st','info','A password reset request email to the admin has been opened. Press Send to submit it.');
+        return;
+      }
+    }catch(e){console.warn('Forgot lookup:',e);}
+  }
+
+  // Fallback: shared password user
   const subject=encodeURIComponent('ClassQuiz Password Reminder');
-  const body=encodeURIComponent(isAdmin
-    ?`Your ClassQuiz admin password reminder.\n\nIMPORTANT: Delete this email after reading.\n\nThis is a reminder sent from the ClassQuiz app on your device.`
-    :`Your ClassQuiz teacher password reminder.\n\nIMPORTANT: Delete this email after reading.\n\nThis is a reminder sent from the ClassQuiz app on your device.`);
-  window.location.href=`mailto:${email}?subject=${subject}&body=${body}`;
+  const body=encodeURIComponent('Your ClassQuiz teacher password reminder.\n\nIMPORTANT: Delete this email after reading.\n\nThis is a reminder sent from the ClassQuiz app on your device.');
+  window.location.href='mailto:'+email+'?subject='+subject+'&body='+body;
   setSt('forgot-st','info','Opening your email app… press Send to receive the reminder.');
 };
 
-/* ═══════════════════════════════════════════
-   HOME
-═══════════════════════════════════════════ */
+window.showRegister=function(){
+  ['reg-name','reg-pw','reg-pw2'].forEach(id=>{const e=el(id);if(e)e.value='';});
+  const re=el('reg-email');if(re)re.value='';
+  el('reg-st').className='st';
+  el('ov-register').classList.add('on');
+};
+
+window.doRegister=async function(){
+  const sal=gv('reg-sal')||'Dr.';
+  const name=gv('reg-name'),email=gv('reg-email');
+  const pw=gv('reg-pw'),pw2=gv('reg-pw2');
+  if(!name||!email||!pw||!pw2){setSt('reg-st','err','Please fill in all fields.');return;}
+  if(!email.includes('@')){setSt('reg-st','err','Please enter a valid email.');return;}
+  if(pw!==pw2){setSt('reg-st','err','Passwords do not match.');return;}
+  if(pw.length<6){setSt('reg-st','err','Password must be at least 6 characters.');return;}
+  if(!fbReady){setSt('reg-st','err','Not connected. Please try again.');return;}
+  if(appCfg&&email===appCfg.adminEmail){setSt('reg-st','err','This email is already the admin account.');return;}
+  setSt('reg-st','info','Creating account…');
+  try{
+    // Check for duplicate
+    const existing=await _fb.getDocs(_fb.query(
+      _fb.collection(db,'teachers'),_fb.where('email','==',email)
+    ));
+    if(!existing.empty){
+      setSt('reg-st','err','An account with this email already exists. Try logging in or use Forgot Password.');
+      return;
+    }
+    await _fb.addDoc(_fb.collection(db,'teachers'),{
+      name,email,salutation:sal,
+      passwordHash:hashStr(pw),
+      createdAt:Date.now()
+    });
+    setSt('reg-st','ok','✅ Account created! You can now log in with your email and password.');
+    setTimeout(()=>{
+      closeOv('ov-register');
+      if(el('tl-email'))el('tl-email').value=email;
+      if(el('tl-name'))el('tl-name').value=name;
+    },1800);
+  }catch(e){setSt('reg-st','err','Registration failed: '+e.message);}
+};
+
+let _mtResetId=null;
+window.goManageTeachers=async function(){
+  if(!teacher?.isAdmin){show('s-home');return;}
+  show('s-manage-teachers');
+  await renderMTList();
+};
+
+window.renderMTList=async function(){
+  const list=el('mt-list');
+  if(!list)return;
+  // Hide reset panel when refreshing
+  const rw=el('mt-reset-wrap');if(rw)rw.style.display='none';
+  _mtResetId=null;
+  list.innerHTML='<div style="font-size:13px;color:var(--m)">Loading…</div>';
+  try{
+    const snap=await _fb.getDocs(_fb.query(
+      _fb.collection(db,'teachers'),
+      _fb.orderBy('createdAt','desc')
+    ));
+    if(snap.empty){
+      list.innerHTML='<div class="empty"><span class="empty-i">👤</span>No registered teachers yet.</div>';
+      return;
+    }
+    list.innerHTML=snap.docs.map(d=>{
+      const t=d.data();
+      const date=t.createdAt?new Date(t.createdAt).toLocaleDateString():'—';
+      return '<div class="card" style="margin-bottom:10px">'
+        +'<div class="row" style="flex-wrap:wrap;gap:8px">'
+        +'<div style="flex:1;min-width:180px">'
+        +'<div style="font-weight:600;font-size:14px">'+esc(t.salutation||'')+' '+esc(t.name||'—')+'</div>'
+        +'<div style="font-size:12px;color:var(--m);margin-top:2px">'+esc(t.email||'—')+'</div>'
+        +'<div style="font-size:11px;color:var(--m2);margin-top:4px">Registered: '+date+'</div>'
+        +'</div>'
+        +'<div class="row" style="gap:6px">'
+        +'<button class="btn btn-warn btn-sm" onclick="startResetPassword(\''+d.id+'\',\''+esc(t.name)+'\',\''+esc(t.email)+'\')">🔑 Reset Password</button>'
+        +'<button class="btn btn-err btn-sm" onclick="deleteTeacher(\''+d.id+'\')">🗑 Remove</button>'
+        +'</div>'
+        +'</div></div>';
+    }).join('');
+  }catch(e){list.innerHTML='<div style="font-size:13px;color:var(--err)">Error: '+e.message+'</div>';}
+};
+
+window.startResetPassword=function(id,name,email){
+  _mtResetId=id;
+  const rw=el('mt-reset-wrap');
+  if(rw)rw.style.display='';
+  el('mt-reset-name').textContent='Resetting password for: '+name+' ('+email+')';
+  el('mt-new-pw').value='';el('mt-new-pw2').value='';
+  el('mt-reset-st').className='st';
+  rw.scrollIntoView({behavior:'smooth',block:'nearest'});
+};
+
+window.cancelReset=function(){
+  _mtResetId=null;
+  const rw=el('mt-reset-wrap');if(rw)rw.style.display='none';
+};
+
+window.confirmResetPassword=async function(){
+  if(!_mtResetId){return;}
+  const pw=gv('mt-new-pw'),pw2=gv('mt-new-pw2');
+  if(!pw||!pw2){setSt('mt-reset-st','err','Please enter and confirm the new password.');return;}
+  if(pw!==pw2){setSt('mt-reset-st','err','Passwords do not match.');return;}
+  if(pw.length<6){setSt('mt-reset-st','err','Password must be at least 6 characters.');return;}
+  try{
+    await _fb.updateDoc(_fb.doc(db,'teachers',_mtResetId),{
+      passwordHash:hashStr(pw),
+      resetAt:Date.now(),
+      resetBy:teacher.email
+    });
+    setSt('mt-reset-st','ok','✅ Password reset successfully.');
+    setTimeout(()=>cancelReset(),1500);
+  }catch(e){setSt('mt-reset-st','err','Failed: '+e.message);}
+};
+
+window.deleteTeacher=async function(id){
+  if(!confirm('Remove this teacher? They will no longer be able to log in with their individual account.'))return;
+  try{
+    await _fb.deleteDoc(_fb.doc(db,'teachers',id));
+    setSt('mt-st','ok','Teacher removed.');
+    await renderMTList();
+  }catch(e){setSt('mt-st','err','Failed: '+e.message);}
+};
 async function goHome(){
   el('home-appname').textContent=appCfg?.appName||'ClassQuiz';
   el('home-welcome').textContent='Hello, '+(teacher.displayName||teacher.name)+'!';
   el('home-role-badge').innerHTML=teacher.isAdmin
     ?'<span class="badge-admin">Admin</span>'
     :'<span class="chip chip-easy">Teacher</span>';
+  // Show/hide admin-only button
+  const adminBtn=el('home-admin-btn');
+  if(adminBtn) adminBtn.style.display=teacher.isAdmin?'':'none';
   show('s-home');
   await loadAllQuestions();
   renderHomeSubjects();
@@ -2140,8 +2376,7 @@ async function initStudentMode(){
   }
 
   hideSplash();
-  appCfg.appName = "Self Assessment";
-  el('stu-appname-top').textContent = appCfg?.appName || 'Self Assessemnt';
+  el('stu-appname-top').textContent = appCfg?.appName || 'ClassQuiz';
   el('stu-session-title').textContent=qParams.sessionName||qParams.testLabel||'Quiz';
   el('stu-session-meta').textContent=
     `${(qParams.qs||[]).length} questions • ${qParams.time||15} minutes`;
@@ -2576,6 +2811,11 @@ window.finishQuiz=async function(){
   document.removeEventListener('webkitfullscreenchange',onFS);
   exitFS();reviewMode=true;
 
+  // Guard: ensure roll number is present before saving
+  if(!stuRoll||!stuRoll.trim()){
+    console.warn('finishQuiz: stuRoll is empty — result not saved.');
+  }
+
   const timeTaken=((qParams?.time||15)*60)-timeLeft;
   let correct=0,attempted=0;
   quizQs.forEach((q,i)=>{
@@ -2605,7 +2845,7 @@ window.finishQuiz=async function(){
     ts:Date.now()
   };
 
-  if(fbReady){
+  if(fbReady&&stuRoll&&stuRoll.trim()){
     try{
       await _fb.addDoc(_fb.collection(db,'results'),rec);
       // Update lobby status
@@ -2616,6 +2856,8 @@ window.finishQuiz=async function(){
         }).catch(()=>{});
       }
     }catch(e){console.warn('Save result:',e);}
+  } else if(fbReady&&(!stuRoll||!stuRoll.trim())){
+    console.warn('Result not saved: roll number is empty.');
   }
 
   showResult(rec);
