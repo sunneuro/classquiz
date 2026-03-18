@@ -433,6 +433,7 @@ tr:hover td{background:var(--s2)}
     </div>
     <div class="st" id="wiz1-st"></div>
     <div class="st" id="wiz2-st"></div>
+    <div id="preview-card" style="margin-top:12px"></div>
   </div>
 </div>
 </div>
@@ -499,6 +500,7 @@ tr:hover td{background:var(--s2)}
     </div>
   </div>
   <div id="bank-list"></div>
+  <div class="st" id="bank-add-st"></div>
   <button class="btn btn-grn w100" style="margin-top:8px" onclick="goCurate()">Launch Quiz →</button>
 </div>
 </div>
@@ -2978,7 +2980,6 @@ async function bootstrap(){
       const snap = await getDocWithRetry(_fb.doc(db,'settings','app'),2,800);
       if(snap.exists()){
         appCfg = snap.data();
-        appCfg.appName = "ClassQuiz";
       } 
     }catch(e){ console.warn('appCfg load:',e); }
     initStudentMode();
@@ -2995,7 +2996,11 @@ async function bootstrap(){
       return;
     }
     appCfg = snap.data();
-    appCfg.appName = "ClassQuiz"; 
+    if(!appCfg.adminHash||!appCfg.teacherHash||!appCfg.adminEmail){
+      hideSplash();
+      showFBSetup('App settings are incomplete (missing passwords). Please re-run First Time Setup or fix the Firestore settings/app document.');
+      return;
+    }
   }catch(e){
     hideSplash();
     showFBSetup('Could not load app: '+e.message);
@@ -3003,7 +3008,6 @@ async function bootstrap(){
   }
 
   hideSplash();
-  appCfg.appName = "ClassQuiz"; /* force application name */
   el('login-appname').textContent = appCfg.appName||'ClassQuiz';
   const cached = loadTCache();
   if(cached){
