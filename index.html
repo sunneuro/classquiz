@@ -769,8 +769,14 @@ tr:hover td{background:var(--s2)}
     <input type="text" id="cs-name" placeholder="e.g. Chapter 3 Mid-Term"/>
     <label>Time Limit (minutes)</label>
     <input type="number" id="cs-time" value="15" min="1" max="180"/>
-    <label>Questions per student (0 = all selected)</label>
-    <input type="number" id="cs-count" value="0" min="0"/>
+    <label>Questions per student
+      <span style="font-weight:400;color:var(--m)"> — each student gets a different random selection (0 = all)</span>
+    </label>
+    <div class="row" style="gap:10px;align-items:center;flex-wrap:nowrap">
+      <input type="number" id="cs-count" value="0" min="0" style="flex:1"
+        oninput="updateCountHint()"/>
+      <span id="cs-count-hint" style="font-size:12px;color:var(--acc);white-space:nowrap;min-width:80px"></span>
+    </div>
   </div>
   <!-- Launch button at bottom -->
   <button class="btn btn-grn w100" style="margin-top:12px" onclick="goLaunch()">🚀 Launch Quiz →</button>
@@ -1177,6 +1183,7 @@ let vioCount=0,offSecs=0,offStart=null;
 let vioTimer=null,vioCd=10,firstVio=true,quizActive=false;
 let reviewMode=false;
 let lockedAnswers={}; // answers locked after navigating away
+let optionShuffles={}; // per-question shuffled option order: {qIdx: [shuffledOriginalIndices]}
 let immRestartTimer=null;
 let lastQType='mcq';   // remembers last used question type across saves
 let lastDiff='medium'; // remembers last used difficulty across saves
@@ -2238,6 +2245,7 @@ window.renderCurate=function(){
     draftLabel.textContent=meta.testid||(meta.cid&&meta.topic?(meta.cid+' / '+meta.topic):'No active paper');
   }
   el('cur-sel-count').textContent=allPaper.length+' question'+(allPaper.length!==1?'s':'');
+  updateCountHint();
 
   if(!allPaper.length){
     list.innerHTML='<div class="empty"><span class="empty-i">📋</span>'
@@ -2357,6 +2365,24 @@ window.loadTemplate=async function(id){
 /* ═══════════════════════════════════════════
    LAUNCH
 ═══════════════════════════════════════════ */
+window.updateCountHint=function(){
+  const n=parseInt(el('cs-count')?.value)||0;
+  const hint=el('cs-count-hint');
+  if(!hint)return;
+  // allPaper may not be assembled yet — use curSel + curDraft length as proxy
+  const poolSize=(curSel.length)+(curDraft.length);
+  if(!n||n<=0){
+    hint.textContent=poolSize?'All '+poolSize+' questions':'';
+    hint.style.color='var(--m)';
+  } else if(poolSize&&n>=poolSize){
+    hint.textContent='All '+poolSize+' (n ≥ pool)';
+    hint.style.color='var(--warn)';
+  } else {
+    hint.textContent=poolSize?n+' of '+poolSize:'n = '+n;
+    hint.style.color='var(--grn)';
+  }
+};
+
 window.goLaunch=async function(){
   // Combine draft + selected bank questions
   const bankQs=allQuestions.filter(q=>curSel.includes(q.id));
@@ -2671,14 +2697,25 @@ window.stuJoin=async function(){
   const status=qParams?.status;
   if(status==='ended'){showStuError('This session has already ended.');return;}
 
-  // Check for duplicate roll number or email in lobby
+  // Check for duplicate roll: query results (already submitted) AND lobby (in-progress)
   if(fbReady&&qParams?.sessionId){
     try{
+      // 1. Check results collection — already completed this session
+      const prevResult=await _fb.getDocs(_fb.query(
+        _fb.collection(db,'results'),
+        _fb.where('sessionId','==',qParams.sessionId),
+        _fb.where('roll','==',roll)
+      ));
+      if(!prevResult.empty){
+        showStuError('You have already submitted this quiz (Roll: '+roll+'). Each student may only attempt a session once.');
+        return;
+      }
+      // 2. Check lobby — currently in progress
       const existing=await _fb.getDocs(_fb.collection(db,'lobby_'+qParams.sessionId));
       for(const d of existing.docs){
         const data=d.data();
         if(data.roll===roll){
-          alert('Roll number '+roll+' has already joined this session. If this is you, please wait — you are already registered.');
+          alert('Roll number '+roll+' is already in this session. If this is you on a different device, please use the same device you started on.');
           return;
         }
         if(data.email===email){
@@ -2787,7 +2824,7 @@ function beginQuiz(){
   const cnt=qParams.count||0;
   quizQs=cnt>0?pool.slice(0,cnt):pool;
 
-  answers={};lockedAnswers={};curQ=0;vioCount=0;offSecs=0;firstVio=true;quizActive=true;reviewMode=false;
+  answers={};lockedAnswers={};optionShuffles={};curQ=0;vioCount=0;offSecs=0;firstVio=true;quizActive=true;reviewMode=false;
   timeLeft=(qParams.time||15)*60;
 
   // Update lobby status
@@ -2925,7 +2962,7 @@ function trigVio(){
 function retVio(){clearInterval(vioTimer);closeOv('ov-vio');reqFS();}
 function restartVio(){
   clearInterval(vioTimer);closeOv('ov-vio');
-  answers={};curQ=0;firstVio=true;
+  answers={};lockedAnswers={};optionShuffles={};curQ=0;firstVio=true;
   for(let i=quizQs.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[quizQs[i],quizQs[j]]=[quizQs[j],quizQs[i]];}
   renderQ();renderDots();reqFS();
 }
@@ -2966,17 +3003,34 @@ function renderQ(){
 
   if(q.type==='mcq'||q.type==='tf'){
     html+=`<div class="opts">`;
-    (q.options||[]).forEach((o,i)=>{
-      const isLocked=!!lockedAnswers[curQ]||reviewMode; // locked only after navigating away
-      const isAnswered=answers[curQ]!==undefined;
-      const isSel=answers[curQ]===String(i);
-      // Clickable on current question until navigated away
+    // Build display order: shuffle MCQ options once per question, then keep stable
+    let displayOrder;
+    if(q.type==='mcq'){
+      if(!optionShuffles[curQ]){
+        // First time rendering this question — create a shuffle mapping
+        const opts=q.options||[];
+        const indices=opts.map((_,i)=>i);
+        for(let s=indices.length-1;s>0;s--){
+          const r=Math.floor(Math.random()*(s+1));
+          [indices[s],indices[r]]=[indices[r],indices[s]];
+        }
+        optionShuffles[curQ]=indices; // e.g. [2,0,3,1] means display[0]=original[2]
+      }
+      displayOrder=optionShuffles[curQ];
+    } else {
+      // T/F: never shuffle
+      displayOrder=(q.options||[]).map((_,i)=>i);
+    }
+    displayOrder.forEach((origIdx,dispIdx)=>{
+      const o=(q.options||[])[origIdx];
+      if(o===undefined)return;
+      const isLocked=!!lockedAnswers[curQ]||reviewMode;
+      const isSel=answers[curQ]===String(dispIdx);
       const clickable=(!isLocked)?'clickable':'';
-      const onclickAttr=(!isLocked)?' onclick="pickOpt('+i+')"':'';
+      const onclickAttr=(!isLocked)?' onclick="pickOpt('+dispIdx+')"':'';
       const lockedBadge=isSel&&isLocked?'<span style="font-size:10px;color:var(--acc);margin-left:auto">✓ Locked</span>':'';
       const selBadge=isSel&&!isLocked?'<span style="font-size:10px;color:var(--acc);margin-left:auto">✓ Selected</span>':'';
-      const ltr=q.type==='mcq'?'ABCD'[i]:o.charAt(0);
-      // Grey non-selected only when locked
+      const ltr=q.type==='mcq'?'ABCD'[dispIdx]:o.charAt(0);
       const greyStyle=(isLocked&&!isSel)?'opacity:0.45;':'';
       html+='<button class="opt '+(isSel?'sel':'')+' '+clickable+'" style="'+greyStyle+'"'+onclickAttr+'>'
         +'<span class="oltr">'+ltr+'</span>'
@@ -3084,7 +3138,13 @@ window.finishQuiz=async function(){
     const ua=answers[i];
     if(ua===undefined||ua==='')return;
     attempted++;
-    if(q.type==='mcq'){if(parseInt(ua)===(q.correctIndex||0))correct++;}
+    if(q.type==='mcq'){
+      // Map displayed answer index back to original option index via shuffle
+      const dispIdx=parseInt(ua);
+      const shuffle=optionShuffles[i];
+      const origIdx=shuffle?shuffle[dispIdx]:dispIdx;
+      if(origIdx===(q.correctIndex||0))correct++;
+    }
     else if(q.type==='tf'){if((['True','False'][parseInt(ua)]||'').toLowerCase()===(q.answer||'').toLowerCase())correct++;}
   });
 
