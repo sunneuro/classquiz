@@ -385,13 +385,29 @@ tr:hover td{background:var(--s2)}
     <button id="home-adminoffice-btn" class="btn btn-err" onclick="goAdminOffice()" style="flex-direction:column;padding:16px 10px;gap:6px;border-radius:var(--r);display:none">
       <span style="font-size:22px">🔐</span><span>Admin Office</span></button>
   </div>
+  <!-- Admin home tabs (admin only) -->
+  <div id="home-admin-tabs" style="display:none;margin-bottom:0">
+    <div class="tabs">
+      <div class="ao-tab on" id="home-tab-mine"    onclick="homeTabSwitch('mine')">🧑‍💼 My Work</div>
+      <div class="ao-tab"    id="home-tab-teachers" onclick="homeTabSwitch('teachers')">👩‍🏫 Teachers</div>
+    </div>
+    <!-- Teacher picker — visible only on Teachers tab -->
+    <div id="home-teacher-pick" style="display:none;margin-bottom:14px">
+      <select id="home-teacher-sel" onchange="homeTeacherSelChanged()"
+        style="width:100%;max-width:320px;background:var(--s2);border:1px solid var(--b);
+               border-radius:8px;color:var(--txt);font-family:var(--fb);font-size:13px;
+               padding:8px 10px;outline:none">
+        <option value="">All Teachers</option>
+      </select>
+    </div>
+  </div>
   <!-- Subject cards -->
-  <h2>Your Subjects</h2>
+  <h2 id="home-subj-heading">Your Subjects</h2>
   <div class="subj-grid" id="home-subjects">
     <div class="empty"><span class="empty-i">📭</span>No subjects yet. Add your first question to create one.</div>
   </div>
   <!-- Recent sessions -->
-  <h2>Recent Sessions</h2>
+  <h2 id="home-sess-heading">Recent Sessions</h2>
   <div id="home-recent">
     <div style="font-size:13px;color:var(--m)">No sessions yet.</div>
   </div>
@@ -1443,10 +1459,101 @@ async function goHome(){
   if(adminBtn) adminBtn.style.display=teacher.isAdmin?'':'none';
   const aoBtn=el('home-adminoffice-btn');
   if(aoBtn) aoBtn.style.display=teacher.isAdmin?'':'none';
+  // Admin tabs: show/hide and reset to My Work tab by default
+  const adminTabs = el('home-admin-tabs');
+  if(adminTabs) adminTabs.style.display = teacher.isAdmin ? '' : 'none';
+  if(teacher.isAdmin){
+    homeTab = 'mine';
+    // Reset tabs to My Work
+    const tMine = el('home-tab-mine');
+    const tTeach = el('home-tab-teachers');
+    if(tMine)  tMine.classList.add('on');
+    if(tTeach) tTeach.classList.remove('on');
+    const pick = el('home-teacher-pick');
+    if(pick) pick.style.display = 'none';
+    await homePopulateTeacherFilter();
+  }
+  homeUpdateHeadings();
   show('s-home');
   await loadAllQuestions();
   renderHomeSubjects();
   loadRecentSessions();
+}
+
+// ── Home screen tab state ─────────────────────────
+let homeTab = 'mine'; // 'mine' | 'teachers'
+
+window.homeTabSwitch = function(tab){
+  homeTab = tab;
+  // Update tab classes
+  ['mine','teachers'].forEach(function(t){
+    const btn = el('home-tab-'+t);
+    if(btn) btn.classList.toggle('on', t===tab);
+  });
+  // Show/hide teacher picker
+  const pick = el('home-teacher-pick');
+  if(pick) pick.style.display = (tab==='teachers') ? '' : 'none';
+  homeUpdateHeadings();
+  renderHomeSubjects();
+  loadRecentSessions();
+};
+
+window.homeTeacherSelChanged = function(){
+  homeUpdateHeadings();
+  renderHomeSubjects();
+  loadRecentSessions();
+};
+
+async function homePopulateTeacherFilter(){
+  const sel = el('home-teacher-sel');
+  if(!sel || !fbReady) return;
+  try{
+    const snap = await _fb.getDocs(_fb.query(
+      _fb.collection(db,'teachers'), _fb.orderBy('createdAt','asc')
+    ));
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">All Teachers</option>'
+      + snap.docs.map(function(d){
+          const t = d.data();
+          return '<option value="'+esc(t.email||'')+'">'+esc((t.salutation||'')+' '+(t.name||t.email))+'</option>';
+        }).join('');
+    if([...sel.options].some(function(o){ return o.value===cur; })) sel.value = cur;
+  }catch(e){ console.warn('homePopulateTeacherFilter:',e); }
+}
+
+function homeViewEmail(){
+  if(!teacher) return teacher?.email || '';
+  if(!teacher.isAdmin) return teacher.email;           // regular teacher: always own
+  if(homeTab === 'mine') return teacher.email;          // admin My Work tab: own only
+  // admin Teachers tab: use dropdown ('' = all teachers)
+  const sel = el('home-teacher-sel');
+  return sel ? sel.value : '';
+}
+
+function homeUpdateHeadings(){
+  const sh = el('home-subj-heading');
+  const rh = el('home-sess-heading');
+  if(!teacher?.isAdmin){
+    if(sh) sh.textContent = 'Your Subjects';
+    if(rh) rh.textContent = 'Your Recent Sessions';
+    return;
+  }
+  if(homeTab === 'mine'){
+    if(sh) sh.textContent = 'Your Subjects';
+    if(rh) rh.textContent = 'Your Recent Sessions';
+    return;
+  }
+  // Teachers tab
+  const sel = el('home-teacher-sel');
+  const filterEmail = sel ? sel.value : '';
+  if(!filterEmail){
+    if(sh) sh.textContent = 'Subjects — All Teachers';
+    if(rh) rh.textContent = 'Recent Sessions — All Teachers';
+  } else {
+    const label = sel ? ([...sel.options].find(function(o){ return o.value===filterEmail; })||{text:filterEmail}).text : filterEmail;
+    if(sh) sh.textContent = 'Subjects — '+label;
+    if(rh) rh.textContent = 'Recent Sessions — '+label;
+  }
 }
 
 window.goBank=async function(){await loadAllQuestions();populateBankFilters();renderBank();show('s-bank');};
@@ -1483,8 +1590,10 @@ window.goDash=function(){
 };
 
 function renderHomeSubjects(){
+  const filterEmail = homeViewEmail();
   const subjMap={};
   allQuestions.forEach(q=>{
+    if(filterEmail && q.addedByEmail !== filterEmail) return;
     const key=q.courseId+'_'+q.subjectName;
     if(!subjMap[key])subjMap[key]={courseId:q.courseId,name:q.subjectName,count:0,prog:q.programmeName};
     subjMap[key].count++;
@@ -1492,7 +1601,10 @@ function renderHomeSubjects(){
   const subjects=Object.values(subjMap);
   const wrap=el('home-subjects');
   if(!subjects.length){
-    wrap.innerHTML='<div class="empty"><span class="empty-i">📭</span>No subjects yet. Add your first question!</div>';
+    const msg = filterEmail
+      ? '<div class="empty"><span class="empty-i">📭</span>No subjects yet for this teacher.</div>'
+      : '<div class="empty"><span class="empty-i">📭</span>No subjects yet. Add your first question!</div>';
+    wrap.innerHTML=msg;
     return;
   }
   wrap.innerHTML=subjects.map(s=>`
@@ -1505,11 +1617,23 @@ function renderHomeSubjects(){
 
 async function loadRecentSessions(){
   if(!fbReady)return;
+  const filterEmail = homeViewEmail();
   try{
-    const snap=await _fb.getDocs(_fb.query(_fb.collection(db,'sessions'),_fb.orderBy('ts','desc'),_fb.limit(5)));
-    const sessions=snap.docs.map(d=>({id:d.id,...d.data()}));
+    let q = _fb.query(
+      _fb.collection(db,'sessions'),
+      _fb.orderBy('ts','desc'),
+      _fb.limit(filterEmail ? 10 : 8)
+    );
+    const snap = await _fb.getDocs(q);
+    // Filter by teacher in JS (avoids composite index for admin case)
+    let sessions = snap.docs.map(d=>({id:d.id,...d.data()}));
+    if(filterEmail) sessions = sessions.filter(s=>s.teacherEmail===filterEmail);
+    sessions = sessions.slice(0,5);
     const wrap=el('home-recent');
-    if(!sessions.length){wrap.innerHTML='<div style="font-size:13px;color:var(--m)">No sessions yet.</div>';return;}
+    if(!sessions.length){
+      wrap.innerHTML='<div style="font-size:13px;color:var(--m)">No sessions yet.</div>';
+      return;
+    }
     wrap.innerHTML=sessions.map(s=>`
       <div class="recent-item" onclick="viewSession('${s.id}')">
         <div style="flex:1">
