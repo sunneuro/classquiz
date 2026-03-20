@@ -921,6 +921,12 @@ tr:hover td{background:var(--s2)}
       <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-forgot')">Cancel</button>
       <button class="btn btn-pri" style="flex:1" onclick="doForgot()">Send Reminder</button>
     </div>
+    <!-- One-time prompt shown when plaintext password not yet stored -->
+    <div id="forgot-save-wrap" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--b)">
+      <div id="forgot-save-msg" style="font-size:12px;color:var(--m);margin-bottom:10px;line-height:1.6"></div>
+      <input type="password" id="forgot-save-pw" placeholder="Enter your current password" style="margin-bottom:10px"/>
+      <button class="btn btn-grn w100" onclick="doForgotSave()">✓ Save &amp; Send Reminder</button>
+    </div>
     <div class="st" id="forgot-st"></div>
   </div>
 </div>
@@ -1134,6 +1140,8 @@ window.doLogout=function(){
 window.showForgot=function(){
   el('forgot-email').value=teacher?.email||'';
   el('forgot-st').className='st';
+  const sw=el('forgot-save-wrap');if(sw)sw.style.display='none';
+  _forgotSaveCb=null;
   el('ov-forgot').classList.add('on');
 };
 
@@ -1142,40 +1150,96 @@ window.doForgot=async function(){
   if(!email){setSt('forgot-st','err','Enter your email.');return;}
   if(!appCfg){setSt('forgot-st','err','App not loaded.');return;}
 
-  // Admin: send reminder to themselves
-  if(email===appCfg.adminEmail){
-    const pw=appCfg.adminPw||'(password not available — please contact support)';
-    const subject=encodeURIComponent('ClassQuiz Admin Password Reminder');
-    const body=encodeURIComponent('Your ClassQuiz admin password reminder.\n\nIMPORTANT: Delete this email after reading.\n\nYour admin password is: '+pw+'\n\nThis is a reminder sent from the ClassQuiz app on your device.');
-    window.location.href='mailto:'+email+'?subject='+subject+'&body='+body;
+  // Always re-fetch the settings doc fresh so we have the latest plaintext passwords
+  let freshCfg=appCfg;
+  if(fbReady){
+    try{
+      const snap=await _fb.getDoc(_fb.doc(db,'settings','app'));
+      if(snap.exists()) freshCfg=snap.data();
+    }catch(e){console.warn('doForgot cfg fetch:',e);}
+  }
+
+  function sendReminderEmail(toEmail,pw){
+    const isAdmin=(toEmail===freshCfg.adminEmail);
+    const subject=encodeURIComponent(isAdmin?'ClassQuiz Admin Password Reminder':'ClassQuiz Password Reminder');
+    const body=encodeURIComponent(
+      'Your ClassQuiz '+(isAdmin?'admin ':'')+' password reminder.\n\n'
+      +'IMPORTANT: Delete this email after reading.\n\n'
+      +'Your '+(isAdmin?'admin ':'')+' password is: '+pw+'\n\n'
+      +'This is a reminder sent from the ClassQuiz app on your device.'
+    );
+    window.location.href='mailto:'+toEmail+'?subject='+subject+'&body='+body;
     setSt('forgot-st','info','Opening your email app… press Send to receive the reminder.');
+  }
+
+  // ── Admin forgot their password ──────────────────────────────────────────
+  if(email===freshCfg.adminEmail){
+    if(freshCfg.adminPw){
+      sendReminderEmail(email, freshCfg.adminPw);
+    } else {
+      // Plaintext not yet saved — ask admin to type current password once so we can save it
+      showForgotSavePrompt('admin', email, async function(typedPw){
+        // Save plaintext for future use
+        try{ await _fb.updateDoc(_fb.doc(db,'settings','app'),{adminPw:typedPw}); freshCfg.adminPw=typedPw; }catch(e){}
+        sendReminderEmail(email, typedPw);
+      });
+    }
     return;
   }
 
-  // Teacher: check if registered individually
+  // ── Individually registered teacher ─────────────────────────────────────
   if(fbReady){
     try{
       const tSnap=await _fb.getDocs(_fb.query(
         _fb.collection(db,'teachers'),_fb.where('email','==',email)
       ));
       if(!tSnap.empty){
-        const tData=tSnap.docs[0].data();
-        const pw=tData.password||'(password not available — please contact your admin)';
-        const subject=encodeURIComponent('ClassQuiz Password Reminder');
-        const body=encodeURIComponent('Your ClassQuiz password reminder.\n\nIMPORTANT: Delete this email after reading.\n\nYour password is: '+pw+'\n\nThis is a reminder sent from the ClassQuiz app on your device.');
-        window.location.href='mailto:'+email+'?subject='+subject+'&body='+body;
-        setSt('forgot-st','info','Opening your email app… press Send to receive the reminder.');
+        const tDoc=tSnap.docs[0];
+        const tData=tDoc.data();
+        if(tData.password){
+          sendReminderEmail(email, tData.password);
+        } else {
+          showForgotSavePrompt('teacher', email, async function(typedPw){
+            try{ await _fb.updateDoc(_fb.doc(db,'teachers',tDoc.id),{password:typedPw}); }catch(e){}
+            sendReminderEmail(email, typedPw);
+          });
+        }
         return;
       }
     }catch(e){console.warn('Forgot lookup:',e);}
   }
 
-  // Fallback: shared password user
-  const pw=appCfg.teacherPw||'(password not available — please contact your admin)';
-  const subject=encodeURIComponent('ClassQuiz Password Reminder');
-  const body=encodeURIComponent('Your ClassQuiz password reminder.\n\nIMPORTANT: Delete this email after reading.\n\nYour password is: '+pw+'\n\nThis is a reminder sent from the ClassQuiz app on your device.');
-  window.location.href='mailto:'+email+'?subject='+subject+'&body='+body;
-  setSt('forgot-st','info','Opening your email app… press Send to receive the reminder.');
+  // ── Shared-password teacher (fallback) ───────────────────────────────────
+  if(freshCfg.teacherPw){
+    sendReminderEmail(email, freshCfg.teacherPw);
+  } else {
+    showForgotSavePrompt('shared', email, async function(typedPw){
+      try{ await _fb.updateDoc(_fb.doc(db,'settings','app'),{teacherPw:typedPw}); freshCfg.teacherPw=typedPw; }catch(e){}
+      sendReminderEmail(email, typedPw);
+    });
+  }
+};
+
+// Shows a one-time "enter your current password to save it" prompt inside the forgot overlay
+var _forgotSaveCb=null;
+window.showForgotSavePrompt=function(role, email, cb){
+  _forgotSaveCb=cb;
+  const wrap=el('forgot-save-wrap');
+  if(!wrap)return;
+  const msg = role==='admin'
+    ? 'Your password has not been saved yet. Enter your current admin password below so it can be stored securely and included in future reminders.'
+    : 'Your password has not been saved yet. Enter your current password below so it can be stored securely and included in future reminders.';
+  el('forgot-save-msg').textContent=msg;
+  el('forgot-save-pw').value='';
+  wrap.style.display='';
+  el('forgot-save-pw').focus();
+};
+window.doForgotSave=function(){
+  const pw=el('forgot-save-pw')?.value?.trim();
+  if(!pw){setSt('forgot-st','err','Please enter your current password.');return;}
+  el('forgot-save-wrap').style.display='none';
+  if(_forgotSaveCb) _forgotSaveCb(pw);
+  _forgotSaveCb=null;
 };
 
 window.showRegister=function(){
