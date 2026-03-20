@@ -297,7 +297,6 @@ tr:hover td{background:var(--s2)}
     <input type="password" id="tl-pw" placeholder="Teacher or Admin password" autocomplete="current-password"/>
     <div style="margin-top:16px" class="col">
       <button class="btn btn-pri w100" onclick="doLogin()">Login →</button>
-      <button class="btn btn-ghost btn-sm w100" onclick="showForgot()">Forgot Password?</button>
     </div>
   </div>
   <div class="st" id="tl-st"></div>
@@ -359,6 +358,8 @@ tr:hover td{background:var(--s2)}
       <span style="font-size:22px">📊</span><span>All Results</span></button>
     <button id="home-admin-btn" class="btn btn-warn" onclick="goManageTeachers()" style="flex-direction:column;padding:16px 10px;gap:6px;border-radius:var(--r);display:none">
       <span style="font-size:22px">👥</span><span>Manage Teachers</span></button>
+    <button id="home-adminoffice-btn" class="btn btn-err" onclick="goAdminOffice()" style="flex-direction:column;padding:16px 10px;gap:6px;border-radius:var(--r);display:none">
+      <span style="font-size:22px">🔐</span><span>Admin Office</span></button>
   </div>
   <!-- Subject cards -->
   <h2>Your Subjects</h2>
@@ -397,6 +398,130 @@ tr:hover td{background:var(--s2)}
     <div class="st" id="mt-reset-st"></div>
   </div>
   <div class="st" id="mt-st"></div>
+</div>
+</div>
+
+
+<!-- ADMIN OFFICE -->
+<div id="s-admin-office" class="screen center">
+<div class="mw-lg">
+  <div class="row" style="margin-bottom:20px;flex-wrap:wrap;gap:10px">
+    <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
+    <h3 style="flex:1">🔐 Admin Office</h3>
+  </div>
+  <!-- Password gate -->
+  <div id="ao-gate" class="card card-acc" style="max-width:400px;margin:0 auto">
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:32px;margin-bottom:8px">🔐</div>
+      <div style="font-family:var(--fh);font-size:16px;font-weight:700">Admin Access Required</div>
+      <div style="font-size:12px;color:var(--m);margin-top:6px">Enter the admin password to continue.</div>
+    </div>
+    <label>Admin Password <span class="req">*</span></label>
+    <input type="password" id="ao-gate-pw" placeholder="Admin password"
+      onkeydown="if(event.key==='Enter')aoUnlock()"/>
+    <button class="btn btn-pri w100" style="margin-top:14px" onclick="aoUnlock()">Unlock →</button>
+    <div class="st" id="ao-gate-st"></div>
+  </div>
+  <!-- Office content (hidden until unlocked) -->
+  <div id="ao-content" style="display:none">
+    <div class="tabs">
+      <div class="tab on" id="ao-tab-teachers" onclick="aoSwitchTab('teachers')">🗑 Delete Teachers</div>
+      <div class="tab" id="ao-tab-students" onclick="aoSwitchTab('students')">👤 Delete Students</div>
+      <div class="tab" id="ao-tab-passwords" onclick="aoSwitchTab('passwords')">🔑 Change Passwords</div>
+    </div>
+
+    <!-- ── TAB 1: DELETE TEACHERS ── -->
+    <div id="ao-panel-teachers">
+      <div class="card card-warn" style="margin-bottom:14px">
+        <div style="font-size:12px;color:var(--m);line-height:1.7">
+          Deleting a teacher removes their account, all their quiz sessions, and all saved drafts/templates.
+          <strong style="color:var(--txt)">Questions they added to the Master Bank are preserved.</strong>
+        </div>
+      </div>
+      <div id="ao-teacher-list"><div style="font-size:13px;color:var(--m)">Loading…</div></div>
+      <div class="st" id="ao-teacher-st"></div>
+    </div>
+
+    <!-- ── TAB 2: DELETE STUDENTS ── -->
+    <div id="ao-panel-students" style="display:none">
+      <div class="card" style="padding:14px;margin-bottom:14px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px">
+          <div>
+            <label style="margin-top:0">Programme</label>
+            <select id="ao-stu-prog" onchange="aoStudentFilter()"><option value="">All</option></select>
+          </div>
+          <div>
+            <label style="margin-top:0">Subject</label>
+            <select id="ao-stu-subj" onchange="aoStudentFilter()"><option value="">All</option></select>
+          </div>
+          <div>
+            <label style="margin-top:0">Sort by</label>
+            <select id="ao-stu-sort" onchange="aoStudentFilter()">
+              <option value="name-asc">Name A→Z</option>
+              <option value="name-desc">Name Z→A</option>
+              <option value="roll-asc">Roll ↑</option>
+              <option value="roll-desc">Roll ↓</option>
+            </select>
+          </div>
+        </div>
+        <input type="text" id="ao-stu-search" placeholder="Search name or roll number…"
+          oninput="aoStudentFilter()" style="margin-bottom:12px"/>
+        <div class="row" style="gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" onclick="aoSelectAll()">☑ Select All Visible</button>
+          <button class="btn btn-ghost btn-sm" onclick="aoDeselectAll()">☐ Deselect All</button>
+          <span id="ao-sel-count" style="font-size:12px;color:var(--acc);font-weight:600"></span>
+          <button class="btn btn-err btn-sm" style="margin-left:auto" onclick="aoDeleteSelected()">🗑 Delete Selected</button>
+        </div>
+      </div>
+      <div id="ao-student-list"></div>
+      <div class="st" id="ao-student-st"></div>
+    </div>
+
+    <!-- ── TAB 3: CHANGE PASSWORDS ── -->
+    <div id="ao-panel-passwords" style="display:none">
+      <!-- Admin password -->
+      <div class="card" style="margin-bottom:14px">
+        <h3 style="margin-bottom:12px">🔐 Admin Password</h3>
+        <label>New Admin Password <span class="req">*</span></label>
+        <input type="password" id="ao-adm-pw" placeholder="New admin password"/>
+        <label>Confirm <span class="req">*</span></label>
+        <input type="password" id="ao-adm-pw2" placeholder="Re-enter new password"/>
+        <button class="btn btn-warn w100" style="margin-top:12px" onclick="aoChangeAdminPw()">Update Admin Password</button>
+        <div class="st" id="ao-adm-st"></div>
+      </div>
+      <!-- Shared teacher password -->
+      <div class="card" style="margin-bottom:14px">
+        <h3 style="margin-bottom:12px">👩‍🏫 Shared Teacher Password</h3>
+        <div style="font-size:12px;color:var(--m);margin-bottom:10px;line-height:1.6">
+          This is the shared password used by all teachers who log in without an individual account.
+        </div>
+        <label>New Shared Password <span class="req">*</span></label>
+        <input type="password" id="ao-tch-pw" placeholder="New shared teacher password"/>
+        <label>Confirm <span class="req">*</span></label>
+        <input type="password" id="ao-tch-pw2" placeholder="Re-enter new password"/>
+        <button class="btn btn-warn w100" style="margin-top:12px" onclick="aoChangeTeacherPw()">Update Shared Password</button>
+        <div class="st" id="ao-tch-st"></div>
+      </div>
+      <!-- Individual teacher passwords -->
+      <div class="card">
+        <h3 style="margin-bottom:12px">👤 Individual Teacher Passwords</h3>
+        <div id="ao-pw-teacher-list"><div style="font-size:13px;color:var(--m)">Loading…</div></div>
+        <div id="ao-pw-reset-wrap" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--b)">
+          <div style="font-size:12px;font-weight:600;margin-bottom:8px" id="ao-pw-reset-label"></div>
+          <label>New Password <span class="req">*</span></label>
+          <input type="password" id="ao-pw-new" placeholder="New password"/>
+          <label>Confirm <span class="req">*</span></label>
+          <input type="password" id="ao-pw-new2" placeholder="Re-enter"/>
+          <div class="row" style="gap:8px;margin-top:10px">
+            <button class="btn btn-warn" style="flex:1" onclick="aoConfirmTeacherPwReset()">Set Password</button>
+            <button class="btn btn-ghost" style="flex:1" onclick="aoCancelTeacherPwReset()">Cancel</button>
+          </div>
+          <div class="st" id="ao-pw-reset-st"></div>
+        </div>
+        <div class="st" id="ao-pw-st"></div>
+      </div>
+    </div>
+  </div><!-- /ao-content -->
 </div>
 </div>
 
@@ -814,7 +939,6 @@ tr:hover td{background:var(--s2)}
   <div class="tabs">
     <div class="tab on" id="tab-results" onclick="switchResultsTab('results')">Results Table</div>
     <div class="tab" id="tab-leaderboard" onclick="switchResultsTab('leaderboard')">🏆 Leaderboard</div>
-    <div class="tab" id="tab-profiles" onclick="switchResultsTab('profiles')">👤 Student Profiles</div>
   </div>
   <!-- Universal filters -->
   <div id="results-filters" class="card" style="padding:14px">
@@ -911,25 +1035,6 @@ tr:hover td{background:var(--s2)}
     <button class="btn btn-warn w100" onclick="finishQuiz()">See My Results</button>
   </div>
 </div>
-<div class="ov" id="ov-forgot">
-  <div class="ovc" style="border:1px solid var(--acc)">
-    <span class="ovi">🔑</span>
-    <div class="ovt">Password Reminder</div>
-    <div class="ovb">Enter your email. The password will open in your email app — press Send to receive it.</div>
-    <input type="email" id="forgot-email" placeholder="your@email.com" style="margin-bottom:12px"/>
-    <div class="row" style="gap:9px">
-      <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-forgot')">Cancel</button>
-      <button class="btn btn-pri" style="flex:1" onclick="doForgot()">Send Reminder</button>
-    </div>
-    <!-- One-time prompt shown when plaintext password not yet stored -->
-    <div id="forgot-save-wrap" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--b)">
-      <div id="forgot-save-msg" style="font-size:12px;color:var(--m);margin-bottom:10px;line-height:1.6"></div>
-      <input type="password" id="forgot-save-pw" placeholder="Enter your current password" style="margin-bottom:10px"/>
-      <button class="btn btn-grn w100" onclick="doForgotSave()">✓ Save &amp; Send Reminder</button>
-    </div>
-    <div class="st" id="forgot-st"></div>
-  </div>
-</div>
 <div class="ov" id="ov-template">
   <div class="ovc" style="border:1px solid var(--acc);max-width:400px">
     <span class="ovi">💾</span>
@@ -937,17 +1042,6 @@ tr:hover td{background:var(--s2)}
     <div id="ov-tpl-body"></div>
     <div class="st" id="tpl-st"></div>
   </div>
-
-<!-- STUDENT PROFILES PANEL -->
-<div id="panel-profiles" style="display:none;width:100%;max-width:920px;padding:0 16px 60px">
-  <div class="card" style="margin-bottom:14px;padding:12px 16px">
-    <p style="font-size:12px;color:var(--m);line-height:1.7">
-      Students matched by <strong style="color:var(--txt)">roll number</strong> only.
-      Use the filters above to narrow which tests are included in the aggregates.
-    </p>
-  </div>
-  <div id="profiles-list"></div>
-</div>
 </div>
 
 <script type="module">
@@ -1137,110 +1231,6 @@ window.doLogout=function(){
   show('s-login-teacher');
 };
 
-window.showForgot=function(){
-  el('forgot-email').value=teacher?.email||'';
-  el('forgot-st').className='st';
-  const sw=el('forgot-save-wrap');if(sw)sw.style.display='none';
-  _forgotSaveCb=null;
-  el('ov-forgot').classList.add('on');
-};
-
-window.doForgot=async function(){
-  const email=gv('forgot-email');
-  if(!email){setSt('forgot-st','err','Enter your email.');return;}
-  if(!appCfg){setSt('forgot-st','err','App not loaded.');return;}
-
-  // Always re-fetch the settings doc fresh so we have the latest plaintext passwords
-  let freshCfg=appCfg;
-  if(fbReady){
-    try{
-      const snap=await _fb.getDoc(_fb.doc(db,'settings','app'));
-      if(snap.exists()) freshCfg=snap.data();
-    }catch(e){console.warn('doForgot cfg fetch:',e);}
-  }
-
-  function sendReminderEmail(toEmail,pw){
-    const isAdmin=(toEmail===freshCfg.adminEmail);
-    const subject=encodeURIComponent(isAdmin?'ClassQuiz Admin Password Reminder':'ClassQuiz Password Reminder');
-    const body=encodeURIComponent(
-      'Your ClassQuiz '+(isAdmin?'admin ':'')+' password reminder.\n\n'
-      +'IMPORTANT: Delete this email after reading.\n\n'
-      +'Your '+(isAdmin?'admin ':'')+' password is: '+pw+'\n\n'
-      +'This is a reminder sent from the ClassQuiz app on your device.'
-    );
-    window.location.href='mailto:'+toEmail+'?subject='+subject+'&body='+body;
-    setSt('forgot-st','info','Opening your email app… press Send to receive the reminder.');
-  }
-
-  // ── Admin forgot their password ──────────────────────────────────────────
-  if(email===freshCfg.adminEmail){
-    if(freshCfg.adminPw){
-      sendReminderEmail(email, freshCfg.adminPw);
-    } else {
-      // Plaintext not yet saved — ask admin to type current password once so we can save it
-      showForgotSavePrompt('admin', email, async function(typedPw){
-        // Save plaintext for future use
-        try{ await _fb.updateDoc(_fb.doc(db,'settings','app'),{adminPw:typedPw}); freshCfg.adminPw=typedPw; }catch(e){}
-        sendReminderEmail(email, typedPw);
-      });
-    }
-    return;
-  }
-
-  // ── Individually registered teacher ─────────────────────────────────────
-  if(fbReady){
-    try{
-      const tSnap=await _fb.getDocs(_fb.query(
-        _fb.collection(db,'teachers'),_fb.where('email','==',email)
-      ));
-      if(!tSnap.empty){
-        const tDoc=tSnap.docs[0];
-        const tData=tDoc.data();
-        if(tData.password){
-          sendReminderEmail(email, tData.password);
-        } else {
-          showForgotSavePrompt('teacher', email, async function(typedPw){
-            try{ await _fb.updateDoc(_fb.doc(db,'teachers',tDoc.id),{password:typedPw}); }catch(e){}
-            sendReminderEmail(email, typedPw);
-          });
-        }
-        return;
-      }
-    }catch(e){console.warn('Forgot lookup:',e);}
-  }
-
-  // ── Shared-password teacher (fallback) ───────────────────────────────────
-  if(freshCfg.teacherPw){
-    sendReminderEmail(email, freshCfg.teacherPw);
-  } else {
-    showForgotSavePrompt('shared', email, async function(typedPw){
-      try{ await _fb.updateDoc(_fb.doc(db,'settings','app'),{teacherPw:typedPw}); freshCfg.teacherPw=typedPw; }catch(e){}
-      sendReminderEmail(email, typedPw);
-    });
-  }
-};
-
-// Shows a one-time "enter your current password to save it" prompt inside the forgot overlay
-var _forgotSaveCb=null;
-window.showForgotSavePrompt=function(role, email, cb){
-  _forgotSaveCb=cb;
-  const wrap=el('forgot-save-wrap');
-  if(!wrap)return;
-  const msg = role==='admin'
-    ? 'Your password has not been saved yet. Enter your current admin password below so it can be stored securely and included in future reminders.'
-    : 'Your password has not been saved yet. Enter your current password below so it can be stored securely and included in future reminders.';
-  el('forgot-save-msg').textContent=msg;
-  el('forgot-save-pw').value='';
-  wrap.style.display='';
-  el('forgot-save-pw').focus();
-};
-window.doForgotSave=function(){
-  const pw=el('forgot-save-pw')?.value?.trim();
-  if(!pw){setSt('forgot-st','err','Please enter your current password.');return;}
-  el('forgot-save-wrap').style.display='none';
-  if(_forgotSaveCb) _forgotSaveCb(pw);
-  _forgotSaveCb=null;
-};
 
 window.showRegister=function(){
   ['reg-name','reg-pw','reg-pw2'].forEach(id=>{const e=el(id);if(e)e.value='';});
@@ -1373,9 +1363,11 @@ async function goHome(){
   el('home-role-badge').innerHTML=teacher.isAdmin
     ?'<span class="badge-admin">Admin</span>'
     :'<span class="chip chip-easy">Teacher</span>';
-  // Show/hide admin-only button
+  // Show/hide admin-only buttons
   const adminBtn=el('home-admin-btn');
   if(adminBtn) adminBtn.style.display=teacher.isAdmin?'':'none';
+  const aoBtn=el('home-adminoffice-btn');
+  if(aoBtn) aoBtn.style.display=teacher.isAdmin?'':'none';
   show('s-home');
   await loadAllQuestions();
   renderHomeSubjects();
@@ -3405,31 +3397,19 @@ function calcPerformance(pct, timeTakenSecs, totalTimeSecs, violations){
 
 
 window.switchResultsTab=function(tab){
-  // Tab buttons
-  ['results','leaderboard','profiles'].forEach(function(t){
+  ['results','leaderboard'].forEach(function(t){
     var tb=el('tab-'+t); if(tb) tb.classList.toggle('on',t===tab);
   });
-  // Filter card visible on all tabs (needed for filtering profiles/leaderboard too)
   var fc=el('results-filters');
   if(fc) fc.style.display='';
-  // Results-only elements
   ['results-summary','results-table-wrap','results-actions'].forEach(function(id){
     var e=el(id); if(e) e.style.display=(tab==='results')?'':'none';
   });
-  // Leaderboard panel
   var lb=el('panel-leaderboard');
   if(lb) lb.style.display=(tab==='leaderboard')?'':'none';
-  // Profiles panel
-  var pr=el('panel-profiles');
-  if(pr) pr.style.display=(tab==='profiles')?'':'none';
-  // Render content — load results first if empty
   if(tab==='leaderboard'){
     if(!allResults.length) loadResults(false).then(renderLeaderboard);
     else renderLeaderboard();
-  }
-  if(tab==='profiles'){
-    if(!allResults.length) loadResults(false).then(renderProfiles);
-    else renderProfiles();
   }
 };
 
@@ -3440,8 +3420,32 @@ function renderLeaderboard(){
     list.innerHTML='<div class="empty"><span class="empty-i">🏆</span>No results yet.</div>';
     return;
   }
-  // Calculate performance for all results and sort
-  const ranked=allResults.map(r=>{
+  // Apply ALL active filters (same logic as Results Table)
+  const prog=gv('rf-prog'),subj=gv('rf-subj'),topic=gv('rf-topic'),
+        testid=gv('rf-testid'),teacher_f=gv('rf-teacher'),
+        session_f=gv('rf-session'),
+        srch=(gv('rf-search')||'').toLowerCase();
+  const filtered=allResults.filter(r=>{
+    if(prog&&r.programmeName!==prog)return false;
+    if(subj&&r.courseId!==subj)return false;
+    if(topic&&r.topicName!==topic)return false;
+    if(testid&&r.testLabel!==testid)return false;
+    if(teacher_f&&r.teacherName!==teacher_f)return false;
+    if(session_f&&r.sessionDisplayId!==session_f)return false;
+    if(srch){
+      const hay=[r.studentName,r.roll,r.email,r.programmeName,
+        r.courseId,r.subjectName,r.topicName,r.testLabel,
+        r.sessionDisplayId,r.teacherName].join(' ').toLowerCase();
+      if(!hay.includes(srch))return false;
+    }
+    return true;
+  });
+  if(!filtered.length){
+    list.innerHTML='<div class="empty"><span class="empty-i">🏆</span>No results match the current filters.</div>';
+    return;
+  }
+  // Calculate performance and rank
+  const ranked=filtered.map(r=>{
     const timeSec=(()=>{const m=(r.timeTaken||'').match(/(\d+)m\s*(\d+)s/);return m?parseInt(m[1])*60+parseInt(m[2]):0;})();
     const perf=r.performanceScore!=null?r.performanceScore:
       calcPerformance(r.pct, timeSec, (r.sessionTotalTime||15)*60, r.violations);
@@ -3449,7 +3453,9 @@ function renderLeaderboard(){
   }).sort((a,b)=>b.perf-a.perf);
 
   const medals=['🥇','🥈','🥉'];
-  list.innerHTML=ranked.map((r,i)=>{
+  const filterLabel=teacher_f?' — '+teacher_f:(prog?' — '+prog:'');
+  list.innerHTML=(filterLabel?'<div style="font-size:12px;color:var(--acc);margin-bottom:10px;font-weight:600">Showing'+esc(filterLabel)+'</div>':'')
+  +ranked.map((r,i)=>{
     const medal=i<3?medals[i]:' '+(i+1)+'.';
     const perfColor=r.perf>=90?'var(--grn)':r.perf>=75?'var(--acc)':r.perf>=60?'var(--warn)':'var(--err)';
     const scoreColor=r.pct>=70?'var(--grn)':r.pct>=50?'var(--warn)':'var(--err)';
@@ -3461,6 +3467,7 @@ function renderLeaderboard(){
           +esc(r.roll||'')+' &nbsp;·&nbsp; '
           +'<span style="color:var(--acc)">'+esc(r.programmeName||'')+'</span>'
           +' &nbsp;·&nbsp; '+esc(r.testLabel||'')
+          +(r.teacherName?' &nbsp;·&nbsp; <span style="color:var(--m)">'+esc(r.teacherName)+'</span>':'')
         +'</div>'
       +'</div>'
       +'<div style="text-align:right">'
@@ -3477,135 +3484,7 @@ function renderLeaderboard(){
 }
 
 
-window.renderProfiles=function(){
-  const list=el('profiles-list');
-  if(!list)return;
 
-  // Apply same filters as results table to get relevant subset
-  const prog=gv('rf-prog'),subj=gv('rf-subj'),topic=gv('rf-topic'),
-        testid=gv('rf-testid'),teacher_f=gv('rf-teacher'),
-        session_f=gv('rf-session');
-
-  const relevant=allResults.filter(function(r){
-    if(prog&&r.programmeName!==prog)return false;
-    if(subj&&r.courseId!==subj)return false;
-    if(topic&&r.topicName!==topic)return false;
-    if(testid&&r.testLabel!==testid)return false;
-    if(teacher_f&&r.teacherName!==teacher_f)return false;
-    if(session_f&&r.sessionDisplayId!==session_f)return false;
-    return true;
-  });
-
-  if(!relevant.length){
-    list.innerHTML='<div class="empty"><span class="empty-i">👤</span>No results match the current filters.</div>';
-    return;
-  }
-
-  // Group by roll number only — roll is the unique student identifier
-  var studentMap={};
-  relevant.forEach(function(r){
-    var roll=(r.roll||'').trim();
-    if(!roll)return; // skip records with no roll number
-    if(!studentMap[roll]){
-      studentMap[roll]={
-        roll:roll,
-        name:r.studentName||'—',   // use most recent name
-        email:r.email||'—',        // use most recent email (informational only)
-        results:[]
-      };
-    }
-    // Always update name/email to most recent entry
-    if(r.ts && (!studentMap[roll]._lastTs || r.ts > studentMap[roll]._lastTs)){
-      studentMap[roll].name = r.studentName||studentMap[roll].name;
-      studentMap[roll].email = r.email||studentMap[roll].email;
-      studentMap[roll]._lastTs = r.ts;
-    }
-    studentMap[roll].results.push(r);
-  });
-
-  if(!Object.keys(studentMap).length){
-    list.innerHTML='<div class="empty"><span class="empty-i">👤</span>No student data found. Results must include roll numbers.</div>';
-    return;
-  }
-
-  // Calculate aggregates and sort by avg performance desc
-  var students=Object.values(studentMap).map(function(s){
-    var n=s.results.length;
-    var avgScore=Math.round(s.results.reduce(function(a,r){return a+(r.pct||0);},0)/n);
-    var avgPerf=Math.round(
-      s.results.reduce(function(a,r){
-        var p=r.performanceScore!=null?r.performanceScore:(function(){
-          var m=(r.timeTaken||'').match(/(\d+)m\s*(\d+)s/);
-          var t=m?parseInt(m[1])*60+parseInt(m[2]):0;
-          return calcPerformance(r.pct,t,(r.sessionTotalTime||15)*60,r.violations);
-        })();
-        return a+p;
-      },0)/n * 10
-    )/10;
-    return {
-      name:s.name, roll:s.roll, email:s.email,
-      results:s.results, n:n,
-      avgScore:avgScore, avgPerf:avgPerf
-    };
-  }).sort(function(a,b){return b.avgPerf-a.avgPerf;});
-
-  list.innerHTML=students.map(function(s,idx){
-    var scoreColor=s.avgScore>=70?'var(--grn)':s.avgScore>=50?'var(--warn)':'var(--err)';
-    var perfColor=s.avgPerf>=90?'var(--grn)':s.avgPerf>=75?'var(--acc)':s.avgPerf>=60?'var(--warn)':'var(--err)';
-    var rowId='profile-row-'+idx;
-    var detailId='profile-detail-'+idx;
-    // Individual test rows
-    var testRows=s.results.slice().sort(function(a,b){return (a.ts||0)-(b.ts||0);}).map(function(r,i){
-      var rp=r.performanceScore!=null?r.performanceScore:(function(){
-        var m=(r.timeTaken||'').match(/(\d+)m\s*(\d+)s/);
-        var t=m?parseInt(m[1])*60+parseInt(m[2]):0;
-        return calcPerformance(r.pct,t,(r.sessionTotalTime||15)*60,r.violations);
-      })();
-      var rsc=r.pct>=70?'var(--grn)':r.pct>=50?'var(--warn)':'var(--err)';
-      return '<tr style="background:var(--s3)">'
-        +'<td style="font-size:11px;color:var(--m);padding-left:32px">'+(i+1)+'</td>'
-        +'<td style="font-size:11px">'+esc(r.sessionDisplayId||r.testLabel||'—')+'</td>'
-        +'<td style="font-size:11px">'+esc(r.teacherName||'—')+'</td>'
-        +'<td style="color:'+rsc+';font-weight:600">'+r.pct+'%</td>'
-        +'<td style="color:var(--acc);font-weight:600">'+rp+'</td>'
-                +'<td style="color:'+(r.violations>0?'var(--warn)':'var(--m)')+'">'+( r.violations||0)+'</td>'
-        +'</tr>';
-    }).join('');
-
-    return '<div class="card" style="padding:0;overflow:hidden;margin-bottom:10px">'
-      // Header row — clickable to expand
-      +'<div style="display:flex;align-items:center;gap:14px;padding:14px 16px;cursor:pointer" onclick="toggleProfile(this.dataset.id)" data-id="'+detailId+'">'  
-        +'<div style="flex:1">'
-          +'<div style="font-family:var(--fh);font-size:15px;font-weight:700">'+esc(s.name)+'</div>'
-          +'<div style="font-size:11px;color:var(--m);margin-top:2px">'+esc(s.roll)+' · '+esc(s.email)+' · '+s.n+' test'+(s.n!==1?'s':'')+'</div>'
-        +'</div>'
-        +'<div style="text-align:center;min-width:60px">'
-          +'<div style="font-size:11px;color:var(--m)">Avg Score</div>'
-          +'<div style="font-family:var(--fh);font-size:18px;font-weight:700;color:'+scoreColor+'">'+s.avgScore+'%</div>'
-        +'</div>'
-        +'<div style="text-align:center;min-width:70px">'
-          +'<div style="font-size:11px;color:var(--m)">Avg Performance</div>'
-          +'<div style="font-family:var(--fh);font-size:18px;font-weight:700;color:'+perfColor+'">'+s.avgPerf+'</div>'
-        +'</div>'
-        +'<div style="font-size:16px;color:var(--m)">▾</div>'
-      +'</div>'
-      // Expandable detail
-      +'<div id="'+detailId+'" style="display:none;border-top:1px solid var(--b)">'
-        +'<table style="width:100%;min-width:500px">'
-          +'<thead><tr>'
-            +'<th style="padding-left:32px">#</th>'
-            +'<th>Session / Test ID</th>'
-            +'<th>Teacher</th>'
-            +'<th>Score%</th>'
-            +'<th>Performance</th>'
-            +'<th>Violations</th>'
-          +'</tr></thead>'
-          +'<tbody>'+testRows+'</tbody>'
-        +'</table>'
-      +'</div>'
-    +'</div>';
-  }).join('');
-};
 
 window.toggleProfile=function(idOrEl){
   var id=typeof idOrEl==='string'?idOrEl:(idOrEl.dataset?idOrEl.dataset.id:null);
@@ -3922,7 +3801,6 @@ window.renderActiveTab=function(){
   if(!active)return renderResults();
   const id=active.id||'';
   if(id==='tab-leaderboard') renderLeaderboard();
-  else if(id==='tab-profiles') renderProfiles();
   else renderResults();
 };
 
@@ -3986,6 +3864,423 @@ window.bankAction=function(btn,action){
   else if(action===1) bankAddOne(id);
   else if(action===2) editQ(id);
   else if(action===3) deleteQ(id);
+};
+
+
+/* ═══════════════════════════════════════════
+   ADMIN OFFICE
+═══════════════════════════════════════════ */
+let aoUnlocked = false;
+let aoStudents  = [];   // flat list of unique students built from allResults
+let aoSelected  = new Set(); // set of roll numbers chosen for deletion
+let _aoPwResetId = null;
+
+window.goAdminOffice = function(){
+  if(!teacher?.isAdmin){ show('s-home'); return; }
+  aoUnlocked = false;
+  // Reset gate
+  const gate = el('ao-gate');
+  const content = el('ao-content');
+  if(gate)    gate.style.display = '';
+  if(content) content.style.display = 'none';
+  const pw = el('ao-gate-pw');
+  if(pw) pw.value = '';
+  setSt('ao-gate-st','','');
+  show('s-admin-office');
+};
+
+window.aoUnlock = function(){
+  const pw = (el('ao-gate-pw')?.value || '').trim();
+  if(!pw){ setSt('ao-gate-st','err','Enter the admin password.'); return; }
+  if(!appCfg?.adminHash){ setSt('ao-gate-st','err','App config not loaded.'); return; }
+  if(hashStr(pw) !== appCfg.adminHash){
+    setSt('ao-gate-st','err','Incorrect password.');
+    el('ao-gate-pw').value = '';
+    return;
+  }
+  aoUnlocked = true;
+  el('ao-gate').style.display = 'none';
+  el('ao-content').style.display = '';
+  aoSwitchTab('teachers');
+};
+
+window.aoSwitchTab = function(tab){
+  ['teachers','students','passwords'].forEach(function(t){
+    const btn = el('ao-tab-'+t);
+    const panel = el('ao-panel-'+t);
+    if(btn)   btn.classList.toggle('on', t===tab);
+    if(panel) panel.style.display = (t===tab)?'':'none';
+  });
+  if(tab==='teachers')  aoLoadTeachers();
+  if(tab==='students')  aoLoadStudents();
+  if(tab==='passwords') aoLoadPwTeachers();
+};
+
+/* ─── TAB 1: DELETE TEACHERS ──────────────────────────────── */
+window.aoLoadTeachers = async function(){
+  if(!fbReady) return;
+  const list = el('ao-teacher-list');
+  list.innerHTML = '<div style="font-size:13px;color:var(--m)">Loading…</div>';
+  try{
+    const snap = await _fb.getDocs(_fb.query(
+      _fb.collection(db,'teachers'), _fb.orderBy('createdAt','desc')
+    ));
+    if(snap.empty){
+      list.innerHTML = '<div class="empty"><span class="empty-i">👤</span>No registered teachers.</div>';
+      return;
+    }
+    list.innerHTML = snap.docs.map(function(d){
+      const t = d.data();
+      const date = t.createdAt ? new Date(t.createdAt).toLocaleDateString() : '—';
+      return '<div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+        +'<div style="flex:1;min-width:180px">'
+          +'<div style="font-weight:600;font-size:14px">'+esc((t.salutation||'')+' '+(t.name||'—'))+'</div>'
+          +'<div style="font-size:12px;color:var(--m);margin-top:2px">'+esc(t.email||'—')+'</div>'
+          +'<div style="font-size:11px;color:var(--m2);margin-top:3px">Registered: '+date+'</div>'
+        +'</div>'
+        +'<button class="btn btn-err btn-sm" onclick="aoDeleteTeacher(''+d.id+'',''+esc(t.name||'')+'',''+esc(t.email||'')+'')">🗑 Delete Profile &amp; Sessions</button>'
+        +'</div>';
+    }).join('');
+  }catch(e){
+    list.innerHTML = '<div style="color:var(--err);font-size:13px">Error: '+e.message+'</div>';
+  }
+};
+
+window.aoDeleteTeacher = async function(docId, name, email){
+  if(!confirm('Delete teacher "'+name+'" ('+email+')?
+
+This will remove:
+• Their teacher account
+• All their quiz sessions
+• All their saved drafts/templates
+
+Questions they added to the Master Bank will be KEPT.
+
+This cannot be undone.')) return;
+  setSt('ao-teacher-st','info','Deleting…');
+  try{
+    // 1. Delete teacher doc
+    await _fb.deleteDoc(_fb.doc(db,'teachers',docId));
+
+    // 2. Delete sessions where teacherEmail matches
+    const sesSnap = await _fb.getDocs(_fb.query(
+      _fb.collection(db,'sessions'),
+      _fb.where('teacherEmail','==',email)
+    ));
+    for(const d of sesSnap.docs){
+      await _fb.deleteDoc(_fb.doc(db,'sessions',d.id));
+    }
+
+    // 3. Delete drafts where teacherEmail matches
+    const draftSnap = await _fb.getDocs(_fb.query(
+      _fb.collection(db,'drafts'),
+      _fb.where('teacherEmail','==',email)
+    ));
+    for(const d of draftSnap.docs){
+      await _fb.deleteDoc(_fb.doc(db,'drafts',d.id));
+    }
+
+    setSt('ao-teacher-st','ok','✅ Teacher "'+name+'" and their sessions/drafts deleted. Questions preserved.');
+    await aoLoadTeachers();
+  }catch(e){
+    setSt('ao-teacher-st','err','Failed: '+e.message);
+  }
+};
+
+/* ─── TAB 2: DELETE STUDENTS ──────────────────────────────── */
+window.aoLoadStudents = async function(){
+  if(!allResults.length){
+    try{ await loadResults(false); }catch(e){}
+  }
+  aoPopulateStudentFilters();
+  aoStudentFilter();
+};
+
+function aoPopulateStudentFilters(){
+  const progs = [...new Set(allResults.map(r=>r.programmeName).filter(Boolean))].sort();
+  const subjs = [...new Set(allResults.map(r=>(r.courseId||'')+'::'+( r.subjectName||'')).filter(s=>s!=='::'))].sort();
+
+  const ps = el('ao-stu-prog');
+  const ss = el('ao-stu-subj');
+  if(!ps||!ss) return;
+
+  const curProg = ps.value, curSubj = ss.value;
+  ps.innerHTML = '<option value="">All Programmes</option>'
+    + progs.map(p=>'<option value="'+esc(p)+'">'+esc(p)+'</option>').join('');
+  ss.innerHTML = '<option value="">All Subjects</option>'
+    + subjs.map(s=>{
+        const [cid,name]=s.split('::');
+        return '<option value="'+esc(s)+'">'+esc(cid+(name?' — '+name:''))+'</option>';
+      }).join('');
+  // Restore selections if still valid
+  if(progs.includes(curProg)) ps.value = curProg;
+  if(subjs.includes(curSubj)) ss.value = curSubj;
+}
+
+window.aoStudentFilter = function(){
+  const prog   = el('ao-stu-prog')?.value  || '';
+  const subj   = el('ao-stu-subj')?.value  || '';
+  const srch   = (el('ao-stu-search')?.value||'').toLowerCase().trim();
+  const sortBy = el('ao-stu-sort')?.value   || 'name-asc';
+
+  // Filter results
+  const relevant = allResults.filter(function(r){
+    if(prog && r.programmeName!==prog) return false;
+    if(subj){
+      const key=(r.courseId||'')+'::'+( r.subjectName||'');
+      if(key!==subj) return false;
+    }
+    return true;
+  });
+
+  // Group by roll number → unique students
+  const map = {};
+  relevant.forEach(function(r){
+    const roll = (r.roll||'').trim();
+    if(!roll) return;
+    if(!map[roll]){
+      map[roll] = { roll, name: r.studentName||'—', email: r.email||'', resultIds: [], programmes: new Set(), subjects: new Set() };
+    }
+    map[roll].resultIds.push(r.id);
+    if(r.programmeName) map[roll].programmes.add(r.programmeName);
+    if(r.subjectName)   map[roll].subjects.add(r.subjectName);
+    // Keep most recent name
+    if(r.ts && (!map[roll]._ts || r.ts > map[roll]._ts)){
+      map[roll].name = r.studentName||map[roll].name;
+      map[roll]._ts = r.ts;
+    }
+  });
+
+  let students = Object.values(map);
+
+  // Search
+  if(srch){
+    students = students.filter(function(s){
+      return s.name.toLowerCase().includes(srch) || s.roll.toLowerCase().includes(srch);
+    });
+  }
+
+  // Sort
+  students.sort(function(a,b){
+    if(sortBy==='name-asc')  return a.name.localeCompare(b.name);
+    if(sortBy==='name-desc') return b.name.localeCompare(a.name);
+    if(sortBy==='roll-asc')  return a.roll.localeCompare(b.roll, undefined, {numeric:true});
+    if(sortBy==='roll-desc') return b.roll.localeCompare(a.roll, undefined, {numeric:true});
+    return 0;
+  });
+
+  aoStudents = students;
+  // Prune selected set to only visible rolls
+  const visibleRolls = new Set(students.map(s=>s.roll));
+  aoSelected = new Set([...aoSelected].filter(r=>visibleRolls.has(r)));
+  aoRenderStudentList();
+};
+
+function aoRenderStudentList(){
+  const list = el('ao-student-list');
+  if(!list) return;
+
+  if(!aoStudents.length){
+    list.innerHTML = '<div class="empty"><span class="empty-i">👤</span>No students match the current filters.</div>';
+    el('ao-sel-count').textContent = '';
+    return;
+  }
+
+  list.innerHTML = aoStudents.map(function(s){
+    const checked = aoSelected.has(s.roll) ? 'checked' : '';
+    const progList = [...s.programmes].join(', ') || '—';
+    const subjList = [...s.subjects].join(', ')   || '—';
+    const tests    = s.resultIds.length;
+    return '<div class="card" style="margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:12px">'
+      +'<input type="checkbox" '+checked+' style="width:18px;height:18px;min-width:18px;cursor:pointer;accent-color:var(--err)"'
+        +' onchange="aoToggle(''+esc(s.roll)+'')" />'
+      +'<div style="flex:1;min-width:0">'
+        +'<div style="font-weight:600;font-size:14px">'+esc(s.name)
+          +' <span style="font-size:11px;color:var(--m);font-weight:400">Roll: '+esc(s.roll)+'</span></div>'
+        +'<div style="font-size:11px;color:var(--m);margin-top:3px">'
+          +esc(progList)+' &nbsp;·&nbsp; '+esc(subjList)
+          +' &nbsp;·&nbsp; <span style="color:var(--acc)">'+tests+' result'+(tests!==1?'s':'')+'</span>'
+        +'</div>'
+      +'</div>'
+      +'<button class="btn btn-err btn-sm" onclick="aoDeleteOne(''+esc(s.roll)+'')">🗑</button>'
+      +'</div>';
+  }).join('');
+
+  aoUpdateSelCount();
+}
+
+function aoUpdateSelCount(){
+  const c = el('ao-sel-count');
+  if(c) c.textContent = aoSelected.size ? aoSelected.size+' selected' : '';
+}
+
+window.aoToggle = function(roll){
+  if(aoSelected.has(roll)) aoSelected.delete(roll);
+  else aoSelected.add(roll);
+  aoUpdateSelCount();
+};
+
+window.aoSelectAll = function(){
+  aoStudents.forEach(s => aoSelected.add(s.roll));
+  aoRenderStudentList();
+};
+
+window.aoDeselectAll = function(){
+  aoSelected.clear();
+  aoRenderStudentList();
+};
+
+window.aoDeleteOne = async function(roll){
+  const s = aoStudents.find(x=>x.roll===roll);
+  const name = s ? s.name : roll;
+  if(!confirm('Delete student "'+name+'" (Roll: '+roll+')?
+
+This removes all their results.
+This cannot be undone.')) return;
+  setSt('ao-student-st','info','Deleting…');
+  try{
+    const resultIds = allResults.filter(r=>(r.roll||'').trim()===roll).map(r=>r.id);
+    for(const id of resultIds){
+      await _fb.deleteDoc(_fb.doc(db,'results',id));
+    }
+    allResults = allResults.filter(r=>(r.roll||'').trim()!==roll);
+    aoSelected.delete(roll);
+    aoStudentFilter();
+    setSt('ao-student-st','ok','✅ Deleted '+resultIds.length+' result(s) for '+name+'.');
+  }catch(e){
+    setSt('ao-student-st','err','Failed: '+e.message);
+  }
+};
+
+window.aoDeleteSelected = async function(){
+  if(!aoSelected.size){ setSt('ao-student-st','err','No students selected.'); return; }
+  const rolls = [...aoSelected];
+  const names = rolls.map(r=>{ const s=aoStudents.find(x=>x.roll===r); return s?s.name+' ('+r+')':r; });
+  if(!confirm('Delete '+rolls.length+' student(s)?
+
+'+names.join('
+')+'
+
+All their results will be removed.
+This cannot be undone.')) return;
+  setSt('ao-student-st','info','Deleting '+rolls.length+' student(s)…');
+  let total = 0;
+  try{
+    for(const roll of rolls){
+      const ids = allResults.filter(r=>(r.roll||'').trim()===roll).map(r=>r.id);
+      for(const id of ids){
+        await _fb.deleteDoc(_fb.doc(db,'results',id));
+        total++;
+      }
+      allResults = allResults.filter(r=>(r.roll||'').trim()!==roll);
+    }
+    aoSelected.clear();
+    aoStudentFilter();
+    setSt('ao-student-st','ok','✅ Deleted '+total+' result(s) for '+rolls.length+' student(s).');
+  }catch(e){
+    setSt('ao-student-st','err','Failed: '+e.message);
+  }
+};
+
+/* ─── TAB 3: CHANGE PASSWORDS ─────────────────────────────── */
+window.aoChangeAdminPw = async function(){
+  const pw  = el('ao-adm-pw')?.value?.trim();
+  const pw2 = el('ao-adm-pw2')?.value?.trim();
+  if(!pw||!pw2){ setSt('ao-adm-st','err','Fill in both fields.'); return; }
+  if(pw!==pw2){ setSt('ao-adm-st','err','Passwords do not match.'); return; }
+  if(pw.length<6){ setSt('ao-adm-st','err','Minimum 6 characters.'); return; }
+  try{
+    await _fb.updateDoc(_fb.doc(db,'settings','app'),{
+      adminHash: hashStr(pw),
+      adminPw:   pw
+    });
+    appCfg.adminHash = hashStr(pw);
+    appCfg.adminPw   = pw;
+    el('ao-adm-pw').value=''; el('ao-adm-pw2').value='';
+    setSt('ao-adm-st','ok','✅ Admin password updated.');
+  }catch(e){ setSt('ao-adm-st','err','Failed: '+e.message); }
+};
+
+window.aoChangeTeacherPw = async function(){
+  const pw  = el('ao-tch-pw')?.value?.trim();
+  const pw2 = el('ao-tch-pw2')?.value?.trim();
+  if(!pw||!pw2){ setSt('ao-tch-st','err','Fill in both fields.'); return; }
+  if(pw!==pw2){ setSt('ao-tch-st','err','Passwords do not match.'); return; }
+  if(pw.length<6){ setSt('ao-tch-st','err','Minimum 6 characters.'); return; }
+  try{
+    await _fb.updateDoc(_fb.doc(db,'settings','app'),{
+      teacherHash: hashStr(pw),
+      teacherPw:   pw
+    });
+    appCfg.teacherHash = hashStr(pw);
+    appCfg.teacherPw   = pw;
+    el('ao-tch-pw').value=''; el('ao-tch-pw2').value='';
+    setSt('ao-tch-st','ok','✅ Shared teacher password updated.');
+  }catch(e){ setSt('ao-tch-st','err','Failed: '+e.message); }
+};
+
+window.aoLoadPwTeachers = async function(){
+  if(!fbReady) return;
+  const list = el('ao-pw-teacher-list');
+  if(!list) return;
+  list.innerHTML = '<div style="font-size:13px;color:var(--m)">Loading…</div>';
+  aoCancelTeacherPwReset();
+  try{
+    const snap = await _fb.getDocs(_fb.query(
+      _fb.collection(db,'teachers'), _fb.orderBy('createdAt','desc')
+    ));
+    if(snap.empty){
+      list.innerHTML = '<div style="font-size:13px;color:var(--m)">No individual teacher accounts.</div>';
+      return;
+    }
+    list.innerHTML = snap.docs.map(function(d){
+      const t = d.data();
+      return '<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--b);flex-wrap:wrap">'
+        +'<div style="flex:1;min-width:160px">'
+          +'<div style="font-size:13px;font-weight:600">'+esc((t.salutation||'')+' '+(t.name||'—'))+'</div>'
+          +'<div style="font-size:11px;color:var(--m)">'+esc(t.email||'')+'</div>'
+        +'</div>'
+        +'<button class="btn btn-warn btn-sm" onclick="aoStartTeacherPwReset(''+d.id+'',''+esc(t.name||'')+'',''+esc(t.email||'')+'')">🔑 Reset Password</button>'
+        +'</div>';
+    }).join('');
+  }catch(e){
+    list.innerHTML = '<div style="color:var(--err);font-size:13px">Error: '+e.message+'</div>';
+  }
+};
+
+window.aoStartTeacherPwReset = function(id, name, email){
+  _aoPwResetId = id;
+  const wrap = el('ao-pw-reset-wrap');
+  if(wrap) wrap.style.display='';
+  el('ao-pw-reset-label').textContent = 'Reset password for: '+name+' ('+email+')';
+  el('ao-pw-new').value=''; el('ao-pw-new2').value='';
+  setSt('ao-pw-reset-st','','');
+  wrap.scrollIntoView({behavior:'smooth',block:'nearest'});
+};
+
+window.aoCancelTeacherPwReset = function(){
+  _aoPwResetId = null;
+  const wrap = el('ao-pw-reset-wrap');
+  if(wrap) wrap.style.display='none';
+};
+
+window.aoConfirmTeacherPwReset = async function(){
+  if(!_aoPwResetId) return;
+  const pw  = el('ao-pw-new')?.value?.trim();
+  const pw2 = el('ao-pw-new2')?.value?.trim();
+  if(!pw||!pw2){ setSt('ao-pw-reset-st','err','Fill in both fields.'); return; }
+  if(pw!==pw2){ setSt('ao-pw-reset-st','err','Passwords do not match.'); return; }
+  if(pw.length<6){ setSt('ao-pw-reset-st','err','Minimum 6 characters.'); return; }
+  try{
+    await _fb.updateDoc(_fb.doc(db,'teachers',_aoPwResetId),{
+      passwordHash: hashStr(pw),
+      password:     pw,
+      resetAt:      Date.now(),
+      resetBy:      teacher.email
+    });
+    setSt('ao-pw-reset-st','ok','✅ Password updated.');
+    setTimeout(()=>aoCancelTeacherPwReset(), 1400);
+  }catch(e){ setSt('ao-pw-reset-st','err','Failed: '+e.message); }
 };
 
 // Start
