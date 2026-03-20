@@ -1119,9 +1119,16 @@ async function initFB(key,pid,aid){
                     return db.collection(col).doc(id); },
       setDoc:     function(ref,data){ return ref.set(data); },
       getDoc:     function(ref){ return ref.get().then(function(s){
-                    var existsBool = s.exists;
-                    s.exists = function(){ return existsBool; };
-                    return s; }); },
+                    // Compat SDK has .exists as a boolean getter on the prototype,
+                    // which cannot be overwritten via assignment.
+                    // Wrap in a plain object so .exists() works as a function call.
+                    return {
+                      exists:  function(){ return s.exists; },
+                      data:    function(){ return s.data(); },
+                      id:      s.id,
+                      ref:     s.ref
+                    };
+                  }); },
       updateDoc:  function(ref,data){ return ref.update(data); },
       deleteDoc:  function(ref){ return ref.delete(); },
       onSnapshot: function(ref,cb){ return ref.onSnapshot(cb); }
