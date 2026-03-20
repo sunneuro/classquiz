@@ -185,10 +185,10 @@ tr:hover td{background:var(--s2)}
 .logo-s{font-size:11px;color:var(--m);letter-spacing:2px;text-transform:uppercase;margin-top:3px}
 /* tabs */
 .tabs{display:flex;gap:3px;background:var(--s2);border-radius:10px;padding:3px;margin-bottom:16px;flex-wrap:wrap}
-.tab{flex:1;padding:6px 4px;text-align:center;font-family:var(--fh);font-size:10px;font-weight:700;
+.tab,.ao-tab{flex:1;padding:6px 4px;text-align:center;font-family:var(--fh);font-size:10px;font-weight:700;
   border-radius:7px;cursor:pointer;color:var(--m);transition:all .15s;letter-spacing:.2px;text-transform:uppercase;
   white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
-.tab.on{background:var(--s1);color:var(--txt);border:1px solid var(--b)}
+.tab.on,.ao-tab.on{background:var(--s1);color:var(--txt);border:1px solid var(--b)}
 /* home cards */
 .subj-card{background:var(--s1);border:1px solid var(--b);border-radius:var(--r);padding:16px;
   cursor:pointer;transition:border-color .15s,background .15s}
@@ -234,6 +234,9 @@ tr:hover td{background:var(--s2)}
 .recent-item:hover{background:var(--s3)}
 @media(max-width:420px){.sgrid{grid-template-columns:1fr 1fr}.qhdr{padding:8px 12px}.subj-grid{grid-template-columns:1fr}}
 </style>
+<!-- Firebase compat SDK — works on file:// in all browsers including Chrome -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -297,10 +300,11 @@ tr:hover td{background:var(--s2)}
     <input type="password" id="tl-pw" placeholder="Teacher or Admin password" autocomplete="current-password"/>
     <div style="margin-top:16px" class="col">
       <button class="btn btn-pri w100" onclick="doLogin()">Login →</button>
+      <button class="btn btn-ghost btn-sm w100" onclick="showPwRequest()">🔑 Request Password Reset</button>
     </div>
   </div>
   <div class="st" id="tl-st"></div>
-  <div style="text-align:center;margin-top:14px;font-size:12px;color:var(--m)">
+  <div style="text-align:center;margin-top:6px;font-size:12px;color:var(--m)">
     New teacher? <span style="color:var(--acc);cursor:pointer;font-weight:600" onclick="showRegister()">Register →</span>
   </div>
 </div>
@@ -330,6 +334,26 @@ tr:hover td{background:var(--s2)}
       <button class="btn btn-ghost btn-sm w100" onclick="closeOv('ov-register')">Cancel</button>
     </div>
     <div class="st" id="reg-st"></div>
+  </div>
+</div>
+
+<!-- PASSWORD RESET REQUEST OVERLAY -->
+<div class="ov" id="ov-pw-request">
+  <div class="ovc" style="border:1px solid var(--warn);max-width:420px;text-align:left">
+    <div style="font-size:28px;text-align:center;margin-bottom:10px">🔑</div>
+    <div style="font-family:var(--fh);font-size:16px;font-weight:700;margin-bottom:6px;text-align:center">Request Password Reset</div>
+    <div style="font-size:12px;color:var(--m);margin-bottom:16px;line-height:1.7;text-align:center">
+      Your name and email will be sent to the admin. They will reset your password and let you know.
+    </div>
+    <label>Your Full Name <span class="req">*</span></label>
+    <input type="text" id="pwr-name" placeholder="Your full name"/>
+    <label>Your Email <span class="req">*</span></label>
+    <input type="email" id="pwr-email" placeholder="your@email.com"/>
+    <div class="row" style="gap:9px;margin-top:14px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-pw-request')">Cancel</button>
+      <button class="btn btn-warn" style="flex:1" onclick="submitPwRequest()">Send Request →</button>
+    </div>
+    <div class="st" id="pwr-st"></div>
   </div>
 </div>
 
@@ -382,6 +406,14 @@ tr:hover td{background:var(--s2)}
     <h3 style="flex:1">👥 Manage Teachers</h3>
     <button class="btn btn-ghost btn-sm" onclick="renderMTList()">↻ Refresh</button>
   </div>
+  <!-- Pending reset requests — shown when any exist -->
+  <div id="mt-requests-wrap" style="display:none;margin-bottom:18px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <h3 style="color:var(--warn)">⚠️ Password Reset Requests</h3>
+      <span id="mt-req-badge" style="background:var(--warn);color:#000;font-size:10px;font-weight:800;padding:2px 8px;border-radius:20px;font-family:var(--fh)"></span>
+    </div>
+    <div id="mt-requests-list"></div>
+  </div>
   <div id="mt-list"><div style="font-size:13px;color:var(--m)">Loading…</div></div>
   <!-- Reset password overlay (inline) -->
   <div id="mt-reset-wrap" style="display:none;margin-top:16px" class="card card-warn">
@@ -425,9 +457,9 @@ tr:hover td{background:var(--s2)}
   <!-- Office content (hidden until unlocked) -->
   <div id="ao-content" style="display:none">
     <div class="tabs">
-      <div class="tab on" id="ao-tab-teachers" onclick="aoSwitchTab('teachers')">🗑 Delete Teachers</div>
-      <div class="tab" id="ao-tab-students" onclick="aoSwitchTab('students')">👤 Delete Students</div>
-      <div class="tab" id="ao-tab-passwords" onclick="aoSwitchTab('passwords')">🔑 Change Passwords</div>
+      <div class="ao-tab on" id="ao-tab-teachers" onclick="aoSwitchTab('teachers')">🗑 Delete Teachers</div>
+      <div class="ao-tab" id="ao-tab-students" onclick="aoSwitchTab('students')">👤 Delete Students</div>
+      <div class="ao-tab" id="ao-tab-passwords" onclick="aoSwitchTab('passwords')">🔑 Change Passwords</div>
     </div>
 
     <!-- ── TAB 1: DELETE TEACHERS ── -->
@@ -1044,29 +1076,56 @@ tr:hover td{background:var(--s2)}
   </div>
 </div>
 
-<script type="module">
+<script>
 /* ═══════════════════════════════════════════
    FIREBASE INIT
 ═══════════════════════════════════════════ */
 let db=null, _fb={}, fbReady=false;
 
 async function initFB(key,pid,aid){
-  // Allow calling with params OR reading from hidden fields (like v3/v4)
   const k = key || (document.getElementById('fb-key')?.value||'').trim();
   const p = pid  || (document.getElementById('fb-pid')?.value||'').trim();
   const a = aid  || (document.getElementById('fb-appid')?.value||'').trim();
   if(!k||!p||!a) return false;
   try{
-    const {initializeApp,getApps,deleteApp}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
-    const {getFirestore,collection,addDoc,getDocs,query,orderBy,where,
-           doc,setDoc,getDoc,updateDoc,deleteDoc,onSnapshot,limit}=
-      await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
-    getApps().forEach(a=>{try{deleteApp(a)}catch(e){}});
-    const app=initializeApp({apiKey:k,authDomain:`${p}.firebaseapp.com`,
-      projectId:p,storageBucket:`${p}.appspot.com`,appId:a});
-    db=getFirestore(app);
-    _fb={collection,addDoc,getDocs,query,orderBy,where,doc,setDoc,
-         getDoc,updateDoc,deleteDoc,onSnapshot,limit};
+    // Use compat SDK already loaded via <script> tags — works on file:// in Chrome
+    firebase.apps.forEach(function(a){try{a.delete()}catch(e){}});
+    const app = firebase.initializeApp({
+      apiKey:k, authDomain:p+'.firebaseapp.com',
+      projectId:p, storageBucket:p+'.appspot.com', appId:a
+    });
+    const fs = app.firestore();
+    db = fs;
+    // Wrap compat API to match the modular call shapes used throughout the app
+    _fb = {
+      collection: function(db,col){ return db.collection(col); },
+      addDoc:     function(ref,data){ return ref.add(data); },
+      getDocs:    function(q){ return q.get(); },
+      query:      function(ref){
+                    var q=ref;
+                    var constraints=Array.prototype.slice.call(arguments,1);
+                    for(var i=0;i<constraints.length;i++) q=constraints[i](q);
+                    return q; },
+      orderBy:    function(field,dir){ return function(q){ return q.orderBy(field,dir||'asc'); }; },
+      where:      function(f,op,v){ return function(q){ return q.where(f,op,v); }; },
+      limit:      function(n){ return function(q){ return q.limit(n); }; },
+      doc:        function(db,col,id){ 
+                    if(id===undefined){ 
+                      // called as _fb.doc(db,'col/id') — split
+                      var parts=col.split('/');
+                      if(parts.length===2) return db.collection(parts[0]).doc(parts[1]);
+                      if(parts.length===4) return db.collection(parts[0]).doc(parts[1]).collection(parts[2]).doc(parts[3]);
+                    }
+                    return db.collection(col).doc(id); },
+      setDoc:     function(ref,data){ return ref.set(data); },
+      getDoc:     function(ref){ return ref.get().then(function(s){
+                    var existsBool = s.exists;
+                    s.exists = function(){ return existsBool; };
+                    return s; }); },
+      updateDoc:  function(ref,data){ return ref.update(data); },
+      deleteDoc:  function(ref){ return ref.delete(); },
+      onSnapshot: function(ref,cb){ return ref.onSnapshot(cb); }
+    };
     fbReady=true;
     return true;
   }catch(e){console.warn('FB init:',e);return false;}
@@ -1278,6 +1337,7 @@ let _mtResetId=null;
 window.goManageTeachers=async function(){
   if(!teacher?.isAdmin){show('s-home');return;}
   show('s-manage-teachers');
+  await loadPwRequests();
   await renderMTList();
 };
 
@@ -1345,6 +1405,14 @@ window.confirmResetPassword=async function(){
       resetBy:teacher.email
     });
     setSt('mt-reset-st','ok','✅ Password reset successfully.');
+    // Clear any pending pw_request for this teacher
+    if(window._mtPendingRequestId){
+      try{
+        await _fb.updateDoc(_fb.doc(db,'pw_requests',window._mtPendingRequestId),{status:'resolved',resolvedAt:Date.now()});
+        window._mtPendingRequestId = null;
+        await loadPwRequests();
+      }catch(e){ console.warn('clear pw_request:',e); }
+    }
     setTimeout(()=>cancelReset(),1500);
   }catch(e){setSt('mt-reset-st','err','Failed: '+e.message);}
 };
@@ -3797,10 +3865,9 @@ window.removeFromPaper=function(qKey,isNew){
 
 
 window.renderActiveTab=function(){
-  const active=document.querySelector('.tab.on');
-  if(!active)return renderResults();
-  const id=active.id||'';
-  if(id==='tab-leaderboard') renderLeaderboard();
+  // Check which panel is visible — avoids querySelector issues entirely
+  const lb=el('panel-leaderboard');
+  if(lb && lb.style.display!=='none') renderLeaderboard();
   else renderResults();
 };
 
@@ -4276,6 +4343,119 @@ window.aoDeleteOneBtn = function(btn){
 window.aoStartTeacherPwResetBtn = function(btn){
   aoStartTeacherPwReset(btn.dataset.tid, btn.dataset.tname, btn.dataset.temail);
 };
+
+/* ═══════════════════════════════════════════
+   PASSWORD RESET REQUESTS
+═══════════════════════════════════════════ */
+window.showPwRequest = function(){
+  const cached = loadTCache();
+  if(el('pwr-name')) el('pwr-name').value = cached?.name || '';
+  if(el('pwr-email')) el('pwr-email').value = cached?.email || '';
+  el('pwr-st').className = 'st';
+  el('ov-pw-request').classList.add('on');
+};
+
+window.submitPwRequest = async function(){
+  const name  = (el('pwr-name')?.value||'').trim();
+  const email = (el('pwr-email')?.value||'').trim();
+  if(!name || !email){ setSt('pwr-st','err','Please fill in your name and email.'); return; }
+  if(!fbReady){ setSt('pwr-st','err','Not connected to server.'); return; }
+  setSt('pwr-st','info','Sending request…');
+  try{
+    // Check a pending request doesn't already exist for this email
+    const existing = await _fb.getDocs(_fb.query(
+      _fb.collection(db,'pw_requests'),
+      _fb.where('email','==',email)
+    ));
+    const alreadyPending = existing.docs.some(function(d){ return d.data().status==='pending'; });
+    if(alreadyPending){
+      setSt('pwr-st','warn','A request is already pending for this email. Please wait for the admin to respond.');
+      return;
+    }
+    await _fb.addDoc(_fb.collection(db,'pw_requests'),{
+      name, email,
+      status: 'pending',
+      ts: Date.now()
+    });
+    setSt('pwr-st','ok','✅ Request sent. The admin will reset your password shortly.');
+    // Also open mailto to admin as secondary channel
+    if(appCfg && appCfg.adminEmail){
+      const subj = encodeURIComponent('ClassQuiz Password Reset Request');
+      const body = encodeURIComponent('Teacher ' + name + ' (' + email + ') has requested a password reset on ClassQuiz. Please go to Manage Teachers to reset their password.');
+      setTimeout(function(){ window.location.href = 'mailto:' + appCfg.adminEmail + '?subject=' + subj + '&body=' + body; }, 1200);
+    }
+    setTimeout(function(){ closeOv('ov-pw-request'); }, 2200);
+  }catch(e){
+    setSt('pwr-st','err','Failed: ' + e.message);
+  }
+};
+
+// Load pending pw reset requests for Manage Teachers panel
+async function loadPwRequests(){
+  if(!fbReady) return;
+  try{
+    const snap = await _fb.getDocs(_fb.query(
+      _fb.collection(db,'pw_requests'),
+      _fb.where('status','==','pending')
+    ));
+    const wrap = el('mt-requests-wrap');
+    const list = el('mt-requests-list');
+    const badge = el('mt-req-badge');
+    if(!wrap || !list) return;
+    if(snap.empty){
+      wrap.style.display = 'none';
+      return;
+    }
+    // Sort by ts ascending in JS (avoids Firestore composite index requirement)
+    const sortedDocs = snap.docs.slice().sort(function(a,b){ return (a.data().ts||0)-(b.data().ts||0); });
+    wrap.style.display = '';
+    if(badge) badge.textContent = sortedDocs.length + ' pending';
+    list.innerHTML = sortedDocs.map(function(d){
+      const r = d.data();
+      const time = r.ts ? new Date(r.ts).toLocaleString() : '—';
+      return '<div class="card card-warn" style="margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">'
+        + '<div style="flex:1;min-width:160px">'
+          + '<div style="font-weight:600;font-size:14px">' + esc(r.name||'—') + '</div>'
+          + '<div style="font-size:12px;color:var(--m);margin-top:2px">' + esc(r.email||'—') + '</div>'
+          + '<div style="font-size:11px;color:var(--m2);margin-top:3px">Requested: ' + time + '</div>'
+        + '</div>'
+        + '<div class="row" style="gap:6px">'
+          + '<button class="btn btn-warn btn-sm" data-rid="' + d.id + '" data-rname="' + esc(r.name||'') + '" data-remail="' + esc(r.email||'') + '" onclick="mtResetFromRequest(this)">🔑 Reset Password</button>'
+          + '<button class="btn btn-ghost btn-sm" data-rid="' + d.id + '" onclick="mtDismissRequest(this)">✕ Dismiss</button>'
+        + '</div>'
+        + '</div>';
+    }).join('');
+  }catch(e){ console.warn('loadPwRequests:', e); }
+}
+
+window.mtResetFromRequest = async function(btn){
+  const rid   = btn.dataset.rid;
+  const name  = btn.dataset.rname;
+  const email = btn.dataset.remail;
+  // Find the teacher doc with this email
+  try{
+    const tSnap = await _fb.getDocs(_fb.query(
+      _fb.collection(db,'teachers'), _fb.where('email','==',email)
+    ));
+    if(tSnap.empty){
+      setSt('mt-st','err','No registered teacher account found for ' + email + '. They may use the shared password.');
+      return;
+    }
+    const tDoc = tSnap.docs[0];
+    // Store request id so confirmResetPassword can clear it
+    window._mtPendingRequestId = rid;
+    startResetPassword(tDoc.id, name, email);
+  }catch(e){ setSt('mt-st','err','Error: ' + e.message); }
+};
+
+window.mtDismissRequest = async function(btn){
+  const rid = btn.dataset.rid;
+  try{
+    await _fb.updateDoc(_fb.doc(db,'pw_requests',rid),{ status:'dismissed' });
+    await loadPwRequests();
+  }catch(e){ setSt('mt-st','err','Failed to dismiss: ' + e.message); }
+};
+
 // Start
 bootstrap();
 </script>
