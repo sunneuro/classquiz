@@ -1061,9 +1061,11 @@ window.doFirstRun=async function(){
       appName,adminEmail:email,
       adminHash:hashStr(adminPw),
       teacherHash:hashStr(teachPw),
+      adminPw:adminPw,
+      teacherPw:teachPw,
       createdAt:Date.now()
     });
-    appCfg={appName,adminEmail:email,adminHash:hashStr(adminPw),teacherHash:hashStr(teachPw)};
+    appCfg={appName,adminEmail:email,adminHash:hashStr(adminPw),teacherHash:hashStr(teachPw),adminPw:adminPw,teacherPw:teachPw};
     teacher={name,email,isAdmin:true};
     saveTCache(teacher);
     goHome();
@@ -1142,8 +1144,9 @@ window.doForgot=async function(){
 
   // Admin: send reminder to themselves
   if(email===appCfg.adminEmail){
+    const pw=appCfg.adminPw||'(password not available — please contact support)';
     const subject=encodeURIComponent('ClassQuiz Admin Password Reminder');
-    const body=encodeURIComponent('Your ClassQuiz admin password reminder.\n\nIMPORTANT: Delete this email after reading.\n\nThis is a reminder sent from the ClassQuiz app on your device.');
+    const body=encodeURIComponent('Your ClassQuiz admin password reminder.\n\nIMPORTANT: Delete this email after reading.\n\nYour admin password is: '+pw+'\n\nThis is a reminder sent from the ClassQuiz app on your device.');
     window.location.href='mailto:'+email+'?subject='+subject+'&body='+body;
     setSt('forgot-st','info','Opening your email app… press Send to receive the reminder.');
     return;
@@ -1156,19 +1159,21 @@ window.doForgot=async function(){
         _fb.collection(db,'teachers'),_fb.where('email','==',email)
       ));
       if(!tSnap.empty){
-        // Email admin requesting a password reset
-        const subject=encodeURIComponent('ClassQuiz Password Reset Request');
-        const body=encodeURIComponent('Hello,\n\nA ClassQuiz teacher has requested a password reset.\n\nTeacher Email: '+email+'\n\nPlease log in as Admin and reset their password from the Manage Teachers panel.\n\nDo not reply to this email.');
-        window.location.href='mailto:'+appCfg.adminEmail+'?subject='+subject+'&body='+body;
-        setSt('forgot-st','info','A password reset request email to the admin has been opened. Press Send to submit it.');
+        const tData=tSnap.docs[0].data();
+        const pw=tData.password||'(password not available — please contact your admin)';
+        const subject=encodeURIComponent('ClassQuiz Password Reminder');
+        const body=encodeURIComponent('Your ClassQuiz password reminder.\n\nIMPORTANT: Delete this email after reading.\n\nYour password is: '+pw+'\n\nThis is a reminder sent from the ClassQuiz app on your device.');
+        window.location.href='mailto:'+email+'?subject='+subject+'&body='+body;
+        setSt('forgot-st','info','Opening your email app… press Send to receive the reminder.');
         return;
       }
     }catch(e){console.warn('Forgot lookup:',e);}
   }
 
   // Fallback: shared password user
+  const pw=appCfg.teacherPw||'(password not available — please contact your admin)';
   const subject=encodeURIComponent('ClassQuiz Password Reminder');
-  const body=encodeURIComponent('Your ClassQuiz teacher password reminder.\n\nIMPORTANT: Delete this email after reading.\n\nThis is a reminder sent from the ClassQuiz app on your device.');
+  const body=encodeURIComponent('Your ClassQuiz password reminder.\n\nIMPORTANT: Delete this email after reading.\n\nYour password is: '+pw+'\n\nThis is a reminder sent from the ClassQuiz app on your device.');
   window.location.href='mailto:'+email+'?subject='+subject+'&body='+body;
   setSt('forgot-st','info','Opening your email app… press Send to receive the reminder.');
 };
@@ -1203,6 +1208,7 @@ window.doRegister=async function(){
     await _fb.addDoc(_fb.collection(db,'teachers'),{
       name,email,salutation:sal,
       passwordHash:hashStr(pw),
+      password:pw,
       createdAt:Date.now()
     });
     setSt('reg-st','ok','✅ Account created! You can now log in with your email and password.');
@@ -1280,6 +1286,7 @@ window.confirmResetPassword=async function(){
   try{
     await _fb.updateDoc(_fb.doc(db,'teachers',_mtResetId),{
       passwordHash:hashStr(pw),
+      password:pw,
       resetAt:Date.now(),
       resetBy:teacher.email
     });
