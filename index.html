@@ -3938,7 +3938,7 @@ window.aoLoadTeachers = async function(){
           +'<div style="font-size:12px;color:var(--m);margin-top:2px">'+esc(t.email||'—')+'</div>'
           +'<div style="font-size:11px;color:var(--m2);margin-top:3px">Registered: '+date+'</div>'
         +'</div>'
-        +'<button class="btn btn-err btn-sm" onclick="aoDeleteTeacher(''+d.id+'',''+esc(t.name||'')+'',''+esc(t.email||'')+'')">🗑 Delete Profile &amp; Sessions</button>'
+        +'<button class="btn btn-err btn-sm" data-did="'+d.id+'" data-dname="'+esc(t.name||'')+'" data-demail="'+esc(t.email||'')+'" onclick="aoDeleteTeacherBtn(this)">🗑 Delete Profile &amp; Sessions</button>'
         +'</div>';
     }).join('');
   }catch(e){
@@ -3947,16 +3947,7 @@ window.aoLoadTeachers = async function(){
 };
 
 window.aoDeleteTeacher = async function(docId, name, email){
-  if(!confirm('Delete teacher "'+name+'" ('+email+')?
-
-This will remove:
-• Their teacher account
-• All their quiz sessions
-• All their saved drafts/templates
-
-Questions they added to the Master Bank will be KEPT.
-
-This cannot be undone.')) return;
+  if(!confirm('Delete teacher "'+name+'" ('+email+')? This will remove their account, all quiz sessions, and drafts/templates. Questions they added are KEPT. Cannot be undone.')) return;
   setSt('ao-teacher-st','info','Deleting…');
   try{
     // 1. Delete teacher doc
@@ -4093,7 +4084,7 @@ function aoRenderStudentList(){
     const tests    = s.resultIds.length;
     return '<div class="card" style="margin-bottom:8px;padding:12px 14px;display:flex;align-items:center;gap:12px">'
       +'<input type="checkbox" '+checked+' style="width:18px;height:18px;min-width:18px;cursor:pointer;accent-color:var(--err)"'
-        +' onchange="aoToggle(''+esc(s.roll)+'')" />'
+        +' data-roll="'+esc(s.roll)+'" onchange="aoToggleBtn(this)" />'
       +'<div style="flex:1;min-width:0">'
         +'<div style="font-weight:600;font-size:14px">'+esc(s.name)
           +' <span style="font-size:11px;color:var(--m);font-weight:400">Roll: '+esc(s.roll)+'</span></div>'
@@ -4102,7 +4093,7 @@ function aoRenderStudentList(){
           +' &nbsp;·&nbsp; <span style="color:var(--acc)">'+tests+' result'+(tests!==1?'s':'')+'</span>'
         +'</div>'
       +'</div>'
-      +'<button class="btn btn-err btn-sm" onclick="aoDeleteOne(''+esc(s.roll)+'')">🗑</button>'
+      +'<button class="btn btn-err btn-sm" data-roll="'+esc(s.roll)+'" onclick="aoDeleteOneBtn(this)">🗑</button>'
       +'</div>';
   }).join('');
 
@@ -4133,10 +4124,7 @@ window.aoDeselectAll = function(){
 window.aoDeleteOne = async function(roll){
   const s = aoStudents.find(x=>x.roll===roll);
   const name = s ? s.name : roll;
-  if(!confirm('Delete student "'+name+'" (Roll: '+roll+')?
-
-This removes all their results.
-This cannot be undone.')) return;
+  if(!confirm('Delete student "'+name+'" (Roll: '+roll+')? This removes all their results and cannot be undone.')) return;
   setSt('ao-student-st','info','Deleting…');
   try{
     const resultIds = allResults.filter(r=>(r.roll||'').trim()===roll).map(r=>r.id);
@@ -4156,13 +4144,7 @@ window.aoDeleteSelected = async function(){
   if(!aoSelected.size){ setSt('ao-student-st','err','No students selected.'); return; }
   const rolls = [...aoSelected];
   const names = rolls.map(r=>{ const s=aoStudents.find(x=>x.roll===r); return s?s.name+' ('+r+')':r; });
-  if(!confirm('Delete '+rolls.length+' student(s)?
-
-'+names.join('
-')+'
-
-All their results will be removed.
-This cannot be undone.')) return;
+  if(!confirm('Delete '+rolls.length+' student(s)? '+names.join(', ')+'. All their results will be removed. Cannot be undone.')) return;
   setSt('ao-student-st','info','Deleting '+rolls.length+' student(s)…');
   let total = 0;
   try{
@@ -4240,7 +4222,7 @@ window.aoLoadPwTeachers = async function(){
           +'<div style="font-size:13px;font-weight:600">'+esc((t.salutation||'')+' '+(t.name||'—'))+'</div>'
           +'<div style="font-size:11px;color:var(--m)">'+esc(t.email||'')+'</div>'
         +'</div>'
-        +'<button class="btn btn-warn btn-sm" onclick="aoStartTeacherPwReset(''+d.id+'',''+esc(t.name||'')+'',''+esc(t.email||'')+'')">🔑 Reset Password</button>'
+        +'<button class="btn btn-warn btn-sm" data-tid="'+d.id+'" data-tname="'+esc(t.name||'')+'" data-temail="'+esc(t.email||'')+'" onclick="aoStartTeacherPwResetBtn(this)">🔑 Reset Password</button>'
         +'</div>';
     }).join('');
   }catch(e){
@@ -4283,6 +4265,17 @@ window.aoConfirmTeacherPwReset = async function(){
   }catch(e){ setSt('ao-pw-reset-st','err','Failed: '+e.message); }
 };
 
+
+window.aoToggleBtn = function(cb){ aoToggle(cb.dataset.roll); };
+window.aoDeleteTeacherBtn = function(btn){
+  aoDeleteTeacher(btn.dataset.did, btn.dataset.dname, btn.dataset.demail);
+};
+window.aoDeleteOneBtn = function(btn){
+  aoDeleteOne(btn.dataset.roll);
+};
+window.aoStartTeacherPwResetBtn = function(btn){
+  aoStartTeacherPwReset(btn.dataset.tid, btn.dataset.tname, btn.dataset.temail);
+};
 // Start
 bootstrap();
 </script>
