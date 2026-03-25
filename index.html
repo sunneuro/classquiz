@@ -403,6 +403,19 @@ tr:hover td{background:var(--s2)}
   </div>
   <!-- Subject cards -->
   <h2 id="home-subj-heading">Your Subjects</h2>
+  <!-- Active session banner -->
+  <div id="home-active-session" style="display:none;margin-bottom:14px">
+    <div class="card" style="padding:12px 16px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);cursor:pointer" onclick="returnToSession()">
+      <div class="row" style="align-items:center;gap:10px">
+        <span style="font-size:20px">🟢</span>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:13px">Active Session Running</div>
+          <div id="home-active-session-label" style="font-size:11px;color:var(--m)"></div>
+        </div>
+        <button class="btn btn-grn btn-sm">Return →</button>
+      </div>
+    </div>
+  </div>
   <div class="subj-grid" id="home-subjects">
     <div class="empty"><span class="empty-i">📭</span>No subjects yet. Add your first question to create one.</div>
   </div>
@@ -744,7 +757,7 @@ tr:hover td{background:var(--s2)}
   <div class="row" style="margin-bottom:10px;gap:8px;flex-wrap:wrap">
     <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
     <button class="btn btn-ghost btn-sm" onclick="show('s-addq');showWizStep(1)">✏️ Create Question Paper</button>
-    <button class="btn btn-ghost btn-sm" onclick="show('s-bank');renderBank()">📚 Master Question Bank</button>
+    <button class="btn btn-ghost btn-sm" onclick="goBank()">📚 Master Question Bank</button>
     <div style="flex:1"></div>
     <button class="btn btn-grn" onclick="goLaunch()" style="padding:8px 18px">🚀 Launch Quiz →</button>
   </div>
@@ -967,6 +980,10 @@ tr:hover td{background:var(--s2)}
   </div>
   <div id="rvio" style="display:none;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);
     border-radius:10px;padding:12px;font-size:12px;color:#fbbf24;width:100%;margin-bottom:12px;line-height:1.65"></div>
+  <!-- Share button ABOVE locked message -->
+  <div class="col w100" style="max-width:520px;margin-bottom:10px">
+    <button class="btn btn-pri w100" onclick="shareRes()">📤 Share Result</button>
+  </div>
   <div id="ans-locked-msg" style="display:none;background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.2);
     border-radius:10px;padding:12px;font-size:12px;color:#a5a0ff;width:100%;margin-bottom:12px;text-align:center">
     🔒 Correct answers will be shown when your teacher unlocks them
@@ -975,10 +992,35 @@ tr:hover td{background:var(--s2)}
     <div style="font-family:var(--fh);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--m);margin-bottom:10px">Answer Review</div>
     <div id="ans-review-list"></div>
   </div>
+  <!-- Share button BELOW answer review -->
   <div class="col w100" style="max-width:520px">
     <button class="btn btn-pri w100" onclick="shareRes()">📤 Share Result</button>
-    <button class="btn btn-ghost btn-sm w100" id="btn-check-unlock" onclick="checkUnlock()" style="display:none">🔄 Check if answers are unlocked</button>
+    <button class="btn btn-ghost btn-sm w100" id="btn-check-unlock" onclick="checkUnlock()" style="display:none;margin-top:8px">🔄 Check if answers are unlocked</button>
   </div>
+</div>
+</div>
+
+<!-- EDIT STUDENT MODAL -->
+<div class="ov" id="ov-edit-student">
+<div class="ov-card" style="max-width:420px;width:94%">
+  <div class="row" style="margin-bottom:14px">
+    <h2 style="flex:1">Edit Student Record</h2>
+    <button class="btn btn-ghost btn-sm" onclick="closeOv('ov-edit-student')">✕</button>
+  </div>
+  <label>Full Name <span class="req">*</span></label>
+  <input type="text" id="es-name" placeholder="Student name"/>
+  <label style="margin-top:10px">Roll Number <span class="req">*</span></label>
+  <input type="text" id="es-roll" placeholder="Roll number"/>
+  <label style="margin-top:10px">Email</label>
+  <input type="text" id="es-email" placeholder="Email address"/>
+  <div style="font-size:11px;color:var(--m);margin-top:6px">
+    ⚠ Editing this record updates the stored result only. It does not affect other sessions.
+  </div>
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-edit-student')">Cancel</button>
+    <button class="btn btn-grn" style="flex:2" onclick="saveEditStudent()">💾 Save Changes</button>
+  </div>
+  <div class="st" id="es-st"></div>
 </div>
 </div>
 
@@ -1027,6 +1069,7 @@ tr:hover td{background:var(--s2)}
         <th class="th-sort" onclick="sortResults('roll')">Roll <span class="arr">↕</span></th>
         <th>Email</th>
         <th class="th-sort" onclick="sortResults('performanceScore')" style="text-align:center">Performance <span class="arr">↕</span></th>
+        <th style="width:36px"></th>
         <th class="th-sort" onclick="sortResults('pct')" style="text-align:center">Score% <span class="arr">↕</span></th>
         <th class="th-sort" onclick="sortResults('timeTaken')" style="text-align:center">Time <span class="arr">↕</span></th>
         <th class="th-sort" onclick="sortResults('violations')" style="text-align:center">Violations <span class="arr">↕</span></th>
@@ -1486,6 +1529,7 @@ async function goHome(){
   await loadAllQuestions();
   renderHomeSubjects();
   loadRecentSessions();
+  checkActiveSession();
 }
 
 // ── Home screen tab state ─────────────────────────
@@ -2076,6 +2120,8 @@ let bankSel=new Set(); // selected question IDs in bank
 let bankMode='';         // 'addToDraft' when opened from Create Question Paper
 
 window.renderBank=function(){
+  // Always refresh filter dropdowns so they reflect current question data
+  populateBankFilters();
   const qs=allQuestions.filter(bankFilterFn);
   el('bank-total').textContent=qs.length+' of '+allQuestions.length+' questions';
   const list=el('bank-list');
@@ -2475,6 +2521,15 @@ window.goLaunch=async function(){
   // Start listening to lobby
   startLobbyListener();
   if(lBtn){lBtn.disabled=false;lBtn.innerHTML='🚀 Launch Quiz →';}
+  // Persist session so teacher can return after navigating away
+  try{
+    localStorage.setItem('cq5_active_session',JSON.stringify({
+      sessionId:activeSessionId,
+      displayId:activeSessionDisplayId,
+      fileId:activeSessionFileId,
+      ts:Date.now()
+    }));
+  }catch(e){}
   launchTab('qr');
   show('s-launch');
 };
@@ -2625,6 +2680,7 @@ window.endSession=async function(){
     el('session-status-msg').textContent='⏹ Session ended — answers auto-unlocked.';
     el('btn-end-session').style.display='none';
     el('btn-end-2').style.display='none';
+    clearSavedSession();
     // Update unlock button visual
     const btn=el('btn-unlock');
     if(btn){btn.textContent='🔓 Answers Unlocked (auto)';btn.className='btn btn-grn w100';}
@@ -3432,12 +3488,12 @@ window.sortResults=function(col){
   });
   renderResults();
 };
-window.renderResults=function(){
+function getFilteredResults(){
   const prog=gv('rf-prog'),subj=gv('rf-subj'),topic=gv('rf-topic'),
         testid=gv('rf-testid'),teacher_f=gv('rf-teacher'),
         session_f=gv('rf-session'),
         srch=(gv('rf-search')||'').toLowerCase();
-  let filtered=allResults.filter(r=>{
+  return allResults.filter(r=>{
     if(prog&&r.programmeName!==prog)return false;
     if(subj&&r.courseId!==subj)return false;
     if(topic&&r.topicName!==topic)return false;
@@ -3445,7 +3501,6 @@ window.renderResults=function(){
     if(teacher_f&&r.teacherName!==teacher_f)return false;
     if(session_f&&r.sessionDisplayId!==session_f)return false;
     if(srch){
-      // Search across ALL columns simultaneously
       const hay=[r.studentName,r.roll,r.email,r.programmeName,
         r.courseId,r.subjectName,r.topicName,r.testLabel,
         r.sessionDisplayId,r.teacherName,
@@ -3455,10 +3510,12 @@ window.renderResults=function(){
     }
     return true;
   });
+}
 
-  // Sort
-  // Numeric columns — always compare as numbers
-  // Sort using unified state object — no closure ambiguity
+window.renderResults=function(){
+  let filtered=getFilteredResults();
+
+  // Sort — numeric columns compared as numbers
   var _s=window._sort;
   var _sc=_s.col;
   var _sd=_s.dir;
@@ -3518,6 +3575,7 @@ window.renderResults=function(){
       +'<td style="font-size:11px">'+esc(r.testLabel||'—')+'</td>'
       +'<td style="font-size:11px;color:var(--acc)">'+esc(r.sessionDisplayId||'—')+'</td>'
       +'<td style="font-size:11px">'+esc(r.teacherName||'—')+'</td>'
+      +'<td><button class="btn-icon" title="Edit student" onclick="openEditStudent(this.dataset.rid)" data-rid="'+r.id+'" style="font-size:13px">✏️</button></td>'
       +'</tr>';
   }).join('');
 };
@@ -3526,7 +3584,9 @@ window.dlCSV=function(){
   const headers=['#','Name','Roll','Email','Performance','Score %','Time','Violations','Reconnects',
     'Programme','Course ID','Subject','Unit/Topic','Test ID/Comment','Session ID','Teacher',
     'Attempted','Correct','Wrong','Off-screen(s)'];
-  const rows=allResults.map((r,i)=>{
+  // Use same filter as dashboard — export only what is currently visible
+  const filtered=getFilteredResults();
+  const rows=filtered.map((r,i)=>{
     const perf=r.performanceScore!=null?r.performanceScore:(()=>{
       const m=(r.timeTaken||'').match(/(\d+)m\s*(\d+)s/);
       const t=m?parseInt(m[1])*60+parseInt(m[2]):0;
@@ -4766,6 +4826,85 @@ async function resumeQuiz(prog, lobbyRef){
   document.addEventListener('visibilitychange',onVis);
   document.addEventListener('fullscreenchange',onFS);
   document.addEventListener('webkitfullscreenchange',onFS);
+}
+
+
+let editingResultId=null;
+
+window.openEditStudent=function(rid){
+  const r=allResults.find(x=>x.id===rid);
+  if(!r){alert('Record not found.');return;}
+  editingResultId=rid;
+  el('es-name').value=r.studentName||'';
+  el('es-roll').value=r.roll||'';
+  el('es-email').value=r.email||'';
+  el('ov-edit-student').classList.add('on');
+};
+
+window.saveEditStudent=async function(){
+  if(!editingResultId){return;}
+  const name=el('es-name').value.trim();
+  const roll=el('es-roll').value.trim();
+  const email=el('es-email').value.trim();
+  if(!name||!roll){setSt('es-st','err','Name and Roll Number are required.');return;}
+  const btn=document.querySelector('#ov-edit-student .btn-grn');
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
+  try{
+    await _fb.updateDoc(_fb.doc(db,'results',editingResultId),{
+      studentName:name,roll:roll,email:email
+    });
+    // Update local cache
+    const r=allResults.find(x=>x.id===editingResultId);
+    if(r){r.studentName=name;r.roll=roll;r.email=email;}
+    setSt('es-st','ok','✅ Saved.');
+    setTimeout(function(){
+      closeOv('ov-edit-student');
+      renderResults();
+    },800);
+  }catch(e){
+    setSt('es-st','err','Save failed: '+e.message);
+  }
+  if(btn){btn.disabled=false;btn.textContent='💾 Save Changes';}
+};
+
+
+window.returnToSession=function(){
+  if(activeSessionId){
+    show('s-launch');
+    launchTab('qr');
+  }
+};
+
+function checkActiveSession(){
+  // Check localStorage for a persisted session
+  try{
+    const saved=localStorage.getItem('cq5_active_session');
+    if(!saved)return;
+    const data=JSON.parse(saved);
+    // Only show if session was started in last 6 hours
+    if(!data.sessionId||Date.now()-data.ts>6*60*60*1000)return;
+    // Restore IDs
+    if(!activeSessionId){
+      activeSessionId=data.sessionId;
+      activeSessionDisplayId=data.displayId||'';
+      activeSessionFileId=data.fileId||'';
+    }
+    // Show banner
+    const banner=el('home-active-session');
+    const label=el('home-active-session-label');
+    if(banner) banner.style.display='';
+    if(label) label.textContent=data.displayId||data.sessionId;
+  }catch(e){}
+}
+
+// Clear saved session when ended
+function clearSavedSession(){
+  try{localStorage.removeItem('cq5_active_session');}catch(e){}
+  const banner=el('home-active-session');
+  if(banner) banner.style.display='none';
+  activeSessionId=null;
+  activeSessionDisplayId='';
+  activeSessionFileId='';
 }
 
 </script>
