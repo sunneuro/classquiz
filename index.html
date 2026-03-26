@@ -1024,6 +1024,31 @@ tr:hover td{background:var(--s2)}
 </div>
 </div>
 
+<!-- ADMIN EDIT STUDENT MODAL -->
+<div class="ov" id="ov-ao-edit-student">
+<div class="ov-card" style="max-width:420px;width:94%">
+  <div class="row" style="margin-bottom:14px">
+    <h2 style="flex:1">Edit Student Profile</h2>
+    <button class="btn btn-ghost btn-sm" onclick="closeOv('ov-ao-edit-student')">✕</button>
+  </div>
+  <div style="font-size:12px;color:var(--m);margin-bottom:12px">
+    Editing will update <strong>all results</strong> for this student's roll number.
+  </div>
+  <label>Full Name <span class="req">*</span></label>
+  <input type="text" id="ao-es-name" placeholder="Student name"/>
+  <label style="margin-top:10px">Roll Number <span class="req">*</span></label>
+  <input type="text" id="ao-es-roll" placeholder="Roll number"/>
+  <label style="margin-top:10px">Email</label>
+  <input type="text" id="ao-es-email" placeholder="Email address"/>
+  <input type="hidden" id="ao-es-orig-roll"/>
+  <div style="display:flex;gap:8px;margin-top:16px">
+    <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-ao-edit-student')">Cancel</button>
+    <button class="btn btn-grn" style="flex:2" onclick="aoSaveEditStudent()">💾 Save All Records</button>
+  </div>
+  <div class="st" id="ao-es-st"></div>
+</div>
+</div>
+
 <!-- RESULTS DASHBOARD -->
 <div id="s-results" class="screen center">
 <div class="mw-lg">
@@ -1267,6 +1292,16 @@ function showSplash(msg){const s=el('s-splash');if(s)s.style.display='flex';cons
 window.show=function(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   el(id).classList.add('active');window.scrollTo(0,0);
+  // Hide float session btn on student screens, show on teacher screens
+  var studentScreens=['s-stu-login','s-stu-wait','s-quiz','s-result'];
+  var fb=el('float-session-btn');
+  if(fb&&activeSessionId){
+    fb.style.display=studentScreens.includes(id)?'none':'';
+  }
+  // If returning to s-launch, refresh lobby immediately
+  if(id==='s-launch'&&activeSessionId){
+    startLobbyListener();
+  }
 };
 window.closeOv=function(id){const e=el(id);if(e)e.classList.remove('on');};
 
@@ -2432,6 +2467,11 @@ window.updateCountHint=function(){
 };
 
 window.goLaunch=async function(){
+  // One session per teacher — check for active session first
+  if(activeSessionId){
+    const goBack=confirm('You already have an active session running.\nLaunching a new one will abandon it (students mid-quiz will be affected).\n\nClick OK to return to your active session, or Cancel to launch a new one anyway.');
+    if(goBack){show('s-launch');launchTab('qr');return;}
+  }
   // Combine draft + selected bank questions
   const bankQs=allQuestions.filter(q=>curSel.includes(q.id));
   const allPaper=[...curDraft,...bankQs];
@@ -2521,6 +2561,9 @@ window.goLaunch=async function(){
   // Start listening to lobby
   startLobbyListener();
   if(lBtn){lBtn.disabled=false;lBtn.innerHTML='🚀 Launch Quiz →';}
+  // Show floating return button
+  var fb=el('float-session-btn');
+  if(fb) fb.style.display='';
   // Persist session so teacher can return after navigating away
   try{
     localStorage.setItem('cq5_active_session',JSON.stringify({
@@ -2742,7 +2785,9 @@ function showStuError(msg){
 }
 
 window.stuJoin=async function(){
-  const name=gv('sl-name'),roll=gv('sl-roll'),email=gv('sl-email');
+  const name=(gv('sl-name')||'').trim();
+  const roll=(gv('sl-roll')||'').trim().toUpperCase();
+  const email=(gv('sl-email')||'').trim().toLowerCase();
   if(!name){alert('Please enter your full name.');el('sl-name').focus();return;}
   if(!roll){alert('Please enter your roll number.');el('sl-roll').focus();return;}
   if(!email||!email.includes('@')){alert('Please enter a valid email.');el('sl-email').focus();return;}
@@ -2775,7 +2820,7 @@ window.stuJoin=async function(){
       const existing=await _fb.getDocs(_fb.collection(db,'lobby_'+qParams.sessionId));
       for(const d of existing.docs){
         const data=d.data();
-        if(data.roll===roll){
+        if((data.roll||'').toUpperCase()===(roll||'').toUpperCase()){
           // Check if this is a disconnect rejoin (progress saved < 2 min ago)
           const prog=data.progress;
           const twoMinAgo=Date.now()-(2*60*1000);
@@ -2783,7 +2828,7 @@ window.stuJoin=async function(){
             // Offer to resume
             const doResume=confirm('Welcome back, '+name+'! You were on Question '+(prog.curQ+1)+'. Tap OK to resume from where you left off.');
             if(doResume){
-              stuName=name;stuRoll=roll;stuEmail=email;
+              stuName=name.trim();stuRoll=roll.trim().toUpperCase();stuEmail=email.trim().toLowerCase();
               // Store lobby doc ref for continued progress saves
               lobbyDocRef=d.ref;
               // Increment relogin count for teacher visibility
@@ -4448,12 +4493,13 @@ function aoRenderStudentList(){
         +' data-roll="'+esc(s.roll)+'" onchange="aoToggleBtn(this)" />'
       +'<div style="flex:1;min-width:0">'
         +'<div style="font-weight:600;font-size:14px">'+esc(s.name)
-          +' <span style="font-size:11px;color:var(--m);font-weight:400">Roll: '+esc(s.roll)+'</span></div>'
+          +' <span style="font-size:13px;color:var(--txt);font-weight:700"> · '+esc(s.roll)+'</span></div>'
         +'<div style="font-size:11px;color:var(--m);margin-top:3px">'
           +esc(progList)+' &nbsp;·&nbsp; '+esc(subjList)
           +' &nbsp;·&nbsp; <span style="color:var(--acc)">'+tests+' result'+(tests!==1?'s':'')+'</span>'
         +'</div>'
       +'</div>'
+      +'<button class="btn btn-ghost btn-sm" data-roll="'+esc(s.roll)+'" onclick="aoEditOneBtn(this)" style="margin-right:4px">✏️</button>'
       +'<button class="btn btn-err btn-sm" data-roll="'+esc(s.roll)+'" onclick="aoDeleteOneBtn(this)">🗑</button>'
       +'</div>';
   }).join('');
@@ -4483,7 +4529,7 @@ window.aoDeselectAll = function(){
 };
 
 window.aoDeleteOne = async function(roll){
-  const s = aoStudents.find(x=>x.roll===roll);
+  const s = aoStudents.find(x=>(x.roll||'').toUpperCase()===(roll||'').toUpperCase());
   const name = s ? s.name : roll;
   if(!confirm('Delete student "'+name+'" (Roll: '+roll+')? This removes all their results and cannot be undone.')) return;
   setSt('ao-student-st','info','Deleting…');
@@ -4889,11 +4935,13 @@ function checkActiveSession(){
       activeSessionDisplayId=data.displayId||'';
       activeSessionFileId=data.fileId||'';
     }
-    // Show banner
+    // Show banner and floating button
     const banner=el('home-active-session');
     const label=el('home-active-session-label');
     if(banner) banner.style.display='';
     if(label) label.textContent=data.displayId||data.sessionId;
+    const fb=el('float-session-btn');
+    if(fb) fb.style.display='';
   }catch(e){}
 }
 
@@ -4902,11 +4950,23 @@ function clearSavedSession(){
   try{localStorage.removeItem('cq5_active_session');}catch(e){}
   const banner=el('home-active-session');
   if(banner) banner.style.display='none';
+  const fb=el('float-session-btn');
+  if(fb) fb.style.display='none';
   activeSessionId=null;
   activeSessionDisplayId='';
   activeSessionFileId='';
 }
 
 </script>
+<!-- FLOATING RETURN TO SESSION BUTTON -->
+<div id="float-session-btn" style="display:none;position:fixed;bottom:20px;right:20px;z-index:9000">
+  <button onclick="returnToSession()"
+    style="background:var(--grn);color:#fff;border:none;border-radius:50px;
+    padding:12px 20px;font-family:var(--fh);font-weight:700;font-size:13px;
+    box-shadow:0 4px 20px rgba(16,185,129,.45);cursor:pointer;
+    display:flex;align-items:center;gap:8px;white-space:nowrap">
+    <span style="font-size:16px">🟢</span> Return to Session
+  </button>
+</div>
 </body>
 </html>
