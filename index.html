@@ -4957,6 +4957,53 @@ function clearSavedSession(){
   activeSessionFileId='';
 }
 
+
+window.aoEditOneBtn=function(btn){
+  const roll=btn.dataset.roll;
+  const s=aoStudents.find(x=>(x.roll||'').toUpperCase()===(roll||'').toUpperCase());
+  if(!s){alert('Student not found.');return;}
+  el('ao-es-name').value=s.name||'';
+  el('ao-es-roll').value=s.roll||'';
+  el('ao-es-email').value=s.email||'';
+  el('ao-es-orig-roll').value=s.roll||'';
+  el('ov-ao-edit-student').classList.add('on');
+};
+
+window.aoSaveEditStudent=async function(){
+  const origRoll=(el('ao-es-orig-roll').value||'').trim().toUpperCase();
+  const newName=(el('ao-es-name').value||'').trim();
+  const newRoll=(el('ao-es-roll').value||'').trim().toUpperCase();
+  const newEmail=(el('ao-es-email').value||'').trim().toLowerCase();
+  if(!newName||!newRoll){setSt('ao-es-st','err','Name and Roll Number are required.');return;}
+  const btn=document.querySelector('#ov-ao-edit-student .btn-grn');
+  if(btn){btn.disabled=true;btn.textContent='Saving...';}
+  try{
+    const snaps=await Promise.all([
+      _fb.getDocs(_fb.query(_fb.collection(db,'results'),_fb.where('roll','==',origRoll))),
+      _fb.getDocs(_fb.query(_fb.collection(db,'results'),_fb.where('roll','==',origRoll.toLowerCase())))
+    ]);
+    const allDocs=[...snaps[0].docs,...snaps[1].docs];
+    const seen=new Set();
+    let updated=0;
+    for(const d of allDocs){
+      if(seen.has(d.id))continue;seen.add(d.id);
+      await _fb.updateDoc(d.ref,{studentName:newName,roll:newRoll,email:newEmail});
+      updated++;
+    }
+    allResults.forEach(function(r){
+      if((r.roll||'').toUpperCase()===origRoll){
+        r.studentName=newName;r.roll=newRoll;r.email=newEmail;
+      }
+    });
+    setSt('ao-es-st','ok','Updated '+updated+' record(s).');
+    setTimeout(function(){
+      closeOv('ov-ao-edit-student');
+      if(typeof aoRenderStudents==='function') aoRenderStudents();
+    },800);
+  }catch(e){setSt('ao-es-st','err','Failed: '+e.message);}
+  if(btn){btn.disabled=false;btn.textContent='Save All Records';}
+};
+
 </script>
 <!-- FLOATING RETURN TO SESSION BUTTON -->
 <div id="float-session-btn" style="display:none;position:fixed;bottom:20px;right:20px;z-index:9000">
