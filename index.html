@@ -1142,6 +1142,9 @@ async function initFB(key,pid,aid){
                       if(parts.length===4) return db.collection(parts[0]).doc(parts[1]).collection(parts[2]).doc(parts[3]);
                     }
                     return db.collection(col).doc(id); },
+      
+      
+  
       setDoc:     function(ref,data){ return ref.set(data); },
       getDoc:     function(ref){ return ref.get().then(function(s){
                     // Compat SDK has .exists as a boolean getter on the prototype,
@@ -3254,7 +3257,6 @@ window.finishQuiz=async function(){
   document.removeEventListener('contextmenu',onCtxMenu);
   exitFS();reviewMode=true;
 
-  // Guard: ensure roll number is present before saving
   if(!stuRoll||!stuRoll.trim()){
     console.warn('finishQuiz: stuRoll is empty — result not saved.');
   }
@@ -3266,7 +3268,6 @@ window.finishQuiz=async function(){
     if(ua===undefined||ua==='')return;
     attempted++;
     if(q.type==='mcq'){
-      // Map displayed answer index back to original option index via shuffle
       const dispIdx=parseInt(ua);
       const shuffle=optionShuffles[i];
       const origIdx=shuffle?shuffle[dispIdx]:dispIdx;
@@ -3276,10 +3277,24 @@ window.finishQuiz=async function(){
   });
 
   const pct=quizQs.length?Math.round(correct/quizQs.length*100):0;
+
+  // Improved Reconnect Counting
+  let reconnects = 0;
+  if(fbReady && qParams?.sessionId && stuRoll){
+    try{
+      const lobbyDocId = stuRoll.replace(/[^a-zA-Z0-9]/g,'_');
+      const lobSnap = await _fb.getDoc(_fb.doc(db,'lobby_'+qParams.sessionId, lobbyDocId));
+      if(lobSnap.exists()){
+        reconnects = (lobSnap.data().reloginCount || 1) - 1;
+      }
+    }catch(e){ console.warn('Reconnect count failed:', e); }
+  }
+
   const rec={
     studentName:stuName,roll:stuRoll,email:stuEmail,
     total:quizQs.length,attempted,correct,wrong:attempted-correct,
     pct,timeTaken:fmtT(timeTaken),violations:vioCount,offSecs,
+    reconnects: reconnects,
     sessionId:qParams?.sessionId||'',
     sessionName:qParams?.sessionName||'',
     sessionDisplayId:qParams?.sessionDisplayId||'',
@@ -3294,19 +3309,25 @@ window.finishQuiz=async function(){
     ts:Date.now()
   };
 
-  if(fbReady&&stuRoll&&stuRoll.trim()){
+  // STRICTLY IDEMPOTENT SAVING - Prevents duplicates
+  if(fbReady && stuRoll && stuRoll.trim()){
     try{
-      const _safeRoll=stuRoll.replace(/[^a-zA-Z0-9]/g,'_');
-      const _safeSid=(qParams?.sessionId||'x').replace(/[^a-zA-Z0-9]/g,'_');
-      await _fb.setDoc(_fb.doc(db,'results',_safeRoll+'__'+_safeSid),rec);
+      const _safeRoll = stuRoll.replace(/[^a-zA-Z0-9]/g,'_');
+      const _safeSid  = (qParams?.sessionId || 'x').replace(/[^a-zA-Z0-9]/g,'_');
+      const docId = _safeRoll + '__' + _safeSid;
+
+      // Delete any previous result first
+      try {
+        await _fb.deleteDoc(_fb.doc(db, 'results', docId));
+      } catch(e) {}
+
+      await _fb.setDoc(_fb.doc(db, 'results', docId), rec);
+
       if(qParams?.sessionId){
         const _lobbyDocId=stuRoll.replace(/[^a-zA-Z0-9]/g,'_');
-        _fb.updateDoc(_fb.doc(db,'lobby_'+qParams.sessionId,_lobbyDocId),
-          {status:'submitted'}).catch(()=>{});
+        _fb.updateDoc(_fb.doc(db,'lobby_'+qParams.sessionId,_lobbyDocId),{status:'submitted'}).catch(()=>{});
       }
     }catch(e){console.warn('Save result:',e);}
-  } else if(fbReady&&(!stuRoll||!stuRoll.trim())){
-    console.warn('Result not saved: roll number is empty.');
   }
 
   showResult(rec);
@@ -3522,6 +3543,7 @@ window.renderResults=function(){
         testid=gv('rf-testid'),teacher_f=gv('rf-teacher'),
         session_f=gv('rf-session'),
         srch=(gv('rf-search')||'').toLowerCase();
+
   let filtered=allResults.filter(r=>{
     if(prog&&r.programmeName!==prog)return false;
     if(subj&&r.courseId!==subj)return false;
@@ -3530,34 +3552,28 @@ window.renderResults=function(){
     if(teacher_f&&r.teacherName!==teacher_f)return false;
     if(session_f&&r.sessionDisplayId!==session_f)return false;
     if(srch){
-      // Search across ALL columns simultaneously
       const hay=[r.studentName,r.roll,r.email,r.programmeName,
         r.courseId,r.subjectName,r.topicName,r.testLabel,
         r.sessionDisplayId,r.teacherName,
-        String(r.pct||''),r.timeTaken,String(r.violations||'')
-      ].join(' ').toLowerCase();
+        String(r.pct||''),r.timeTaken,String(r.violations||'')].join(' ').toLowerCase();
       if(!hay.includes(srch))return false;
     }
     return true;
   });
 
-  // Sort
-  // Numeric columns — always compare as numbers
-  // Sort using unified state object — no closure ambiguity
+  // Sort (your original sort logic)
   var _s=window._sort;
   var _sc=_s.col;
   var _sd=_s.dir;
   var toSec=function(s){if(!s)return 0;var m=s.match(/(\d+)m\s*(\d+)s/);return m?parseInt(m[1])*60+parseInt(m[2]):0;};
-  var numericCols={'pct':1,'performanceScore':1,'violations':1,'offSecs':1,'attempted':1,'correct':1,'wrong':1};
   filtered.sort(function(a,b){
     var va,vb;
     if(_sc==='performanceScore'){
-      // Compute fresh if missing to guarantee numeric value
       va=typeof a.performanceScore==='number'?a.performanceScore:0;
       vb=typeof b.performanceScore==='number'?b.performanceScore:0;
     } else if(_sc==='timeTaken'){
       va=toSec(a[_sc]); vb=toSec(b[_sc]);
-    } else if(numericCols[_sc]){
+    } else if({'pct':1,'performanceScore':1,'violations':1,'offSecs':1,'attempted':1,'correct':1,'wrong':1}[_sc]){
       va=Number(a[_sc])||0; vb=Number(b[_sc])||0;
     } else {
       va=String(a[_sc]||'').toLowerCase();
@@ -3568,16 +3584,24 @@ window.renderResults=function(){
     return 0;
   });
 
-  el('rs-tot').textContent=filtered.length;
-  if(!filtered.length){
-    el('rs-avg').textContent=el('rs-hi').textContent=el('rs-lo').textContent='—';
-    el('results-tbody').innerHTML='<tr><td colspan="13" style="text-align:center;color:var(--m);padding:24px">No results match.</td></tr>';
-    return;
-  }
-  const pcts=filtered.map(r=>r.pct);
-  el('rs-avg').textContent=Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length)+'%';
-  el('rs-hi').textContent=Math.max(...pcts)+'%';
-  el('rs-lo').textContent=Math.min(...pcts)+'%';
+  // Updated Header with Reconnects column
+  el('results-thead').innerHTML = `<tr>
+    <th>#</th>
+    <th class="th-sort" onclick="sortResults('studentName')">Name <span class="arr">↕</span></th>
+    <th class="th-sort" onclick="sortResults('roll')">Roll <span class="arr">↕</span></th>
+    <th>Email</th>
+    <th class="th-sort" onclick="sortResults('performanceScore')" style="text-align:center">Performance <span class="arr">↕</span></th>
+    <th class="th-sort" onclick="sortResults('pct')" style="text-align:center">Score% <span class="arr">↕</span></th>
+    <th class="th-sort" onclick="sortResults('timeTaken')" style="text-align:center">Time <span class="arr">↕</span></th>
+    <th class="th-sort" onclick="sortResults('violations')" style="text-align:center">Violations <span class="arr">↕</span></th>
+    <th class="th-sort" onclick="sortResults('reconnects')" style="text-align:center">Reconnects <span class="arr">↕</span></th>
+    <th class="th-sort" onclick="sortResults('programmeName')">Programme <span class="arr">↕</span></th>
+    <th class="th-sort" onclick="sortResults('subjectName')">Subject <span class="arr">↕</span></th>
+    <th class="th-sort" onclick="sortResults('topicName')">Unit/Topic <span class="arr">↕</span></th>
+    <th class="th-sort" onclick="sortResults('testLabel')">Test ID/Comment <span class="arr">↕</span></th>
+    <th>Session ID</th>
+    <th class="th-sort" onclick="sortResults('teacherName')">Teacher <span class="arr">↕</span></th>
+  </tr>`;
 
   el('results-tbody').innerHTML=filtered.map((r,i)=>{
     const scoreColor=r.pct>=70?'var(--grn)':r.pct>=50?'var(--warn)':'var(--err)';
@@ -3596,6 +3620,7 @@ window.renderResults=function(){
       +'<td style="color:'+scoreColor+';font-weight:700;text-align:center">'+r.pct+'%</td>'
       +'<td style="text-align:center">'+esc(r.timeTaken||'—')+'</td>'
       +'<td style="color:'+vioColor+';text-align:center">'+( r.violations||0)+'</td>'
+      +'<td style="text-align:center;color:'+((r.reconnects||0)>0?'var(--warn)':'var(--m)')+'">'+(r.reconnects||0)+'</td>'
       +'<td style="font-size:11px">'+esc(r.programmeName||'—')+'</td>'
       +'<td style="font-size:11px">'+esc(r.courseId||'')+' '+esc(r.subjectName||'—')+'</td>'
       +'<td style="font-size:11px">'+esc(r.topicName||'—')+'</td>'
@@ -3604,8 +3629,47 @@ window.renderResults=function(){
       +'<td style="font-size:11px">'+esc(r.teacherName||'—')+'</td>'
       +'</tr>';
   }).join('');
-};
 
+  // Duplicate Warning Banner
+  const dupMap = {};
+  filtered.forEach(r => {
+    const key = (r.roll || '') + '::' + (r.sessionDisplayId || r.sessionId || '');
+    if (!dupMap[key]) dupMap[key] = [];
+    dupMap[key].push(r);
+  });
+  const duplicates = Object.values(dupMap).filter(group => group.length > 1);
+
+  if (duplicates.length > 0) {
+    let bannerHTML = `<div id="dup-banner" class="st warn" style="margin:12px 0 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">`
+      + `<div><strong>⚠️ Duplicates Detected:</strong> ${duplicates.length} student(s) have multiple entries in the same session.</div>`
+      + `<button class="btn btn-err btn-sm" onclick="cleanDuplicates()">🧹 Clean Duplicates (Keep Best)</button>`
+      + `</div>`;
+
+    const existing = document.getElementById('dup-banner');
+    if (existing) existing.remove();
+
+    const tableWrap = el('results-table-wrap');
+    if (tableWrap) {
+      const div = document.createElement('div');
+      div.innerHTML = bannerHTML;
+      tableWrap.parentNode.insertBefore(div, tableWrap);
+    }
+  } else {
+    const existing = document.getElementById('dup-banner');
+    if (existing) existing.remove();
+  }
+
+  el('rs-tot').textContent=filtered.length;
+  if(!filtered.length){
+    el('rs-avg').textContent=el('rs-hi').textContent=el('rs-lo').textContent='—';
+    return;
+  }
+  const pcts=filtered.map(r=>r.pct);
+  el('rs-avg').textContent=Math.round(pcts.reduce((a,b)=>a+b,0)/pcts.length)+'%';
+  el('rs-hi').textContent=Math.max(...pcts)+'%';
+  el('rs-lo').textContent=Math.min(...pcts)+'%';
+};
+  
 window.dlCSV=function(){
   const headers=['#','Name','Roll','Email','Performance','Score %','Time','Violations',
     'Programme','Course ID','Subject','Unit/Topic','Test ID/Comment','Session ID','Teacher',
@@ -4775,6 +4839,46 @@ window.mtDismissRequest = async function(btn){
 };
 
 // Start
+
+// Clean Duplicates - Keep only the best result per student per session
+window.cleanDuplicates = async function(){
+  if(!confirm('This will delete duplicate results and keep only the best (highest Performance) entry for each student.\n\nContinue?')) return;
+
+  setSt('results-refreshed', 'info', 'Cleaning duplicates...');
+
+  const dupMap = {};
+  allResults.forEach(r => {
+    const key = (r.roll || '') + '::' + (r.sessionDisplayId || r.sessionId || '');
+    if (!dupMap[key]) dupMap[key] = [];
+    dupMap[key].push(r);
+  });
+
+  let deletedCount = 0;
+
+  for (const group of Object.values(dupMap)) {
+    if (group.length <= 1) continue;
+
+    group.sort((a,b) => {
+      const pa = a.performanceScore != null ? a.performanceScore : (a.pct || 0);
+      const pb = b.performanceScore != null ? b.performanceScore : (b.pct || 0);
+      return pb - pa;
+    });
+
+    const toDelete = group.slice(1);
+    for (const bad of toDelete) {
+      try {
+        const docId = bad.id || ((bad.roll||'').replace(/[^a-zA-Z0-9]/g,'_') + '__' + ((bad.sessionId||'').replace(/[^a-zA-Z0-9]/g,'_')));
+        await _fb.deleteDoc(_fb.doc(db, 'results', docId));
+        deletedCount++;
+      } catch(e) { console.warn('Failed to delete duplicate:', e); }
+    }
+  }
+
+  await loadResults(false);
+  renderResults();
+
+  setSt('results-refreshed', 'ok', `✅ Cleaned ${deletedCount} duplicate record(s). Only best results kept.`);
+};
 bootstrap();
 </script>
 </body>
