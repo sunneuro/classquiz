@@ -480,8 +480,8 @@ tr:hover td{background:var(--s2)}
       <div class="ao-tab" id="ao-tab-students" onclick="aoSwitchTab('students')">👥 Edit / Delete Students</div>
       <div class="ao-tab" id="ao-tab-passwords" onclick="aoSwitchTab('passwords')">🔑 Change Passwords</div>
     </div>
-
-    <!-- ── TAB 1: DELETE TEACHERS ── -->
+  
+    <!-- ── TAB 1: EDIT / DELETE TEACHERS ── -->
     <div id="ao-panel-teachers">
       <div class="card card-warn" style="margin-bottom:14px">
         <div style="font-size:12px;color:var(--m);line-height:1.7">
@@ -492,8 +492,8 @@ tr:hover td{background:var(--s2)}
       <div id="ao-teacher-list"><div style="font-size:13px;color:var(--m)">Loading…</div></div>
       <div class="st" id="ao-teacher-st"></div>
     </div>
-
-    <!-- ── TAB 2: DELETE STUDENTS ── -->
+  
+    <!-- ── TAB 2: EDIT / DELETE STUDENTS ── -->
     <div id="ao-panel-students" style="display:none">
       <div class="card" style="padding:14px;margin-bottom:14px">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px">
@@ -528,7 +528,7 @@ tr:hover td{background:var(--s2)}
       <div class="st" id="ao-student-st"></div>
     </div>
 
-    <!-- ── TAB 3: CHANGE PASSWORDS ── -->
+<!-- ── TAB 3: CHANGE PASSWORDS ── -->
     <div id="ao-panel-passwords" style="display:none">
       <!-- Admin password -->
       <div class="card" style="margin-bottom:14px">
@@ -572,6 +572,48 @@ tr:hover td{background:var(--s2)}
         <div class="st" id="ao-pw-st"></div>
       </div>
     </div>
+
+    <!-- EDIT MODALS - Placed here, inside #ao-content but OUTSIDE all panels -->
+    <!-- Edit Student Modal -->
+    <div class="ov" id="ov-edit-student">
+      <div class="ovc" style="max-width:420px;text-align:left">
+        <div style="font-family:var(--fh);font-size:18px;font-weight:700;margin-bottom:8px">✏️ Edit Student</div>
+        <label>Full Name <span class="req">*</span></label>
+        <input type="text" id="edit-stu-name" placeholder="Student full name"/>
+        <label>Roll Number <span class="req">*</span></label>
+        <input type="text" id="edit-stu-roll" placeholder="e.g. 2025MSNS010"/>
+        <label>Email <span class="req">*</span></label>
+        <input type="email" id="edit-stu-email" placeholder="student@email.com"/>
+        <div class="row" style="gap:8px;margin-top:16px">
+          <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-edit-student')">Cancel</button>
+          <button class="btn btn-grn" style="flex:1" onclick="saveEditedStudent()">💾 Save Changes</button>
+        </div>
+        <div class="st" id="edit-stu-st"></div>
+      </div>
+    </div>
+
+    <!-- Edit Teacher Modal (Basic version) -->
+    <div class="ov" id="ov-edit-teacher">
+      <div class="ovc" style="max-width:420px;text-align:left">
+        <div style="font-family:var(--fh);font-size:18px;font-weight:700;margin-bottom:8px">✏️ Edit Teacher</div>
+        <label>Salutation</label>
+        <select id="edit-tch-sal">
+          <option value="Dr.">Dr.</option>
+          <option value="Mr.">Mr.</option>
+          <option value="Ms.">Ms.</option>
+        </select>
+        <label>Full Name <span class="req">*</span></label>
+        <input type="text" id="edit-tch-name" placeholder="Teacher full name"/>
+        <label>Email <span class="req">*</span></label>
+        <input type="email" id="edit-tch-email" placeholder="teacher@email.com"/>
+        <div class="row" style="gap:8px;margin-top:16px">
+          <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-edit-teacher')">Cancel</button>
+          <button class="btn btn-grn" style="flex:1" onclick="saveEditedTeacher()">💾 Save Changes</button>
+        </div>
+        <div class="st" id="edit-tch-st"></div>
+      </div>
+    </div>
+
   </div><!-- /ao-content -->
 </div>
 </div>
@@ -4838,32 +4880,24 @@ window.mtDismissRequest = async function(btn){
   }catch(e){ setSt('mt-st','err','Failed to dismiss: ' + e.message); }
 };
 
-// Start
-
 // Clean Duplicates - Keep only the best result per student per session
 window.cleanDuplicates = async function(){
   if(!confirm('This will delete duplicate results and keep only the best (highest Performance) entry for each student.\n\nContinue?')) return;
-
   setSt('results-refreshed', 'info', 'Cleaning duplicates...');
-
   const dupMap = {};
   allResults.forEach(r => {
     const key = (r.roll || '') + '::' + (r.sessionDisplayId || r.sessionId || '');
     if (!dupMap[key]) dupMap[key] = [];
     dupMap[key].push(r);
   });
-
   let deletedCount = 0;
-
   for (const group of Object.values(dupMap)) {
     if (group.length <= 1) continue;
-
     group.sort((a,b) => {
       const pa = a.performanceScore != null ? a.performanceScore : (a.pct || 0);
       const pb = b.performanceScore != null ? b.performanceScore : (b.pct || 0);
       return pb - pa;
     });
-
     const toDelete = group.slice(1);
     for (const bad of toDelete) {
       try {
@@ -4873,12 +4907,79 @@ window.cleanDuplicates = async function(){
       } catch(e) { console.warn('Failed to delete duplicate:', e); }
     }
   }
-
   await loadResults(false);
   renderResults();
-
   setSt('results-refreshed', 'ok', `✅ Cleaned ${deletedCount} duplicate record(s). Only best results kept.`);
 };
+
+// ====================== EDIT STUDENT ======================
+let currentEditingStudentRoll = null;
+
+window.editStudent = function(btn){
+  const roll = btn.dataset.roll;
+  const student = aoStudents.find(s => s.roll === roll);
+  if(!student) {
+    alert("Student data not found.");
+    return;
+  }
+
+  currentEditingStudentRoll = roll;
+  el('edit-stu-name').value = student.name || '';
+  el('edit-stu-roll').value = student.roll || '';
+  el('edit-stu-email').value = student.email || '';
+  el('edit-stu-st').className = 'st';
+  el('ov-edit-student').classList.add('on');
+};
+
+window.saveEditedStudent = async function(){
+  if(!currentEditingStudentRoll) return;
+
+  const newName  = gv('edit-stu-name').trim();
+  const newRoll  = gv('edit-stu-roll').trim();
+  const newEmail = gv('edit-stu-email').trim();
+
+  if(!newName || !newRoll || !newEmail){
+    setSt('edit-stu-st','err','All fields are required.');
+    return;
+  }
+
+  setSt('edit-stu-st','info','Updating...');
+
+  try{
+    const toUpdate = allResults.filter(r => (r.roll || '').trim() === currentEditingStudentRoll);
+
+    for(const result of toUpdate){
+      const docId = result.id || 
+        ((result.roll||'').replace(/[^a-zA-Z0-9]/g,'_') + '__' + 
+         (result.sessionId||'').replace(/[^a-zA-Z0-9]/g,'_'));
+      
+      await _fb.updateDoc(_fb.doc(db, 'results', docId), {
+        studentName: newName,
+        roll: newRoll,
+        email: newEmail
+      });
+    }
+
+    setSt('edit-stu-st','ok','✅ Student profile updated successfully.');
+
+    setTimeout(() => {
+      closeOv('ov-edit-student');
+      aoStudentFilter();   // Refresh the list
+    }, 1500);
+
+  } catch(e){
+    setSt('edit-stu-st','err','Failed to update: ' + e.message);
+  }
+};
+
+// ====================== EDIT TEACHER (Basic) ======================
+let currentEditingTeacherId = null;
+
+window.editTeacher = function(btn){
+  alert("Teacher editing is not fully implemented yet.\n\nYou can use 'Reset Password' for now.");
+};
+
+// Start the app
 bootstrap();
 </script>
 </body>
