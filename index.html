@@ -104,6 +104,9 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
   border:1px solid var(--b);background:transparent;color:var(--m);cursor:pointer;transition:all .13s}
 .fil.on{background:var(--acc);border-color:var(--acc);color:#fff}
 /* quiz */
+/* Screenshot deterrent: disable selection & right-click on quiz */
+#s-quiz{-webkit-user-select:none;user-select:none}
+#s-quiz .qbody{-webkit-user-select:none;user-select:none}
 .qhdr{background:var(--s1);border-bottom:1px solid var(--b);padding:10px 16px;
   display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;
   position:sticky;top:0;z-index:10}
@@ -403,19 +406,6 @@ tr:hover td{background:var(--s2)}
   </div>
   <!-- Subject cards -->
   <h2 id="home-subj-heading">Your Subjects</h2>
-  <!-- Active session banner -->
-  <div id="home-active-session" style="display:none;margin-bottom:14px">
-    <div class="card" style="padding:12px 16px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.25);cursor:pointer" onclick="returnToSession()">
-      <div class="row" style="align-items:center;gap:10px">
-        <span style="font-size:20px">🟢</span>
-        <div style="flex:1">
-          <div style="font-weight:700;font-size:13px">Active Session Running</div>
-          <div id="home-active-session-label" style="font-size:11px;color:var(--m)"></div>
-        </div>
-        <button class="btn btn-grn btn-sm">Return →</button>
-      </div>
-    </div>
-  </div>
   <div class="subj-grid" id="home-subjects">
     <div class="empty"><span class="empty-i">📭</span>No subjects yet. Add your first question to create one.</div>
   </div>
@@ -757,7 +747,7 @@ tr:hover td{background:var(--s2)}
   <div class="row" style="margin-bottom:10px;gap:8px;flex-wrap:wrap">
     <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
     <button class="btn btn-ghost btn-sm" onclick="show('s-addq');showWizStep(1)">✏️ Create Question Paper</button>
-    <button class="btn btn-ghost btn-sm" onclick="goBank()">📚 Master Question Bank</button>
+    <button class="btn btn-ghost btn-sm" onclick="show('s-bank');renderBank()">📚 Master Question Bank</button>
     <div style="flex:1"></div>
     <button class="btn btn-grn" onclick="goLaunch()" style="padding:8px 18px">🚀 Launch Quiz →</button>
   </div>
@@ -980,10 +970,6 @@ tr:hover td{background:var(--s2)}
   </div>
   <div id="rvio" style="display:none;background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);
     border-radius:10px;padding:12px;font-size:12px;color:#fbbf24;width:100%;margin-bottom:12px;line-height:1.65"></div>
-  <!-- Share button ABOVE locked message -->
-  <div class="col w100" style="max-width:520px;margin-bottom:10px">
-    <button class="btn btn-pri w100" onclick="shareRes()">📤 Share Result</button>
-  </div>
   <div id="ans-locked-msg" style="display:none;background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.2);
     border-radius:10px;padding:12px;font-size:12px;color:#a5a0ff;width:100%;margin-bottom:12px;text-align:center">
     🔒 Correct answers will be shown when your teacher unlocks them
@@ -992,60 +978,10 @@ tr:hover td{background:var(--s2)}
     <div style="font-family:var(--fh);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--m);margin-bottom:10px">Answer Review</div>
     <div id="ans-review-list"></div>
   </div>
-  <!-- Share button BELOW answer review -->
   <div class="col w100" style="max-width:520px">
     <button class="btn btn-pri w100" onclick="shareRes()">📤 Share Result</button>
-    <button class="btn btn-ghost btn-sm w100" id="btn-check-unlock" onclick="checkUnlock()" style="display:none;margin-top:8px">🔄 Check if answers are unlocked</button>
+    <button class="btn btn-ghost btn-sm w100" id="btn-check-unlock" onclick="checkUnlock()" style="display:none">🔄 Check if answers are unlocked</button>
   </div>
-</div>
-</div>
-
-<!-- EDIT STUDENT MODAL -->
-<div class="ov" id="ov-edit-student">
-<div class="ov-card" style="max-width:420px;width:94%">
-  <div class="row" style="margin-bottom:14px">
-    <h2 style="flex:1">Edit Student Record</h2>
-    <button class="btn btn-ghost btn-sm" onclick="closeOv('ov-edit-student')">✕</button>
-  </div>
-  <label>Full Name <span class="req">*</span></label>
-  <input type="text" id="es-name" placeholder="Student name"/>
-  <label style="margin-top:10px">Roll Number <span class="req">*</span></label>
-  <input type="text" id="es-roll" placeholder="Roll number"/>
-  <label style="margin-top:10px">Email</label>
-  <input type="text" id="es-email" placeholder="Email address"/>
-  <div style="font-size:11px;color:var(--m);margin-top:6px">
-    ⚠ Editing this record updates the stored result only. It does not affect other sessions.
-  </div>
-  <div style="display:flex;gap:8px;margin-top:16px">
-    <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-edit-student')">Cancel</button>
-    <button class="btn btn-grn" style="flex:2" onclick="saveEditStudent()">💾 Save Changes</button>
-  </div>
-  <div class="st" id="es-st"></div>
-</div>
-</div>
-
-<!-- ADMIN EDIT STUDENT MODAL -->
-<div class="ov" id="ov-ao-edit-student">
-<div class="ov-card" style="max-width:420px;width:94%">
-  <div class="row" style="margin-bottom:14px">
-    <h2 style="flex:1">Edit Student Profile</h2>
-    <button class="btn btn-ghost btn-sm" onclick="closeOv('ov-ao-edit-student')">✕</button>
-  </div>
-  <div style="font-size:12px;color:var(--m);margin-bottom:12px">
-    Editing will update <strong>all results</strong> for this student's roll number.
-  </div>
-  <label>Full Name <span class="req">*</span></label>
-  <input type="text" id="ao-es-name" placeholder="Student name"/>
-  <label style="margin-top:10px">Roll Number <span class="req">*</span></label>
-  <input type="text" id="ao-es-roll" placeholder="Roll number"/>
-  <label style="margin-top:10px">Email</label>
-  <input type="text" id="ao-es-email" placeholder="Email address"/>
-  <input type="hidden" id="ao-es-orig-roll"/>
-  <div style="display:flex;gap:8px;margin-top:16px">
-    <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-ao-edit-student')">Cancel</button>
-    <button class="btn btn-grn" style="flex:2" onclick="aoSaveEditStudent()">💾 Save All Records</button>
-  </div>
-  <div class="st" id="ao-es-st"></div>
 </div>
 </div>
 
@@ -1094,11 +1030,9 @@ tr:hover td{background:var(--s2)}
         <th class="th-sort" onclick="sortResults('roll')">Roll <span class="arr">↕</span></th>
         <th>Email</th>
         <th class="th-sort" onclick="sortResults('performanceScore')" style="text-align:center">Performance <span class="arr">↕</span></th>
-        <th style="width:36px"></th>
         <th class="th-sort" onclick="sortResults('pct')" style="text-align:center">Score% <span class="arr">↕</span></th>
         <th class="th-sort" onclick="sortResults('timeTaken')" style="text-align:center">Time <span class="arr">↕</span></th>
         <th class="th-sort" onclick="sortResults('violations')" style="text-align:center">Violations <span class="arr">↕</span></th>
-        <th class="th-sort" onclick="sortResults('reconnects')" style="text-align:center">Reconnects <span class="arr">↕</span></th>
         <th class="th-sort" onclick="sortResults('programmeName')">Programme <span class="arr">↕</span></th>
         <th class="th-sort" onclick="sortResults('subjectName')">Subject <span class="arr">↕</span></th>
         <th class="th-sort" onclick="sortResults('topicName')">Unit/Topic <span class="arr">↕</span></th>
@@ -1248,7 +1182,7 @@ let quizQs=[];         // final quiz question array
 let answers={};
 let curQ=0,timeLeft=0,timerInt=null;
 let stuName='',stuRoll='',stuEmail='';
-let vioCount=0,offSecs=0,offStart=null;
+let vioCount=0,offSecs=0,offStart=null,vioLockedQs={};
 let vioTimer=null,vioCd=10,firstVio=true,quizActive=false;
 let reviewMode=false;
 let lockedAnswers={}; // answers locked after navigating away
@@ -1292,16 +1226,6 @@ function showSplash(msg){const s=el('s-splash');if(s)s.style.display='flex';cons
 window.show=function(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   el(id).classList.add('active');window.scrollTo(0,0);
-  // Hide float session btn on student screens, show on teacher screens
-  var studentScreens=['s-stu-login','s-stu-wait','s-quiz','s-result'];
-  var fb=el('float-session-btn');
-  if(fb&&activeSessionId){
-    fb.style.display=studentScreens.includes(id)?'none':'';
-  }
-  // If returning to s-launch, refresh lobby immediately
-  if(id==='s-launch'&&activeSessionId){
-    startLobbyListener();
-  }
 };
 window.closeOv=function(id){const e=el(id);if(e)e.classList.remove('on');};
 
@@ -1564,7 +1488,6 @@ async function goHome(){
   await loadAllQuestions();
   renderHomeSubjects();
   loadRecentSessions();
-  checkActiveSession();
 }
 
 // ── Home screen tab state ─────────────────────────
@@ -2067,8 +1990,7 @@ window.saveQuestion=async function(){
     testLabel:wizData.testid,
     addedBy:teacher.name,
     addedByEmail:teacher.email,
-    ts:Date.now(),
-    reconnects:0 // will be updated from lobby doc if available
+    ts:Date.now()
   };
   const btn=el('btn-save-q');
   btn.innerHTML='<span class="spin"></span> Saving…';btn.disabled=true;
@@ -2155,8 +2077,6 @@ let bankSel=new Set(); // selected question IDs in bank
 let bankMode='';         // 'addToDraft' when opened from Create Question Paper
 
 window.renderBank=function(){
-  // Always refresh filter dropdowns so they reflect current question data
-  populateBankFilters();
   const qs=allQuestions.filter(bankFilterFn);
   el('bank-total').textContent=qs.length+' of '+allQuestions.length+' questions';
   const list=el('bank-list');
@@ -2467,11 +2387,6 @@ window.updateCountHint=function(){
 };
 
 window.goLaunch=async function(){
-  // One session per teacher — check for active session first
-  if(activeSessionId){
-    const goBack=confirm('You already have an active session running.\nLaunching a new one will abandon it (students mid-quiz will be affected).\n\nClick OK to return to your active session, or Cancel to launch a new one anyway.');
-    if(goBack){show('s-launch');launchTab('qr');return;}
-  }
   // Combine draft + selected bank questions
   const bankQs=allQuestions.filter(q=>curSel.includes(q.id));
   const allPaper=[...curDraft,...bankQs];
@@ -2561,18 +2476,6 @@ window.goLaunch=async function(){
   // Start listening to lobby
   startLobbyListener();
   if(lBtn){lBtn.disabled=false;lBtn.innerHTML='🚀 Launch Quiz →';}
-  // Show floating return button
-  var fb=el('float-session-btn');
-  if(fb) fb.style.display='';
-  // Persist session so teacher can return after navigating away
-  try{
-    localStorage.setItem('cq5_active_session',JSON.stringify({
-      sessionId:activeSessionId,
-      displayId:activeSessionDisplayId,
-      fileId:activeSessionFileId,
-      ts:Date.now()
-    }));
-  }catch(e){}
   launchTab('qr');
   show('s-launch');
 };
@@ -2667,20 +2570,17 @@ function renderLobby(entries){
   list.innerHTML=entries.map(e=>{
     const statusCls=e.status==='submitted'?'chip-submitted':e.status==='started'?'chip-started':'chip-joined';
     const statusLbl=e.status==='submitted'?'✓ Submitted':e.status==='started'?'▶ Started':'● Waiting';
-    const reconnectBadge=(e.reloginCount>0)
-      ?'<span style="font-size:10px;color:var(--warn);margin-left:6px" title="Reconnected '+e.reloginCount+' time(s)">⚠ reconnected×'+e.reloginCount+'</span>'
-      :'';
-    return '<div class="lobby-row">'
-      +'<div style="flex:1">'
-        +'<div class="lobby-name">'+esc(e.name)+reconnectBadge+'</div>'
-        +'<div class="lobby-roll">'+esc(e.roll)+' • '+esc(e.email)+'</div>'
-      +'</div>'
-      +'<span class="chip '+statusCls+'" style="font-size:10px">'+statusLbl+'</span>'
-      +'<button class="btn-icon" onclick="lobbyRemoveBtn(this)" data-id="'+e.id+'" title="Remove" style="color:var(--err);font-size:11px">✕</button>'+'</div>';
+    return`<div class="lobby-row">
+      <div style="flex:1">
+        <div class="lobby-name">${esc(e.name)}</div>
+        <div class="lobby-roll">${esc(e.roll)} • ${esc(e.email)}</div>
+      </div>
+      <span class="chip ${statusCls}" style="font-size:10px">${statusLbl}</span>
+      <button class="btn-icon" onclick="removeFromLobby('${e.id}')" title="Remove" style="color:var(--err);font-size:11px">✕</button>
+    </div>`;
   }).join('');
 }
 
-window.lobbyRemoveBtn=function(btn){removeFromLobby(btn.dataset.id);};
 window.removeFromLobby=async function(docId){
   if(!confirm('Remove this student from the lobby?'))return;
   try{
@@ -2723,7 +2623,6 @@ window.endSession=async function(){
     el('session-status-msg').textContent='⏹ Session ended — answers auto-unlocked.';
     el('btn-end-session').style.display='none';
     el('btn-end-2').style.display='none';
-    clearSavedSession();
     // Update unlock button visual
     const btn=el('btn-unlock');
     if(btn){btn.textContent='🔓 Answers Unlocked (auto)';btn.className='btn btn-grn w100';}
@@ -2785,69 +2684,75 @@ function showStuError(msg){
 }
 
 window.stuJoin=async function(){
-  const name=(gv('sl-name')||'').trim();
-  const roll=(gv('sl-roll')||'').trim().toUpperCase();
-  const email=(gv('sl-email')||'').trim().toLowerCase();
+  const name=gv('sl-name'),roll=gv('sl-roll'),email=gv('sl-email');
   if(!name){alert('Please enter your full name.');el('sl-name').focus();return;}
   if(!roll){alert('Please enter your roll number.');el('sl-roll').focus();return;}
   if(!email||!email.includes('@')){alert('Please enter a valid email.');el('sl-email').focus();return;}
-  // Check email typo
   var slWarn=document.getElementById('sl-email-warn');
   var slDismissed=slWarn&&slWarn.dataset.dismissed==='1';
   if(!slDismissed){
     var blocked=!checkEmailTypo('sl-email','sl-email-warn');
-    if(blocked)return; // show suggestion, wait for acknowledgement
+    if(blocked)return;
+  }
+  const sid=qParams?.sessionId;
+  const status=qParams?.status;
+
+  async function findResult(sessionId,r){
+    if(!fbReady||!sessionId)return null;
+    const safeR=r.replace(/[^a-zA-Z0-9]/g,'_');
+    const safeS=sessionId.replace(/[^a-zA-Z0-9]/g,'_');
+    try{
+      const snap=await _fb.getDoc(_fb.doc(db,'results',safeR+'__'+safeS));
+      if(snap.exists())return snap.data();
+    }catch(e){}
+    try{
+      const q=await _fb.getDocs(_fb.query(
+        _fb.collection(db,'results'),
+        _fb.where('sessionId','==',sessionId),
+        _fb.where('roll','==',r)
+      ));
+      if(!q.empty)return q.docs[0].data();
+    }catch(e){}
+    return null;
   }
 
-  // Check session status
-  const status=qParams?.status;
-  if(status==='ended'){showStuError('This session has already ended.');return;}
+  if(status==='ended'){
+    const rec=await findResult(sid,roll);
+    if(rec){
+      stuName=name;stuRoll=roll;stuEmail=email;
+      quizQs=qParams.qs||[];
+      try{answers=typeof rec.answerMap==='string'?JSON.parse(rec.answerMap):(rec.answerMap||{});}catch(e){answers={};}
+      reviewMode=true;await showResult(rec);return;
+    }
+    showStuError('This session has already ended. No submission was found for Roll: '+roll+'.');
+    return;
+  }
 
-  // Check for duplicate roll: query results (already submitted) AND lobby (in-progress)
-  if(fbReady&&qParams?.sessionId){
+  if(fbReady&&sid){
     try{
-      // 1. Check results collection — already completed this session
-      const prevResult=await _fb.getDocs(_fb.query(
-        _fb.collection(db,'results'),
-        _fb.where('sessionId','==',qParams.sessionId),
-        _fb.where('roll','==',roll)
-      ));
-      if(!prevResult.empty){
-        showStuError('You have already submitted this quiz (Roll: '+roll+'). Each student may only attempt a session once.');
-        return;
+      const rec=await findResult(sid,roll);
+      if(rec){
+        stuName=name;stuRoll=roll;stuEmail=email;
+        quizQs=qParams.qs||[];
+        try{answers=typeof rec.answerMap==='string'?JSON.parse(rec.answerMap):(rec.answerMap||{});}catch(e){answers={};}
+        reviewMode=true;await showResult(rec);return;
       }
-      // 2. Check lobby — currently in progress
-      const existing=await _fb.getDocs(_fb.collection(db,'lobby_'+qParams.sessionId));
-      for(const d of existing.docs){
-        const data=d.data();
-        if((data.roll||'').toUpperCase()===(roll||'').toUpperCase()){
-          // Check if this is a disconnect rejoin (progress saved < 2 min ago)
-          const prog=data.progress;
-          const twoMinAgo=Date.now()-(2*60*1000);
-          if(data.status==='started'&&prog&&prog.ts&&prog.ts>twoMinAgo){
-            // Offer to resume
-            const doResume=confirm('Welcome back, '+name+'! You were on Question '+(prog.curQ+1)+'. Tap OK to resume from where you left off.');
-            if(doResume){
-              stuName=name.trim();stuRoll=roll.trim().toUpperCase();stuEmail=email.trim().toLowerCase();
-              // Store lobby doc ref for continued progress saves
-              lobbyDocRef=d.ref;
-              // Increment relogin count for teacher visibility
-              _fb.updateDoc(d.ref,{
-                reloginCount:(data.reloginCount||0)+1,
-                name:name
-              }).catch(()=>{});
-              // Resume quiz with saved state
-              await resumeQuiz(prog,d.ref);
-              return;
-            }else{
-              alert('Session still in progress. Please wait for it to end.');
-              return;
-            }
-          }
-          alert('Roll number '+roll+' is already active in this session.');
+      const lobbyDocId=roll.replace(/[^a-zA-Z0-9]/g,'_');
+      const lobSnap=await _fb.getDoc(_fb.doc(db,'lobby_'+sid,lobbyDocId));
+      if(lobSnap.exists()){
+        const lobData=lobSnap.data();
+        const prog=lobData.progress;
+        const TWO_MIN=2*60*1000;
+        if(lobData.status==='started'&&prog&&prog.ts&&(Date.now()-prog.ts)<TWO_MIN){
+          showReconnectOverlay(name,roll,email,lobSnap.ref,lobData,prog,(prog.curQ||0)+1);
           return;
         }
-        if(data.email===email){
+        showStuError('Roll '+roll+' is already active in this session. If you lost connection more than 2 minutes ago, ask your teacher to remove you from the lobby so you can rejoin.');
+        return;
+      }
+      const allLobby=await _fb.getDocs(_fb.collection(db,'lobby_'+sid));
+      for(const d of allLobby.docs){
+        if(d.data().email===email){
           alert('Email '+email+' has already joined this session. Each student must use a unique email.');
           return;
         }
@@ -2856,8 +2761,10 @@ window.stuJoin=async function(){
   }
 
   stuName=name;stuRoll=roll;stuEmail=email;
+  doRegisterAndWait(name,roll,email);
+};
 
-  // Save to sessionStorage so refresh restores the student
+function doRegisterAndWait(name,roll,email){
   try{
     sessionStorage.setItem('cq5_stu',JSON.stringify({
       name,roll,email,sessionId:qParams?.sessionId,
@@ -2865,28 +2772,60 @@ window.stuJoin=async function(){
       time:qParams?.time||15
     }));
   }catch(e){}
-
-  // Register in lobby
   if(fbReady&&qParams?.sessionId){
-    try{
-      const lobbyDocId=roll.replace(/[^a-zA-Z0-9]/g,'_');
-      await _fb.setDoc(_fb.doc(db,'lobby_'+qParams.sessionId,lobbyDocId),{
-        name,roll,email,status:'joined',reloginCount:0,ts:Date.now()
-      });
-      // Store reference for progress saves
-      lobbyDocRef=_fb.doc(db,'lobby_'+qParams.sessionId,lobbyDocId);
-    }catch(e){console.warn('Lobby register:',e);}
+    const lobbyDocId=roll.replace(/[^a-zA-Z0-9]/g,'_');
+    _fb.setDoc(_fb.doc(db,'lobby_'+qParams.sessionId,lobbyDocId),{
+      name,roll,email,status:'joined',ts:Date.now(),reloginCount:1
+    }).catch(()=>{});
   }
-
-  // Show waiting screen
   el('wait-title').textContent=qParams.sessionName||'Quiz';
   el('wait-name').textContent='Joined as: '+name+' ('+roll+')';
   show('s-stu-wait');
-
-  // Start polling for session status
   startSessionPoller();
-};
+}
 
+function showReconnectOverlay(name,roll,email,lobRef,lobData,prog,resumeQ){
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px';
+  ov.innerHTML='<div style="background:var(--s1);border:1px solid var(--b);border-radius:14px;padding:24px;max-width:380px;width:100%;text-align:center">'
+    +'<div style="font-size:28px;margin-bottom:10px">&#x1F504;</div>'
+    +'<div style="font-family:var(--fh);font-size:17px;font-weight:700;margin-bottom:8px">Resume your quiz?</div>'
+    +'<div style="font-size:13px;color:var(--m);margin-bottom:20px;line-height:1.6">'
+      +'Your session is still active.<br>You were on <strong style="color:var(--txt)">Question '+resumeQ+'</strong>. Resume from where you left off?'
+    +'</div>'
+    +'<div style="display:flex;gap:10px;justify-content:center">'
+      +'<button id="rcv-yes" class="btn btn-grn" style="flex:1;max-width:160px">&#9654; Resume</button>'
+      +'<button id="rcv-no" class="btn btn-ghost" style="flex:1;max-width:160px">&#x2715; Cancel</button>'
+    +'</div>'
+  +'</div>';
+  document.body.appendChild(ov);
+  document.getElementById('rcv-yes').onclick=function(){
+    document.body.removeChild(ov);
+    stuName=name;stuRoll=roll;stuEmail=email;
+    try{answers=JSON.parse(prog.answers||'{}');}catch(e){answers={};}
+    try{lockedAnswers=JSON.parse(prog.lockedAnswers||'{}');}catch(e){lockedAnswers={};}
+    try{optionShuffles=JSON.parse(prog.optionShuffles||'{}');}catch(e){optionShuffles={};}
+    try{vioLockedQs=JSON.parse(prog.vioLockedQs||'{}');}catch(e){vioLockedQs={};}
+    curQ=prog.curQ||0;
+    timeLeft=Math.max(0,((qParams?.time||15)*60)-(prog.timeTaken||0));
+    vioCount=prog.vioCount||0;
+    quizQs=qParams.qs||[];
+    _fb.updateDoc(lobRef,{reloginCount:(lobData.reloginCount||1)+1,status:'started'}).catch(()=>{});
+    try{sessionStorage.setItem('cq5_stu',JSON.stringify({name,roll,email,
+      sessionId:qParams?.sessionId,sessionName:qParams?.sessionName||'',time:qParams?.time||15}));}catch(e){}
+    el('hstu').textContent='&#x1F464; '+stuName;
+    show('s-quiz');renderQ();renderDots();startTmr();reqFS();
+    document.addEventListener('visibilitychange',onVis);
+    document.addEventListener('fullscreenchange',onFS);
+    document.addEventListener('webkitfullscreenchange',onFS);
+    document.addEventListener('keydown',onScrKey);
+    document.addEventListener('contextmenu',onCtxMenu);
+    listenForSessionEnd();
+  };
+  document.getElementById('rcv-no').onclick=function(){
+    document.body.removeChild(ov);
+  };
+}
 let sessionPollInt=null;
 
 function startSessionPoller(){
@@ -2955,7 +2894,7 @@ function beginQuiz(){
   const cnt=qParams.count||0;
   quizQs=cnt>0?pool.slice(0,cnt):pool;
 
-  answers={};lockedAnswers={};optionShuffles={};curQ=0;vioCount=0;offSecs=0;firstVio=true;quizActive=true;reviewMode=false;
+  answers={};lockedAnswers={};optionShuffles={};vioLockedQs={};curQ=0;vioCount=0;offSecs=0;firstVio=true;quizActive=true;reviewMode=false;
   timeLeft=(qParams.time||15)*60;
 
   // Update lobby status
@@ -2975,6 +2914,8 @@ function beginQuiz(){
   document.addEventListener('visibilitychange',onVis);
   document.addEventListener('fullscreenchange',onFS);
   document.addEventListener('webkitfullscreenchange',onFS);
+  document.addEventListener('keydown',onScrKey);
+  document.addEventListener('contextmenu',onCtxMenu);
 
   // Listen for session end
   listenForSessionEnd();
@@ -3013,10 +2954,8 @@ function exitFS(){
 }
 function onFS(){
   if(!quizActive)return;
-  // Only enforce fullscreen on touch devices (mobile)
-  // Desktop browsers handle fullscreen differently and shouldn't trigger violations
-  const isMobile=('ontouchstart' in window)||navigator.maxTouchPoints>0;
-  if(isMobile&&!(document.fullscreenElement||document.webkitFullscreenElement||document.mozFullScreenElement)){
+  // Enforce fullscreen on ALL devices — desktop and mobile
+  if(!(document.fullscreenElement||document.webkitFullscreenElement||document.mozFullScreenElement)){
     trigVio();
   }
 }
@@ -3046,9 +2985,45 @@ function onVis(){
   }
 }
 
+/* Screenshot key detection — fires trigVio as a deterrent */
+function onScrKey(e){
+  if(!quizActive)return;
+  // Windows: PrintScreen (key=PrintScreen), also Fn+PrtSc combos
+  // macOS: Cmd+Shift+3, Cmd+Shift+4, Cmd+Shift+5
+  // Linux: PrintScreen, Shift+PrtSc
+  const isPrint=e.key==='PrintScreen'||e.key==='Print';
+  const isMacShot=e.metaKey&&e.shiftKey&&(e.key==='3'||e.key==='4'||e.key==='5');
+  if(isPrint||isMacShot){
+    e.preventDefault();
+    showScrWarn();
+  }
+}
+function onCtxMenu(e){
+  if(!quizActive)return;
+  e.preventDefault();
+}
+function showScrWarn(){
+  // Show a prominent warning overlay — does not count as a vio
+  // but is logged. We keep it as a warning rather than a penalty
+  // since some accessibility tools use these keys legitimately.
+  const ov=document.createElement('div');
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.95);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px';
+  ov.innerHTML='<div style="background:var(--s1);border:1px solid rgba(239,68,68,.5);border-radius:14px;padding:28px;max-width:360px;width:100%;text-align:center">'
+    +'<div style="font-size:36px;margin-bottom:12px">&#x1F4F5;</div>'
+    +'<div style="font-family:var(--fh);font-size:16px;font-weight:700;color:#f87171;margin-bottom:10px">Screenshot Blocked</div>'
+    +'<div style="font-size:13px;color:var(--m);margin-bottom:20px;line-height:1.6">Screenshots are not permitted during the exam. This attempt has been noted.</div>'
+    +'<button class="btn btn-err" onclick="this.closest('div[style]').remove();reqFS()">Return to Quiz</button>'
+    +'</div>';
+  document.body.appendChild(ov);
+  // Log the attempt in the violation counter (soft — does not restart)
+  el('hvio').style.display='';
+  el('hvio').textContent='&#x26A0; '+(++vioCount)+' violation'+(vioCount>1?'s':'');
+}
+
 function trigVio(){
   if(!quizActive)return;
   vioCount++;
+  const _vioQ=curQ; // capture which question was active
   el('hvio').style.display='';
   el('hvio').textContent='⚠ '+vioCount+' violation'+(vioCount>1?'s':'');
 
@@ -3083,6 +3058,7 @@ function trigVio(){
   el('ov-vbtn').onclick=canReturn?retVio:restartVio;
   vioCd=cdSecs; el('ov-vc').textContent=cdSecs;
   el('ov-vio').classList.add('on');
+  el('ov-vio').dataset.vioQ=_vioQ;
   clearInterval(vioTimer);
   vioTimer=setInterval(()=>{
     vioCd--; el('ov-vc').textContent=vioCd;
@@ -3090,10 +3066,21 @@ function trigVio(){
   },1000);
 }
 
-function retVio(){clearInterval(vioTimer);closeOv('ov-vio');reqFS();}
+function retVio(){
+  clearInterval(vioTimer);
+  closeOv('ov-vio');
+  // Lock the question that was active during the violation — answered OR unanswered
+  const vioQ=parseInt(el('ov-vio').dataset.vioQ);
+  if(!isNaN(vioQ)){
+    lockedAnswers[vioQ]=true;
+    vioLockedQs[vioQ]=true;
+    if(curQ===vioQ){renderQ();renderDots();}
+  }
+  reqFS();
+}
 function restartVio(){
   clearInterval(vioTimer);closeOv('ov-vio');
-  answers={};lockedAnswers={};optionShuffles={};curQ=0;firstVio=true;
+  answers={};lockedAnswers={};optionShuffles={};vioLockedQs={};curQ=0;firstVio=true;
   for(let i=quizQs.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[quizQs[i],quizQs[j]]=[quizQs[j],quizQs[i]];}
   renderQ();renderDots();reqFS();
 }
@@ -3173,8 +3160,15 @@ function renderQ(){
     if(answers[curQ]===undefined&&reviewMode){
       html+='<div style="font-size:12px;color:var(--m);text-align:center;margin-top:12px">You did not answer this question</div>';
     } else if(lockedAnswers[curQ]||reviewMode){
-      html+='<div style="margin-top:10px;text-align:center;font-size:11px;color:var(--m2);padding:6px 10px;background:var(--s2);border-radius:6px">'
-        +(reviewMode?'🔒 Review mode — answers cannot be changed':'🔒 Answer locked — navigate back to change is not allowed')
+      const _isVioLock=vioLockedQs[curQ]&&!reviewMode;
+      const _lockMsg=_isVioLock
+        ?'&#x26A0;&#xFE0F; This question is locked due to an off-screen violation. Please move to the next question.'
+        :(reviewMode?'&#x1F512; Review mode — answers cannot be changed':'&#x1F512; Answer locked — navigate back to change is not allowed');
+      html+='<div style="margin-top:12px;text-align:center;font-size:12px;'
+        +'color:'+(_isVioLock?'#f87171':'var(--m2)')+';'
+        +'padding:10px 14px;background:'+(_isVioLock?'rgba(239,68,68,.10)':'var(--s2)')+';'
+        +'border-radius:8px;'+(_isVioLock?'border:1px solid rgba(239,68,68,.3);':'')+"'>"
+        +_lockMsg
         +'</div>';
     } else if(answers[curQ]!==undefined){
       html+='<div style="margin-top:8px;text-align:center;font-size:11px;color:var(--m2)">'
@@ -3221,9 +3215,9 @@ function renderDots(){
 }
 
 window.jumpQ=function(i){
+  // Lock current answer before jumping
   if(answers[curQ]!==undefined) lockedAnswers[curQ]=true;
   curQ=i;renderQ();renderDots();
-  saveProgress();
 };
 window.pickOpt=function(i){
   if(reviewMode)return;
@@ -3232,10 +3226,10 @@ window.pickOpt=function(i){
   renderQ();renderDots();
 };
 window.navQ=function(d){
+  // Lock current answer before navigating away
   if(answers[curQ]!==undefined) lockedAnswers[curQ]=true;
   curQ=Math.max(0,Math.min(quizQs.length-1,curQ+d));
   renderQ();renderDots();
-  saveProgress();
 };
 
 /* ═══════════════════════════════════════════
@@ -3256,6 +3250,8 @@ window.finishQuiz=async function(){
   document.removeEventListener('visibilitychange',onVis);
   document.removeEventListener('fullscreenchange',onFS);
   document.removeEventListener('webkitfullscreenchange',onFS);
+  document.removeEventListener('keydown',onScrKey);
+  document.removeEventListener('contextmenu',onCtxMenu);
   exitFS();reviewMode=true;
 
   // Guard: ensure roll number is present before saving
@@ -3300,25 +3296,13 @@ window.finishQuiz=async function(){
 
   if(fbReady&&stuRoll&&stuRoll.trim()){
     try{
-      // Get actual reloginCount from lobby doc before saving
+      const _safeRoll=stuRoll.replace(/[^a-zA-Z0-9]/g,'_');
+      const _safeSid=(qParams?.sessionId||'x').replace(/[^a-zA-Z0-9]/g,'_');
+      await _fb.setDoc(_fb.doc(db,'results',_safeRoll+'__'+_safeSid),rec);
       if(qParams?.sessionId){
-        try{
-          const lobbySnap=await _fb.getDocs(_fb.query(
-            _fb.collection(db,'lobby_'+qParams.sessionId),
-            _fb.where('roll','==',stuRoll)
-          ));
-          if(!lobbySnap.empty){
-            rec.reconnects=lobbySnap.docs[0].data().reloginCount||0;
-          }
-        }catch(e){}
-      }
-      await _fb.addDoc(_fb.collection(db,'results'),rec);
-      // Update lobby status
-      if(qParams?.sessionId){
-        _fb.getDocs(_fb.query(_fb.collection(db,'lobby_'+qParams.sessionId),
-          _fb.where('roll','==',stuRoll))).then(snap=>{
-          snap.docs.forEach(d=>_fb.updateDoc(d.ref,{status:'submitted'}));
-        }).catch(()=>{});
+        const _lobbyDocId=stuRoll.replace(/[^a-zA-Z0-9]/g,'_');
+        _fb.updateDoc(_fb.doc(db,'lobby_'+qParams.sessionId,_lobbyDocId),
+          {status:'submitted'}).catch(()=>{});
       }
     }catch(e){console.warn('Save result:',e);}
   } else if(fbReady&&(!stuRoll||!stuRoll.trim())){
@@ -3533,12 +3517,12 @@ window.sortResults=function(col){
   });
   renderResults();
 };
-function getFilteredResults(){
+window.renderResults=function(){
   const prog=gv('rf-prog'),subj=gv('rf-subj'),topic=gv('rf-topic'),
         testid=gv('rf-testid'),teacher_f=gv('rf-teacher'),
         session_f=gv('rf-session'),
         srch=(gv('rf-search')||'').toLowerCase();
-  return allResults.filter(r=>{
+  let filtered=allResults.filter(r=>{
     if(prog&&r.programmeName!==prog)return false;
     if(subj&&r.courseId!==subj)return false;
     if(topic&&r.topicName!==topic)return false;
@@ -3546,6 +3530,7 @@ function getFilteredResults(){
     if(teacher_f&&r.teacherName!==teacher_f)return false;
     if(session_f&&r.sessionDisplayId!==session_f)return false;
     if(srch){
+      // Search across ALL columns simultaneously
       const hay=[r.studentName,r.roll,r.email,r.programmeName,
         r.courseId,r.subjectName,r.topicName,r.testLabel,
         r.sessionDisplayId,r.teacherName,
@@ -3555,17 +3540,15 @@ function getFilteredResults(){
     }
     return true;
   });
-}
 
-window.renderResults=function(){
-  let filtered=getFilteredResults();
-
-  // Sort — numeric columns compared as numbers
+  // Sort
+  // Numeric columns — always compare as numbers
+  // Sort using unified state object — no closure ambiguity
   var _s=window._sort;
   var _sc=_s.col;
   var _sd=_s.dir;
   var toSec=function(s){if(!s)return 0;var m=s.match(/(\d+)m\s*(\d+)s/);return m?parseInt(m[1])*60+parseInt(m[2]):0;};
-  var numericCols={'pct':1,'performanceScore':1,'violations':1,'reconnects':1,'offSecs':1,'attempted':1,'correct':1,'wrong':1};
+  var numericCols={'pct':1,'performanceScore':1,'violations':1,'offSecs':1,'attempted':1,'correct':1,'wrong':1};
   filtered.sort(function(a,b){
     var va,vb;
     if(_sc==='performanceScore'){
@@ -3613,25 +3596,21 @@ window.renderResults=function(){
       +'<td style="color:'+scoreColor+';font-weight:700;text-align:center">'+r.pct+'%</td>'
       +'<td style="text-align:center">'+esc(r.timeTaken||'—')+'</td>'
       +'<td style="color:'+vioColor+';text-align:center">'+( r.violations||0)+'</td>'
-      +'<td style="color:'+(r.reconnects>0?'var(--warn)':'var(--m)')+';text-align:center">'+(r.reconnects||0)+'</td>'
       +'<td style="font-size:11px">'+esc(r.programmeName||'—')+'</td>'
       +'<td style="font-size:11px">'+esc(r.courseId||'')+' '+esc(r.subjectName||'—')+'</td>'
       +'<td style="font-size:11px">'+esc(r.topicName||'—')+'</td>'
       +'<td style="font-size:11px">'+esc(r.testLabel||'—')+'</td>'
       +'<td style="font-size:11px;color:var(--acc)">'+esc(r.sessionDisplayId||'—')+'</td>'
       +'<td style="font-size:11px">'+esc(r.teacherName||'—')+'</td>'
-      +'<td><button class="btn-icon" title="Edit student" onclick="openEditStudent(this.dataset.rid)" data-rid="'+r.id+'" style="font-size:13px">✏️</button></td>'
       +'</tr>';
   }).join('');
 };
 
 window.dlCSV=function(){
-  const headers=['#','Name','Roll','Email','Performance','Score %','Time','Violations','Reconnects',
+  const headers=['#','Name','Roll','Email','Performance','Score %','Time','Violations',
     'Programme','Course ID','Subject','Unit/Topic','Test ID/Comment','Session ID','Teacher',
     'Attempted','Correct','Wrong','Off-screen(s)'];
-  // Use same filter as dashboard — export only what is currently visible
-  const filtered=getFilteredResults();
-  const rows=filtered.map((r,i)=>{
+  const rows=allResults.map((r,i)=>{
     const perf=r.performanceScore!=null?r.performanceScore:(()=>{
       const m=(r.timeTaken||'').match(/(\d+)m\s*(\d+)s/);
       const t=m?parseInt(m[1])*60+parseInt(m[2]):0;
@@ -4493,13 +4472,12 @@ function aoRenderStudentList(){
         +' data-roll="'+esc(s.roll)+'" onchange="aoToggleBtn(this)" />'
       +'<div style="flex:1;min-width:0">'
         +'<div style="font-weight:600;font-size:14px">'+esc(s.name)
-          +' <span style="font-size:13px;color:var(--txt);font-weight:700"> · '+esc(s.roll)+'</span></div>'
+          +' <span style="font-size:11px;color:var(--m);font-weight:400">Roll: '+esc(s.roll)+'</span></div>'
         +'<div style="font-size:11px;color:var(--m);margin-top:3px">'
           +esc(progList)+' &nbsp;·&nbsp; '+esc(subjList)
           +' &nbsp;·&nbsp; <span style="color:var(--acc)">'+tests+' result'+(tests!==1?'s':'')+'</span>'
         +'</div>'
       +'</div>'
-      +'<button class="btn btn-ghost btn-sm" data-roll="'+esc(s.roll)+'" onclick="aoEditOneBtn(this)" style="margin-right:4px">✏️</button>'
       +'<button class="btn btn-err btn-sm" data-roll="'+esc(s.roll)+'" onclick="aoDeleteOneBtn(this)">🗑</button>'
       +'</div>';
   }).join('');
@@ -4529,7 +4507,7 @@ window.aoDeselectAll = function(){
 };
 
 window.aoDeleteOne = async function(roll){
-  const s = aoStudents.find(x=>(x.roll||'').toUpperCase()===(roll||'').toUpperCase());
+  const s = aoStudents.find(x=>x.roll===roll);
   const name = s ? s.name : roll;
   if(!confirm('Delete student "'+name+'" (Roll: '+roll+')? This removes all their results and cannot be undone.')) return;
   setSt('ao-student-st','info','Deleting…');
@@ -4798,222 +4776,6 @@ window.mtDismissRequest = async function(btn){
 
 // Start
 bootstrap();
-
-// ── Progress saving for disconnect/rejoin ──
-let lobbyDocRef=null; // reference to this student's lobby doc
-
-function saveProgress(){
-  if(!fbReady||!qParams?.sessionId||!lobbyDocRef)return;
-  try{
-    _fb.updateDoc(lobbyDocRef,{
-      progress:{
-        curQ:curQ,
-        answers:answers,
-        timeTaken:timeTaken,
-        vioCount:vioCount,
-        ts:Date.now()
-      }
-    }).catch(()=>{});
-  }catch(e){}
-}
-
-
-// ── Resume quiz after network disconnect ──
-async function resumeQuiz(prog, lobbyRef){
-  // Load session questions
-  let pool=qParams.qs||[];
-  if(!pool.length){alert('Could not restore session questions.');return;}
-
-  // We cannot restore the exact shuffle order — restart with same questions
-  // but restore answers and jump to saved question
-  const cnt=qParams.count||0;
-  quizQs=cnt>0?pool.slice(0,cnt):pool;
-
-  // Restore saved state
-  answers=prog.answers||{};
-  lockedAnswers={};
-  // Lock all previously answered questions
-  Object.keys(answers).forEach(function(k){lockedAnswers[parseInt(k)]=true;});
-  curQ=Math.min(prog.curQ||0, quizQs.length-1);
-  timeTaken=prog.timeTaken||0;
-  vioCount=prog.vioCount||0; // preserve violations, not penalised extra
-  offSecs=0;
-  quizActive=true;
-  reviewMode=false;
-  firstVio=true;
-  timeLeft=Math.max(0, (qParams.time||15)*60 - timeTaken);
-
-  // Update lobby status back to started
-  if(lobbyRef){
-    _fb.updateDoc(lobbyRef,{status:'started'}).catch(()=>{});
-  }
-
-  // Start timer and render
-  show('s-quiz');
-  renderQ();
-  renderDots();
-  el('hvio').style.display=vioCount>0?'':'none';
-  if(vioCount>0) el('hvio').textContent='⚠ '+vioCount+' violation'+(vioCount>1?'s':'');
-  el('hstu').textContent='👤 '+stuName;
-  el('htim').textContent=fmtT(timeLeft);
-
-  clearInterval(timerInt);
-  timerInt=setInterval(function(){
-    if(!quizActive)return;
-    timeTaken++;timeLeft=Math.max(0,timeLeft-1);
-    el('htim').textContent=fmtT(timeLeft);
-    if(timeLeft<=0){clearInterval(timerInt);finishQuiz();}
-  },1000);
-
-  // Re-enable fullscreen on mobile
-  reqFS();
-
-  // Set up violation detection
-  document.addEventListener('visibilitychange',onVis);
-  document.addEventListener('fullscreenchange',onFS);
-  document.addEventListener('webkitfullscreenchange',onFS);
-}
-
-
-let editingResultId=null;
-
-window.openEditStudent=function(rid){
-  const r=allResults.find(x=>x.id===rid);
-  if(!r){alert('Record not found.');return;}
-  editingResultId=rid;
-  el('es-name').value=r.studentName||'';
-  el('es-roll').value=r.roll||'';
-  el('es-email').value=r.email||'';
-  el('ov-edit-student').classList.add('on');
-};
-
-window.saveEditStudent=async function(){
-  if(!editingResultId){return;}
-  const name=el('es-name').value.trim();
-  const roll=el('es-roll').value.trim();
-  const email=el('es-email').value.trim();
-  if(!name||!roll){setSt('es-st','err','Name and Roll Number are required.');return;}
-  const btn=document.querySelector('#ov-edit-student .btn-grn');
-  if(btn){btn.disabled=true;btn.textContent='Saving…';}
-  try{
-    await _fb.updateDoc(_fb.doc(db,'results',editingResultId),{
-      studentName:name,roll:roll,email:email
-    });
-    // Update local cache
-    const r=allResults.find(x=>x.id===editingResultId);
-    if(r){r.studentName=name;r.roll=roll;r.email=email;}
-    setSt('es-st','ok','✅ Saved.');
-    setTimeout(function(){
-      closeOv('ov-edit-student');
-      renderResults();
-    },800);
-  }catch(e){
-    setSt('es-st','err','Save failed: '+e.message);
-  }
-  if(btn){btn.disabled=false;btn.textContent='💾 Save Changes';}
-};
-
-
-window.returnToSession=function(){
-  if(activeSessionId){
-    show('s-launch');
-    launchTab('qr');
-  }
-};
-
-function checkActiveSession(){
-  // Check localStorage for a persisted session
-  try{
-    const saved=localStorage.getItem('cq5_active_session');
-    if(!saved)return;
-    const data=JSON.parse(saved);
-    // Only show if session was started in last 6 hours
-    if(!data.sessionId||Date.now()-data.ts>6*60*60*1000)return;
-    // Restore IDs
-    if(!activeSessionId){
-      activeSessionId=data.sessionId;
-      activeSessionDisplayId=data.displayId||'';
-      activeSessionFileId=data.fileId||'';
-    }
-    // Show banner and floating button
-    const banner=el('home-active-session');
-    const label=el('home-active-session-label');
-    if(banner) banner.style.display='';
-    if(label) label.textContent=data.displayId||data.sessionId;
-    const fb=el('float-session-btn');
-    if(fb) fb.style.display='';
-  }catch(e){}
-}
-
-// Clear saved session when ended
-function clearSavedSession(){
-  try{localStorage.removeItem('cq5_active_session');}catch(e){}
-  const banner=el('home-active-session');
-  if(banner) banner.style.display='none';
-  const fb=el('float-session-btn');
-  if(fb) fb.style.display='none';
-  activeSessionId=null;
-  activeSessionDisplayId='';
-  activeSessionFileId='';
-}
-
-
-window.aoEditOneBtn=function(btn){
-  const roll=btn.dataset.roll;
-  const s=aoStudents.find(x=>(x.roll||'').toUpperCase()===(roll||'').toUpperCase());
-  if(!s){alert('Student not found.');return;}
-  el('ao-es-name').value=s.name||'';
-  el('ao-es-roll').value=s.roll||'';
-  el('ao-es-email').value=s.email||'';
-  el('ao-es-orig-roll').value=s.roll||'';
-  el('ov-ao-edit-student').classList.add('on');
-};
-
-window.aoSaveEditStudent=async function(){
-  const origRoll=(el('ao-es-orig-roll').value||'').trim().toUpperCase();
-  const newName=(el('ao-es-name').value||'').trim();
-  const newRoll=(el('ao-es-roll').value||'').trim().toUpperCase();
-  const newEmail=(el('ao-es-email').value||'').trim().toLowerCase();
-  if(!newName||!newRoll){setSt('ao-es-st','err','Name and Roll Number are required.');return;}
-  const btn=document.querySelector('#ov-ao-edit-student .btn-grn');
-  if(btn){btn.disabled=true;btn.textContent='Saving...';}
-  try{
-    const snaps=await Promise.all([
-      _fb.getDocs(_fb.query(_fb.collection(db,'results'),_fb.where('roll','==',origRoll))),
-      _fb.getDocs(_fb.query(_fb.collection(db,'results'),_fb.where('roll','==',origRoll.toLowerCase())))
-    ]);
-    const allDocs=[...snaps[0].docs,...snaps[1].docs];
-    const seen=new Set();
-    let updated=0;
-    for(const d of allDocs){
-      if(seen.has(d.id))continue;seen.add(d.id);
-      await _fb.updateDoc(d.ref,{studentName:newName,roll:newRoll,email:newEmail});
-      updated++;
-    }
-    allResults.forEach(function(r){
-      if((r.roll||'').toUpperCase()===origRoll){
-        r.studentName=newName;r.roll=newRoll;r.email=newEmail;
-      }
-    });
-    setSt('ao-es-st','ok','Updated '+updated+' record(s).');
-    setTimeout(function(){
-      closeOv('ov-ao-edit-student');
-      if(typeof aoRenderStudents==='function') aoRenderStudents();
-    },800);
-  }catch(e){setSt('ao-es-st','err','Failed: '+e.message);}
-  if(btn){btn.disabled=false;btn.textContent='Save All Records';}
-};
-
 </script>
-<!-- FLOATING RETURN TO SESSION BUTTON -->
-<div id="float-session-btn" style="display:none;position:fixed;bottom:20px;right:20px;z-index:9000">
-  <button onclick="returnToSession()"
-    style="background:var(--grn);color:#fff;border:none;border-radius:50px;
-    padding:12px 20px;font-family:var(--fh);font-weight:700;font-size:13px;
-    box-shadow:0 4px 20px rgba(16,185,129,.45);cursor:pointer;
-    display:flex;align-items:center;gap:8px;white-space:nowrap">
-    <span style="font-size:16px">🟢</span> Return to Session
-  </button>
-</div>
 </body>
 </html>
