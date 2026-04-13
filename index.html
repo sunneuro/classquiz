@@ -516,9 +516,26 @@ tr:hover td{background:var(--s2)}
   <!-- Office content (hidden until unlocked) -->
   <div id="ao-content" style="display:none">
     <div class="tabs">
-      <div class="ao-tab on" id="ao-tab-teachers" onclick="aoSwitchTab('teachers')">🗑 Delete Teachers</div>
-      <div class="ao-tab" id="ao-tab-students" onclick="aoSwitchTab('students')">👤 Delete Students</div>
+      <div class="ao-tab on" id="ao-tab-teachers" onclick="aoSwitchTab('teachers')">👤 Edit / Delete Teachers</div>
+      <div class="ao-tab" id="ao-tab-students" onclick="aoSwitchTab('students')">👥 Edit / Delete Students</div>
       <div class="ao-tab" id="ao-tab-passwords" onclick="aoSwitchTab('passwords')">🔑 Change Passwords</div>
+    <!-- Edit Student Modal -->
+      <div class="ov" id="ov-edit-student">
+        <div class="ovc" style="max-width:420px;text-align:left">
+          <div style="font-family:var(--fh);font-size:18px;font-weight:700;margin-bottom:8px">✏️ Edit Student</div>
+          <label>Full Name <span class="req">*</span></label>
+          <input type="text" id="edit-stu-name" placeholder="Student full name"/>
+          <label>Roll Number <span class="req">*</span></label>
+          <input type="text" id="edit-stu-roll" placeholder="e.g. 2025MSNS010"/>
+          <label>Email <span class="req">*</span></label>
+          <input type="email" id="edit-stu-email" placeholder="student@email.com"/>
+          <div class="row" style="gap:8px;margin-top:16px">
+            <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-edit-student')">Cancel</button>
+            <button class="btn btn-grn" style="flex:1" onclick="saveEditedStudent()">💾 Save Changes</button>
+          </div>
+          <div class="st" id="edit-stu-st"></div>
+        </div>
+      </div>
     </div>
 
     <!-- ── TAB 1: DELETE TEACHERS ── -->
@@ -4937,13 +4954,16 @@ window.editStudent = function(btn){
   el('ov-edit-student').classList.add('on');
 };
 
-// Edit Student
+// ====================== EDIT STUDENT ======================
 let currentEditingStudentRoll = null;
 
 window.editStudent = function(btn){
   const roll = btn.dataset.roll;
   const student = aoStudents.find(s => s.roll === roll);
-  if(!student) return;
+  if(!student) {
+    alert("Student data not found.");
+    return;
+  }
 
   currentEditingStudentRoll = roll;
   el('edit-stu-name').value = student.name || '';
@@ -4955,21 +4975,28 @@ window.editStudent = function(btn){
 
 window.saveEditedStudent = async function(){
   if(!currentEditingStudentRoll) return;
-  const newName = gv('edit-stu-name');
-  const newRoll = gv('edit-stu-roll');
-  const newEmail = gv('edit-stu-email');
+
+  const newName  = gv('edit-stu-name').trim();
+  const newRoll  = gv('edit-stu-roll').trim();
+  const newEmail = gv('edit-stu-email').trim();
 
   if(!newName || !newRoll || !newEmail){
     setSt('edit-stu-st','err','All fields are required.');
     return;
   }
 
-  setSt('edit-stu-st','info','Saving...');
+  setSt('edit-stu-st','info','Updating...');
+
   try{
-    // Update all results for this old roll
-    const toUpdate = allResults.filter(r => (r.roll||'').trim() === currentEditingStudentRoll);
+    // Update all results belonging to this student
+    const toUpdate = allResults.filter(r => (r.roll || '').trim() === currentEditingStudentRoll);
+
     for(const result of toUpdate){
-      await _fb.updateDoc(_fb.doc(db,'results',result.id || (result.roll + '__' + (result.sessionId||''))), {
+      const docRef = _fb.doc(db, 'results', result.id || 
+        ((result.roll||'').replace(/[^a-zA-Z0-9]/g,'_') + '__' + 
+         (result.sessionId||'').replace(/[^a-zA-Z0-9]/g,'_')));
+      
+      await _fb.updateDoc(docRef, {
         studentName: newName,
         roll: newRoll,
         email: newEmail
@@ -4977,24 +5004,15 @@ window.saveEditedStudent = async function(){
     }
 
     setSt('edit-stu-st','ok','✅ Student profile updated successfully.');
+
     setTimeout(() => {
       closeOv('ov-edit-student');
-      aoStudentFilter(); // Refresh list
-    }, 1200);
-  }catch(e){
-    setSt('edit-stu-st','err','Failed: '+e.message);
+      aoStudentFilter();   // Refresh the list
+    }, 1500);
+
+  } catch(e){
+    setSt('edit-stu-st','err','Failed to update: ' + e.message);
   }
-};
-
-// Edit Teacher
-let currentEditingTeacherId = null;
-
-window.editTeacher = function(btn){
-  const id = btn.dataset.tid;
-  // You need to pass teacher data when rendering - for simplicity, we'll load it again
-  // For now, we'll implement a basic version. You can enhance later.
-  alert("Teacher edit coming soon. For now, use Reset Password or Delete.");
-  // Full implementation can be added similarly if needed.
 };
 bootstrap();
 </script>
