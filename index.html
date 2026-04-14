@@ -4605,11 +4605,7 @@ window.msDeleteSelected = async function(){
   if(!msSelected.size){ setSt('ms-st','err','No students selected.'); return; }
   const rolls = [...msSelected];
   const names = rolls.map(r=>{ const s=msStudents.find(x=>x.roll===r); return s?s.name+' ('+r+')':r; });
-  if(!confirm('Delete '+rolls.length+' student(s)?
-'+names.join('
-')+'
-
-All their results will be removed. Cannot be undone.')) return;
+  if(!confirm('Delete '+rolls.length+' student(s)? '+names.join(', ')+'. All their results will be removed. Cannot be undone.')) return;
   setSt('ms-st','info','Deleting '+rolls.length+' student(s)…');
   let total = 0;
   try{
