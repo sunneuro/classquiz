@@ -4659,15 +4659,25 @@ window.msDeselectAll = function(){
 };
 
 window.msEditStudent = function(btn){
-  const roll = btn.dataset.roll;
-  const student = msStudents.find(s=>s.roll===roll);
-  if(!student) return;
-  // Reuse the existing edit-student overlay
+  const roll = btn ? btn.dataset.roll : null;
+  if (!roll) {
+    alert("Error: Could not identify the student.");
+    return;
+  }
+
+  const student = msStudents.find(s => s.roll === roll);
+  if (!student) {
+    alert("Student data not found. Please try again.");
+    return;
+  }
+
+  currentEditingStudentRoll = roll;
+
   el('edit-stu-name').value  = student.name  || '';
   el('edit-stu-roll').value  = student.roll  || '';
   el('edit-stu-email').value = student.email || '';
+
   el('edit-stu-st').className = 'st';
-  // Tag overlay so saveEditedStudent knows to refresh ms list too
   el('ov-edit-student').dataset.caller = 'ms';
   el('ov-edit-student').classList.add('on');
 };
@@ -5284,27 +5294,35 @@ window.editStudent = function(btn){
 };
 
 window.saveEditedStudent = async function(){
-  if(!currentEditingStudentRoll) return;
+  if (!currentEditingStudentRoll) {
+    setSt('edit-stu-st', 'err', 'No student selected for editing.');
+    return;
+  }
 
   const newName  = gv('edit-stu-name').trim();
   const newRoll  = gv('edit-stu-roll').trim();
   const newEmail = gv('edit-stu-email').trim();
 
-  if(!newName || !newRoll || !newEmail){
-    setSt('edit-stu-st','err','All fields are required.');
+  if (!newName || !newRoll || !newEmail) {
+    setSt('edit-stu-st', 'err', 'All fields are required.');
     return;
   }
 
-  setSt('edit-stu-st','info','Updating...');
+  setSt('edit-stu-st', 'info', 'Updating student...');
 
-  try{
+  try {
     const toUpdate = allResults.filter(r => (r.roll || '').trim() === currentEditingStudentRoll);
 
-    for(const result of toUpdate){
+    if (toUpdate.length === 0) {
+      setSt('edit-stu-st', 'warn', 'No results found for this student.');
+      return;
+    }
+
+    for (const result of toUpdate) {
       const docId = result.id || 
-        ((result.roll||'').replace(/[^a-zA-Z0-9]/g,'_') + '__' + 
-         (result.sessionId||'').replace(/[^a-zA-Z0-9]/g,'_'));
-      
+        ((result.roll || '').replace(/[^a-zA-Z0-9]/g, '_') + '__' + 
+         (result.sessionId || '').replace(/[^a-zA-Z0-9]/g, '_'));
+
       await _fb.updateDoc(_fb.doc(db, 'results', docId), {
         studentName: newName,
         roll: newRoll,
@@ -5312,16 +5330,33 @@ window.saveEditedStudent = async function(){
       });
     }
 
-    setSt('edit-stu-st','ok','✅ Student profile updated successfully.');
+    // Update local cache
+    allResults.forEach(r => {
+      if ((r.roll || '').trim() === currentEditingStudentRoll) {
+        r.studentName = newName;
+        r.roll = newRoll;
+        r.email = newEmail;
+      }
+    });
+
+    setSt('edit-stu-st', 'ok', `✅ Updated ${toUpdate.length} result(s) successfully.`);
 
     setTimeout(() => {
-      const caller = el('ov-edit-student').dataset.caller;
+      const caller = el('ov-edit-student').dataset.caller || '';
       closeOv('ov-edit-student');
-      if(caller==='ms') msFilter(); else aoStudentFilter();
+
+      if (caller === 'ms') {
+        msFilter();
+      } else {
+        aoStudentFilter();
+      }
+
+      currentEditingStudentRoll = null;
     }, 1500);
 
-  } catch(e){
-    setSt('edit-stu-st','err','Failed to update: ' + e.message);
+  } catch (e) {
+    console.error("saveEditedStudent error:", e);
+    setSt('edit-stu-st', 'err', 'Failed to update: ' + e.message);
   }
 };
 
