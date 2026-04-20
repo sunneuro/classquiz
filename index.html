@@ -620,23 +620,6 @@ tr:hover td{background:var(--s2)}
     </div>
 
     <!-- EDIT MODALS - Placed here, inside #ao-content but OUTSIDE all panels -->
-    <!-- Edit Student Modal -->
-    <div class="ov" id="ov-edit-student">
-      <div class="ovc" style="max-width:420px;text-align:left">
-        <div style="font-family:var(--fh);font-size:18px;font-weight:700;margin-bottom:8px">✏️ Edit Student</div>
-        <label>Full Name <span class="req">*</span></label>
-        <input type="text" id="edit-stu-name" placeholder="Student full name"/>
-        <label>Roll Number <span class="req">*</span></label>
-        <input type="text" id="edit-stu-roll" placeholder="e.g. 2025MSNS010"/>
-        <label>Email <span class="req">*</span></label>
-        <input type="email" id="edit-stu-email" placeholder="student@email.com"/>
-        <div class="row" style="gap:8px;margin-top:16px">
-          <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-edit-student')">Cancel</button>
-          <button class="btn btn-grn" style="flex:1" onclick="saveEditedStudent()">💾 Save Changes</button>
-        </div>
-        <div class="st" id="edit-stu-st"></div>
-      </div>
-    </div>
 
     <!-- Edit Teacher Modal (Basic version) -->
     <div class="ov" id="ov-edit-teacher">
@@ -664,6 +647,24 @@ tr:hover td{background:var(--s2)}
 </div>
 </div>
 
+<!-- ←←← PASTE THE EDIT OVERLAY HERE (at root level) -->
+<div class="ov" id="ov-edit-student">
+  <div class="ovc" style="max-width:420px;text-align:left">
+    <div style="font-family:var(--fh);font-size:18px;font-weight:700;margin-bottom:8px">✏️ Edit Student</div>
+    <label>Full Name <span class="req">*</span></label>
+    <input type="text" id="edit-stu-name" placeholder="Student full name"/>
+    <label>Roll Number <span class="req">*</span></label>
+    <input type="text" id="edit-stu-roll" placeholder="e.g. 2025MSNS010"/>
+    <label>Email <span class="req">*</span></label>
+    <input type="email" id="edit-stu-email" placeholder="student@email.com"/>
+    <div class="row" style="gap:8px;margin-top:16px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-edit-student')">Cancel</button>
+      <button class="btn btn-grn" style="flex:1" onclick="saveEditedStudent()">💾 Save Changes</button>
+    </div>
+    <div class="st" id="edit-stu-st"></div>
+  </div>
+</div>
+  
 <!-- ADD QUESTIONS WIZARD -->
 <div id="s-addq" class="screen center">
 <div class="mw">
