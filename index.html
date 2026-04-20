@@ -5277,23 +5277,31 @@ window.cleanDuplicates = async function(){
 // ====================== EDIT STUDENT ======================
 let currentEditingStudentRoll = null;
 
-window.editStudent = function(btn){
-  const roll = btn.dataset.roll;
-  const student = aoStudents.find(s => s.roll === roll);
-  if(!student) {
-    alert("Student data not found.");
+window.msEditStudent = function(btn){
+  const roll = btn ? btn.dataset.roll : null;
+  if (!roll) {
+    alert("Error: Could not identify the student.");
+    return;
+  }
+
+  const student = msStudents.find(s => s.roll === roll);
+  if (!student) {
+    alert("Student data not found. Please refresh and try again.");
     return;
   }
 
   currentEditingStudentRoll = roll;
-  el('edit-stu-name').value = student.name || '';
-  el('edit-stu-roll').value = student.roll || '';
+
+  el('edit-stu-name').value  = student.name  || '';
+  el('edit-stu-roll').value  = student.roll  || '';
   el('edit-stu-email').value = student.email || '';
+
   el('edit-stu-st').className = 'st';
+  el('ov-edit-student').dataset.caller = 'ms';
   el('ov-edit-student').classList.add('on');
 };
 
-window.saveEditedStudent = async function(){
+window.saveEditedStudent = async function(){   // ← MUST be async
   if (!currentEditingStudentRoll) {
     setSt('edit-stu-st', 'err', 'No student selected for editing.');
     return;
@@ -5356,10 +5364,9 @@ window.saveEditedStudent = async function(){
 
   } catch (e) {
     console.error("saveEditedStudent error:", e);
-    setSt('edit-stu-st', 'err', 'Failed to update: ' + e.message);
+    setSt('edit-stu-st', 'err', 'Failed to update: ' + (e.message || e));
   }
 };
-
 // ====================== EDIT TEACHER (Basic) ======================
 let currentEditingTeacherId = null;
 
