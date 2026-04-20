@@ -771,6 +771,7 @@ tr:hover td{background:var(--s2)}
     <div style="flex:1"></div>
     <h3 style="font-size:14px">Master Question Bank</h3>
     <span id="bank-total" style="font-size:12px;color:var(--m)"></span>
+    <button class="btn btn-sm" id="bank-commit-all-btn" style="display:none;background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.4)" onclick="commitAllDrafts()">💾 Commit All Drafts to Bank</button>
   </div>
   <!-- Hierarchy filters -->
   <div class="card" style="padding:14px">
@@ -1770,9 +1771,35 @@ window.filterBankBySubj=async function(cid){
 async function loadAllQuestions(){
   if(!fbReady)return;
   try{
+    // Load committed questions from 'questions' collection
     const snap=await _fb.getDocs(_fb.collection(db,'questions'));
-    allQuestions=snap.docs.map(d=>({id:d.id,...d.data()}));
-    allQuestions.sort(function(a,b){ return (b.ts||0)-(a.ts||0); }); // sort in JS so docs missing ts are still included
+    const committed=snap.docs.map(d=>({id:d.id,...d.data(),_source:'bank'}));
+
+    // Also load draft questions from 'drafts' collection so they appear in the bank
+    let draftQs=[];
+    try{
+      const dSnap=await _fb.getDocs(_fb.collection(db,'drafts'));
+      dSnap.docs.forEach(function(d){
+        const data=d.data();
+        const qs=data.questions||[];
+        qs.forEach(function(q){
+          // Avoid duplication — skip if already in committed (matched by tempId or text+courseId)
+          const alreadySaved=committed.some(function(c){
+            return (q.tempId && c.tempId===q.tempId) || (c.text===q.text && c.courseId===q.courseId);
+          });
+          if(!alreadySaved){
+            draftQs.push(Object.assign({},q,{
+              _source:'draft',
+              _draftId:d.id,
+              id:q.tempId||('draft_'+d.id+'_'+Math.random().toString(36).slice(2,6))
+            }));
+          }
+        });
+      });
+    }catch(de){console.warn('Draft load in bank:',de);}
+
+    allQuestions=[...committed,...draftQs];
+    allQuestions.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
     // Rebuild autocomplete data
     const sets={prog:new Set(),cid:new Set(),subj:new Set(),topic:new Set(),testid:new Set()};
     allQuestions.forEach(q=>{
@@ -2175,6 +2202,9 @@ window.renderBank=function(){
   const qs=allQuestions.filter(bankFilterFn);
   el('bank-total').textContent=qs.length+' of '+allQuestions.length+' questions';
   const list=el('bank-list');
+  // Show/hide commit-all button based on draft presence
+  const commitBtn=el('bank-commit-all-btn');
+  if(commitBtn) commitBtn.style.display=allQuestions.some(function(q){return q._source==='draft';}) ? '' : 'none';
   // Show bulk bar
   const bar=el('bank-bulk-bar');
   if(bar) bar.style.display='';
@@ -2191,13 +2221,15 @@ window.renderBank=function(){
           return '<span style="'+(i===q.correctIndex?'color:var(--grn);font-weight:600':'')+'">'+'ABCD'[i]+'. '+esc(o)+'</span>';
         }).join(' &nbsp;')+'</div>'
       :'<div style="font-size:11px;color:var(--grn);margin-top:4px;font-weight:600">Answer: '+esc(q.answer)+'</div>';
-    return '<div class="qi'+(sel?' sel':'')+'" id="bq-'+q.id+'" data-id="'+q.id+'">'
+    const isDraft = q._source==='draft';
+    return '<div class="qi'+(sel?' sel':'')+'" id="bq-'+q.id+'" data-id="'+q.id+'"'+(isDraft?' style="border-left:3px solid var(--warn)"':'')+' data-draftid="'+(q._draftId||'')+'">'
       +'<div class="qi-row" style="align-items:flex-start">'
         +'<div style="padding:4px 10px 0 2px;cursor:pointer" onclick="bankAction(this,0)">'
           +'<div class="chk'+(sel?' on':'')+'" id="bchk-'+q.id+'">&#x2713;</div>'
         +'</div>'
         +'<div class="qi-body" style="flex:1">'
           +'<div class="qi-meta">'
+            +(isDraft?'<span class="chip" style="background:rgba(245,158,11,.15);color:#f59e0b">Draft</span>':'')
             +'<span class="chip chip-'+q.type+'">'+(q.type==='mcq'?'MCQ':'T/F')+'</span>'
             +'<span class="chip chip-'+(q.difficulty||'medium')+'">'+(q.difficulty||'medium')+'</span>'
             +'<span class="qi-tag">'+esc(q.courseId)+' '+esc(q.subjectName)+'</span>'
@@ -2208,8 +2240,9 @@ window.renderBank=function(){
           +opts
         +'</div>'
         +'<div style="display:flex;flex-direction:column;gap:5px;margin-left:8px;flex-shrink:0">'
+          +(isDraft?'<button class="btn-icon" title="Commit to Bank" onclick="commitDraftQ(this)" data-id="'+q.id+'" style="color:var(--warn);font-size:14px">💾</button>':'')
           +'<button class="btn-icon" title="Add to Quiz" onclick="bankAction(this,1)" style="color:var(--grn);font-size:14px">➕</button>'
-          +'<button class="btn-icon" title="Edit" onclick="bankAction(this,2)">✏️</button>'
+          +(!isDraft?'<button class="btn-icon" title="Edit" onclick="bankAction(this,2)">✏️</button>':'')
           +'<button class="btn-icon" title="Delete" onclick="bankAction(this,3)" style="color:var(--err)">🗑</button>'
         +'</div>'
       +'</div>'
@@ -2239,6 +2272,51 @@ window.bankSelAll=function(){
 window.bankDeselAll=function(){
   bankSel.clear();
   renderBank();
+};
+
+// Commit a single draft question to the Master Bank
+window.commitDraftQ = async function(btn){
+  const id = btn.dataset.id;
+  const q = allQuestions.find(function(x){ return x.id===id; });
+  if(!q || q._source!=='draft'){ return; }
+  btn.disabled=true; btn.textContent='…';
+  try{
+    const qFinal = Object.assign({},q);
+    delete qFinal._source; delete qFinal._draftId; delete qFinal.tempId; delete qFinal.inDraft; delete qFinal.id;
+    const ref = await _fb.addDoc(_fb.collection(db,'questions'), qFinal);
+    // Remove this question from its parent draft doc
+    setSt('bank-add-st','ok','✅ Question committed to Master Bank.');
+    setTimeout(function(){ var s=el('bank-add-st'); if(s) s.className='st'; },2500);
+    await loadAllQuestions(); populateBankFilters(); renderBank();
+  }catch(e){
+    btn.disabled=false; btn.textContent='💾';
+    setSt('bank-add-st','err','Commit failed: '+e.message);
+  }
+};
+
+// Commit ALL draft questions to the Master Bank at once
+window.commitAllDrafts = async function(){
+  const drafts = allQuestions.filter(function(q){ return q._source==='draft'; });
+  if(!drafts.length){ alert('No draft questions to commit.'); return; }
+  if(!confirm('Commit '+drafts.length+' draft question(s) to the Master Bank?')) return;
+  const btn = el('bank-commit-all-btn');
+  if(btn){ btn.disabled=true; btn.textContent='Committing…'; }
+  setSt('bank-add-st','info','Committing '+drafts.length+' questions…');
+  let done=0;
+  try{
+    for(const q of drafts){
+      const qFinal = Object.assign({},q);
+      delete qFinal._source; delete qFinal._draftId; delete qFinal.tempId; delete qFinal.inDraft; delete qFinal.id;
+      await _fb.addDoc(_fb.collection(db,'questions'), qFinal);
+      done++;
+    }
+    setSt('bank-add-st','ok','✅ '+done+' question(s) committed to Master Bank.');
+    setTimeout(function(){ var s=el('bank-add-st'); if(s) s.className='st'; },3000);
+    await loadAllQuestions(); populateBankFilters(); renderBank();
+  }catch(e){
+    setSt('bank-add-st','err','Failed after '+done+': '+e.message);
+    if(btn){ btn.disabled=false; btn.textContent='💾 Commit All Drafts to Bank'; }
+  }
 };
 
 window.bankAddOne=function(id){
