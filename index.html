@@ -4660,15 +4660,24 @@ window.msDeselectAll = function(){
 
 window.msEditStudent = function(btn){
   const roll = btn.dataset.roll;
-  const student = msStudents.find(s=>s.roll===roll);
-  if(!student) return;
-  // Reuse the existing edit-student overlay
+  if(!roll) return;
+
+  const student = msStudents.find(s => s.roll === roll);
+  if(!student) {
+    console.warn('Student not found in msStudents for roll:', roll);
+    return;
+  }
+
+  // ← This line was missing — this is the main bug
+  currentEditingStudentRoll = roll;
+
+  // Pre-fill the form
   el('edit-stu-name').value  = student.name  || '';
   el('edit-stu-roll').value  = student.roll  || '';
   el('edit-stu-email').value = student.email || '';
-  el('edit-stu-st').className = 'st';
-  // Tag overlay so saveEditedStudent knows to refresh ms list too
-  el('ov-edit-student').dataset.caller = 'ms';
+
+  el('edit-stu-st').className = 'st';           // clear previous status
+  el('ov-edit-student').dataset.caller = 'ms';  // tell save function which screen called it
   el('ov-edit-student').classList.add('on');
 };
 
