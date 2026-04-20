@@ -1724,15 +1724,12 @@ async function loadRecentSessions(){
   if(!fbReady)return;
   const filterEmail = homeViewEmail();
   try{
-    let q = _fb.query(
-      _fb.collection(db,'sessions'),
-      _fb.orderBy('ts','desc'),
-      _fb.limit(filterEmail ? 10 : 8)
-    );
-    const snap = await _fb.getDocs(q);
-    // Filter by teacher in JS (avoids composite index for admin case)
+    const snap = await _fb.getDocs(_fb.collection(db,'sessions'));
+    // Sort and filter in JS — avoids Firestore composite index requirement
+    // and includes sessions that may be missing the ts field
     let sessions = snap.docs.map(d=>({id:d.id,...d.data()}));
-    if(filterEmail) sessions = sessions.filter(s=>!s.teacherEmail || s.teacherEmail===filterEmail); // include legacy sessions missing teacherEmail
+    sessions.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+    if(filterEmail) sessions = sessions.filter(s=>!s.teacherEmail || s.teacherEmail===filterEmail);
     sessions = sessions.slice(0,5);
     const wrap=el('home-recent');
     if(!sessions.length){
@@ -1828,10 +1825,16 @@ async function loadResults(force){
   const rb=el('results-refreshed');
   if(rb)rb.textContent='Refreshing…';
   try{
-    const snap=await _fb.getDocs(
-      _fb.query(_fb.collection(db,'results'),_fb.orderBy('ts','desc'))
-    );
-    allResults=snap.docs.map(d=>({id:d.id,...d.data()}));
+    // Fetch from both 'results' and 'results_Classroom_Quiz' collections and merge
+    const [snap1, snap2] = await Promise.all([
+      _fb.getDocs(_fb.collection(db,'results')),
+      _fb.getDocs(_fb.collection(db,'results_Classroom_Quiz')).catch(()=>({docs:[]}))
+    ]);
+    const seen = new Set();
+    allResults = [...snap1.docs, ...snap2.docs]
+      .map(d=>({id:d.id,...d.data()}))
+      .filter(r=>{ if(seen.has(r.id)) return false; seen.add(r.id); return true; });
+    allResults.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
     // Ensure every record has a numeric performanceScore for sorting
     allResults.forEach(r=>{
       if(r.performanceScore==null||typeof r.performanceScore!=='number'){
@@ -2176,8 +2179,17 @@ function populateBankFilters(){
 function fillSelect(id,items,valFn,lblFn){
   const sel=el(id);if(!sel)return;
   const cur=sel.value;
+  // NOTE: option values must NOT be HTML-escaped — only the display label should be.
+  // Using esc() on values breaks gv() comparisons since .value returns the raw string.
   sel.innerHTML='<option value="">All</option>'+
-    items.map(x=>`<option value="${esc(valFn?valFn(x):x)}">${esc(lblFn?lblFn(x):x)}</option>`).join('');
+    items.map(x=>{
+      const val=valFn?valFn(x):x;
+      const lbl=lblFn?lblFn(x):x;
+      const opt=document.createElement('option');
+      opt.value=val;
+      opt.textContent=lbl;
+      return opt.outerHTML;
+    }).join('');
   sel.value=cur;
 }
 
