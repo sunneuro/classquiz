@@ -4660,24 +4660,15 @@ window.msDeselectAll = function(){
 
 window.msEditStudent = function(btn){
   const roll = btn.dataset.roll;
-  if(!roll) return;
-
-  const student = msStudents.find(s => s.roll === roll);
-  if(!student) {
-    console.warn('Student not found in msStudents for roll:', roll);
-    return;
-  }
-
-  // ← This line was missing — this is the main bug
-  currentEditingStudentRoll = roll;
-
-  // Pre-fill the form
+  const student = msStudents.find(s=>s.roll===roll);
+  if(!student) return;
+  // Reuse the existing edit-student overlay
   el('edit-stu-name').value  = student.name  || '';
   el('edit-stu-roll').value  = student.roll  || '';
   el('edit-stu-email').value = student.email || '';
-
-  el('edit-stu-st').className = 'st';           // clear previous status
-  el('ov-edit-student').dataset.caller = 'ms';  // tell save function which screen called it
+  el('edit-stu-st').className = 'st';
+  // Tag overlay so saveEditedStudent knows to refresh ms list too
+  el('ov-edit-student').dataset.caller = 'ms';
   el('ov-edit-student').classList.add('on');
 };
 
@@ -5292,21 +5283,17 @@ window.editStudent = function(btn){
   el('ov-edit-student').classList.add('on');
 };
 
-setSt('edit-stu-st','ok','✅ Student profile updated successfully.');
+window.saveEditedStudent = async function(){
+  if(!currentEditingStudentRoll) return;
 
-    setTimeout(() => {
-      const caller = el('ov-edit-student').dataset.caller || '';
-      closeOv('ov-edit-student');
-      
-      if(caller === 'ms') {
-        msFilter();           // refresh My Students list
-      } else {
-        aoStudentFilter();    // refresh Admin Office list
-      }
-      
-      // Optional: clear the global after use
-      currentEditingStudentRoll = null;
-    }, 1200);  
+  const newName  = gv('edit-stu-name').trim();
+  const newRoll  = gv('edit-stu-roll').trim();
+  const newEmail = gv('edit-stu-email').trim();
+
+  if(!newName || !newRoll || !newEmail){
+    setSt('edit-stu-st','err','All fields are required.');
+    return;
+  }
 
   setSt('edit-stu-st','info','Updating...');
 
