@@ -2894,8 +2894,6 @@ async function endSessionAuto(){
   }catch(e){ console.warn('Auto-end failed:',e); }
 }
 
-let _windowTimer=null;
-
 function startWindowTimer(liveAt, windowSecs){
   clearTimeout(_windowTimer);
   if(!windowSecs||windowSecs<=0) return;
