@@ -3235,7 +3235,7 @@ function trigVio(){
     title='⚠ Warning 3 of 3 — Screen Left Again!';
     body='Return within 10 seconds or the quiz will restart.';
   } else if(vioCount===4){
-    cdSecs=5; canReturn=True;
+    cdSecs=5; canReturn=true;  // ← FIXED: was 'True'
     title='🚨 Warning - Quiz Restart on next exit of quiz app!';
     body='Return within 5 seconds or the quiz will restart.';
   } else {
