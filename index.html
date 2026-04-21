@@ -862,9 +862,16 @@ tr:hover td{background:var(--s2)}
     <h2>Session Settings</h2>
     <label>Session Name</label>
     <input type="text" id="cs-name" placeholder="e.g. Chapter 3 Mid-Term"/>
-    <label>Time Limit (minutes)</label>
+    <label>Time Limit (minutes) — per student</label>
     <input type="number" id="cs-time" value="15" min="1" max="180"/>
+    <label>Open Window (HH:MM) — session auto-ends after this long
+      <span style="font-weight:400;color:var(--m)"> — leave blank for manual close</span>
+    </label>
+    <input type="text" id="cs-window" placeholder="e.g. 02:00" maxlength="5"
+      style="max-width:120px"
+      oninput="this.value=this.value.replace(/[^0-9:]/g,'')"/>
     <label>Questions per student
+
       <span style="font-weight:400;color:var(--m)"> — each student gets a different random selection (0 = all)</span>
     </label>
     <div class="row" style="gap:10px;align-items:center;flex-wrap:nowrap">
@@ -1413,6 +1420,7 @@ window.doLogin=async function(){
 window.doLogout=function(){
   teacher=null;
   allQuestions=[];allResults=[];curSel=[];
+  clearTimeout(_windowTimer);
   if(sessionUnsubscribe){sessionUnsubscribe();sessionUnsubscribe=null;}
   if(lobbyUnsubscribe){lobbyUnsubscribe();lobbyUnsubscribe=null;}
   show('s-login-teacher');
@@ -2508,7 +2516,7 @@ window.saveTemplate=async function(){
   try{
     await _fb.addDoc(_fb.collection(db,'templates'),{
       name,questionIds:curSel,
-      settings:{time:gv('cs-time'),count:gv('cs-count'),sessionName:gv('cs-name')},
+      settings:{time:gv('cs-time'),count:gv('cs-count'),sessionName:gv('cs-name'),window:gv('cs-window')},
       createdBy:teacher.name,createdByEmail:teacher.email,ts:Date.now()
     });
     setSt('tpl-st','ok','✅ Template saved!');
@@ -2543,10 +2551,11 @@ window.loadTemplate=async function(id){
     if(!snap.exists())return;
     const t=snap.data();
     curSel=t.questionIds||[];
-    if(t.settings){
+    if(t.settings){  
       if(t.settings.time)el('cs-time').value=t.settings.time;
       if(t.settings.count)el('cs-count').value=t.settings.count;
       if(t.settings.sessionName)el('cs-name').value=t.settings.sessionName;
+      if(t.settings.window)el('cs-window').value=t.settings.window;     
     }
     closeOv('ov-template');
     renderCurate();
@@ -2588,6 +2597,20 @@ window.goLaunch=async function(){
   const time=parseInt(gv('cs-time'))||15;
   const count=parseInt(gv('cs-count'))||0;
 
+  // Parse open window HH:MM → total seconds (0 = no window / manual close)
+  let windowSecs=0;
+  const winRaw=gv('cs-window');
+  if(winRaw){
+    const parts=winRaw.split(':');
+    const hh=parseInt(parts[0])||0;
+    const mm=parseInt(parts[1])||0;
+    windowSecs=(hh*3600)+(mm*60);
+    if(windowSecs>0 && windowSecs < time*60){
+      setSt('cur-st','warn','⚠ Open window is shorter than the per-student time limit.');
+      // Warn but don't block — teacher may intend this
+    }
+  }
+
   // Step 1: Save all DRAFT questions to Master Bank with Test ID stamp
   const finalTestId=curDraftMeta.testid||autoGenTestId(curDraftMeta.cid||'',curDraftMeta.topic||'');
   const savedQIds=[];
@@ -2625,7 +2648,7 @@ window.goLaunch=async function(){
   const fq=launchQs[0]||allPaper[0];
   try{
     await _fb.setDoc(_fb.doc(db,'sessions',activeSessionId),{
-      sessionName,time,count,
+      sessionName,time,count,windowSecs,
       qs:launchQs.length?launchQs:allPaper,
       status:'waiting', // waiting | live | ended
       answersLocked:true,
@@ -2784,25 +2807,96 @@ window.goLive=async function(){
     const sid=genSessionId(fq.courseId||gv('cs-name'),fq.topicName||'');
     activeSessionDisplayId=sid.display;
     activeSessionFileId=sid.filename;
+    const liveAt=Date.now();
     await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{
       status:'live',
       sessionDisplayId:sid.display,
       sessionFileId:sid.filename,
-      liveAt:Date.now()
+      liveAt
     });
     el('session-status-msg').textContent='✅ Test is live! Session: '+sid.display;
+    // Start auto-end timer if open window was configured
+    const _wSnap=await _fb.getDoc(_fb.doc(db,'sessions',activeSessionId));
+    if(_wSnap.exists()) startWindowTimer(liveAt, _wSnap.data().windowSecs||0);
     el('btn-go-live').style.display='none';
     el('btn-end-session').style.display='';
     el('btn-go-live-2').style.display='none';
     el('btn-end-2').style.display='';
   }catch(e){alert('Go live failed: '+e.message);}
 };
+let _windowTimer=null;
 
+function startWindowTimer(liveAt, windowSecs){
+  clearTimeout(_windowTimer);
+  if(!windowSecs||windowSecs<=0) return;
+  const elapsed=Math.floor((Date.now()-liveAt)/1000);
+  const remaining=windowSecs-elapsed;
+  if(remaining<=0){
+    // Already expired — end immediately
+    endSessionAuto();
+    return;
+  }
+  _windowTimer=setTimeout(()=>{ endSessionAuto(); }, remaining*1000);
+}
+
+async function endSessionAuto(){
+  clearTimeout(_windowTimer);
+  if(!fbReady||!activeSessionId) return;
+  try{
+    await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{
+      status:'ended',
+      answersLocked:false,
+      autoEndedAt:Date.now()
+    });
+    answersLocked=false;
+    el('session-status-msg').textContent='⏹ Session auto-closed — open window elapsed.';
+    el('btn-end-session').style.display='none';
+    el('btn-end-2').style.display='none';
+    const btn=el('btn-unlock');
+    if(btn){btn.textContent='🔓 Answers Unlocked (auto)';btn.className='btn btn-grn w100';}
+    setSt('unlock-st','ok','✅ Session auto-ended — open window expired.');
+  }catch(e){ console.warn('Auto-end failed:',e); }
+}
+
+let _windowTimer=null;
+
+function startWindowTimer(liveAt, windowSecs){
+  clearTimeout(_windowTimer);
+  if(!windowSecs||windowSecs<=0) return;
+  const elapsed=Math.floor((Date.now()-liveAt)/1000);
+  const remaining=windowSecs-elapsed;
+  if(remaining<=0){
+    // Already expired — end immediately
+    endSessionAuto();
+    return;
+  }
+  _windowTimer=setTimeout(()=>{ endSessionAuto(); }, remaining*1000);
+}
+
+async function endSessionAuto(){
+  clearTimeout(_windowTimer);
+  if(!fbReady||!activeSessionId) return;
+  try{
+    await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{
+      status:'ended',
+      answersLocked:false,
+      autoEndedAt:Date.now()
+    });
+    answersLocked=false;
+    el('session-status-msg').textContent='⏹ Session auto-closed — open window elapsed.';
+    el('btn-end-session').style.display='none';
+    el('btn-end-2').style.display='none';
+    const btn=el('btn-unlock');
+    if(btn){btn.textContent='🔓 Answers Unlocked (auto)';btn.className='btn btn-grn w100';}
+    setSt('unlock-st','ok','✅ Session auto-ended — open window expired.');
+  }catch(e){ console.warn('Auto-end failed:',e); }
+}
+  
 window.endSession=async function(){
   if(!confirm('End this session? All students still attempting will be auto-submitted.'))return;
   if(!fbReady||!activeSessionId)return;
+  clearTimeout(_windowTimer);
   try{
-    // End session AND auto-unlock answers
     await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{
       status:'ended',
       answersLocked:false
@@ -2904,7 +2998,14 @@ window.stuJoin=async function(){
     return null;
   }
 
-  if(status==='ended'){
+  // Block join if open window has expired
+  if(status==='live' && qParams.windowSecs > 0 && qParams.liveAt){
+    const elapsed=Date.now()-qParams.liveAt;
+    if(elapsed > qParams.windowSecs*1000){
+      showStuError('This session has expired. The open window has closed.');
+      return;
+    }
+  }
     const rec=await findResult(sid,roll);
     if(rec){
       stuName=name;stuRoll=roll;stuEmail=email;
