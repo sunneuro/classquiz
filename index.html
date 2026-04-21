@@ -1237,6 +1237,12 @@ async function initFB(key,pid,aid){
     });
     const fs = app.firestore();
     db = fs;
+    // Sign in anonymously so Firestore write rules (request.auth != null) pass.
+    // This is invisible to the user — no account is created.
+    try{
+      const auth = app.auth();
+      if(!auth.currentUser) await auth.signInAnonymously();
+    }catch(authErr){ console.warn('Anon auth failed:', authErr); }
     // Wrap compat API to match the modular call shapes used throughout the app
     _fb = {
       collection: function(db,col){ return db.collection(col); },
@@ -1599,6 +1605,7 @@ window.deleteTeacher=async function(id){
   }catch(e){setSt('mt-st','err','Failed: '+e.message);}
 };
 async function goHome(){
+  clearInterval(resultsRefreshInt); // stop polling when leaving results screen
   el('home-appname').textContent=appCfg?.appName||'ClassQuiz';
   el('home-welcome').textContent='Hello, '+(teacher.displayName||teacher.name)+'!';
   el('home-role-badge').innerHTML=teacher.isAdmin
@@ -1706,8 +1713,8 @@ function homeUpdateHeadings(){
   }
 }
 
-window.goBank=async function(){await loadAllQuestions();populateBankFilters();renderBank();show('s-bank');};
-window.goCurate=async function(){await loadAllQuestions();populateCurateFilters();renderCurate();show('s-curate');};
+window.goBank=async function(){clearInterval(resultsRefreshInt);await loadAllQuestions();populateBankFilters();renderBank();show('s-bank');};
+window.goCurate=async function(){clearInterval(resultsRefreshInt);await loadAllQuestions();populateCurateFilters();renderCurate();show('s-curate');};
 let resultsRefreshInt=null;
 window._sort={col:'ts',dir:'desc'}; // unified sort state
 window.goResults=async function(){
@@ -2748,7 +2755,7 @@ function startLobbyListener(){
   if(lobbyUnsubscribe){lobbyUnsubscribe();lobbyUnsubscribe=null;}
   if(!fbReady||!activeSessionId)return;
   clearInterval(lobbyPollInt);
-  // Poll lobby every 3 seconds
+  // Poll lobby every 8 seconds — reduced from 3s to save Firestore read quota
   lobbyPollInt=setInterval(async()=>{
     try{
       const snap=await _fb.getDocs(
@@ -2757,7 +2764,7 @@ function startLobbyListener(){
       const entries=snap.docs.map(d=>({id:d.id,...d.data()}));
       renderLobby(entries);
     }catch(e){}
-  },3000);
+  },8000);
   // Also load immediately
   _fb.getDocs(_fb.query(_fb.collection(db,'lobby_'+activeSessionId),_fb.orderBy('ts','asc')))
     .then(snap=>{
@@ -3158,7 +3165,7 @@ let sessionPollInt=null;
 function startSessionPoller(){
   if(!fbReady||!qParams?.sessionId)return;
   clearInterval(sessionPollInt);
-  // Poll every 2 seconds for session status changes
+  // Poll every 7 seconds for session status changes — reduced from 2s to save quota
   sessionPollInt=setInterval(async()=>{
     try{
       const snap=await _fb.getDoc(_fb.doc(db,'sessions',qParams.sessionId));
@@ -3174,7 +3181,7 @@ function startSessionPoller(){
         showStuError('This session was ended by the teacher.');
       }
     }catch(e){console.warn('Session poll:',e);}
-  },2000);
+  },7000);
 }
 
 // Keep backward compat
@@ -3262,7 +3269,7 @@ function listenForSessionEnd(){
         el('ov-session-ended').classList.add('on');
       }
     }catch(e){}
-  },3000);
+  },8000);
 }
 
 /* ═══════════════════════════════════════════
@@ -3718,7 +3725,7 @@ async function showResult(r){
             const b=el('btn-check-unlock');if(b)b.style.display='none';
           }
         }catch(e){}
-      },3000); // poll every 3 seconds
+      },10000); // poll every 10 seconds — teacher unlock is not time-critical
     }
   }
   show('s-result');
@@ -3740,7 +3747,7 @@ window.checkUnlock=async function(){
       return;
     }else{
       btn.textContent='🔄 Check again';btn.disabled=false;
-      // Start auto-polling every 5 seconds
+      // Start auto-polling every 10 seconds — teacher unlock is not time-critical
       if(!unlockPollInt){
         unlockPollInt=setInterval(async()=>{
           try{
@@ -3752,7 +3759,7 @@ window.checkUnlock=async function(){
               const b=el('btn-check-unlock');if(b)b.style.display='none';
             }
           }catch(e){}
-        },5000);
+        },10000);
       }
     }
   }catch(e){
@@ -4804,6 +4811,9 @@ window.msDeselectAll = function(){
   msRenderList();
 };
 
+// Shared state for the Edit Student overlay (used by both My Students and Admin Office)
+let currentEditingStudentRoll = null;
+
 window.msEditStudent = function(btn){
   const roll = btn ? btn.dataset.roll : null;
   if (!roll) {
@@ -4826,6 +4836,67 @@ window.msEditStudent = function(btn){
   el('edit-stu-st').className = 'st';
   el('ov-edit-student').dataset.caller = 'ms';
   el('ov-edit-student').classList.add('on');
+};
+
+window.saveEditedStudent = async function(){
+  if (!currentEditingStudentRoll) {
+    setSt('edit-stu-st', 'err', 'No student selected for editing.');
+    return;
+  }
+
+  const newName  = gv('edit-stu-name').trim();
+  const newRoll  = gv('edit-stu-roll').trim();
+  const newEmail = gv('edit-stu-email').trim();
+
+  if (!newName || !newRoll || !newEmail) {
+    setSt('edit-stu-st', 'err', 'All fields are required.');
+    return;
+  }
+
+  setSt('edit-stu-st', 'info', 'Updating student...');
+
+  try {
+    const toUpdate = allResults.filter(r => (r.roll || '').trim() === currentEditingStudentRoll);
+
+    if (toUpdate.length === 0) {
+      setSt('edit-stu-st', 'warn', 'No results found for this student.');
+      return;
+    }
+
+    for (const result of toUpdate) {
+      const docId = result.id ||
+        ((result.roll || '').replace(/[^a-zA-Z0-9]/g, '_') + '__' +
+         (result.sessionId || '').replace(/[^a-zA-Z0-9]/g, '_'));
+
+      await _fb.updateDoc(_fb.doc(db, 'results', docId), {
+        studentName: newName,
+        roll: newRoll,
+        email: newEmail
+      });
+    }
+
+    // Update local cache
+    allResults.forEach(r => {
+      if ((r.roll || '').trim() === currentEditingStudentRoll) {
+        r.studentName = newName;
+        r.roll = newRoll;
+        r.email = newEmail;
+      }
+    });
+
+    setSt('edit-stu-st', 'ok', `✅ Updated ${toUpdate.length} result(s) successfully.`);
+
+    setTimeout(() => {
+      const caller = el('ov-edit-student').dataset.caller || '';
+      closeOv('ov-edit-student');
+      if (caller === 'ms') { msFilter(); } else { aoStudentFilter(); }
+      currentEditingStudentRoll = null;
+    }, 1500);
+
+  } catch (e) {
+    console.error("saveEditedStudent error:", e);
+    setSt('edit-stu-st', 'err', 'Failed to update: ' + (e.message || e));
+  }
 };
 
 window.msDeleteOne = async function(btn){
@@ -5420,107 +5491,49 @@ window.cleanDuplicates = async function(){
   setSt('results-refreshed', 'ok', `✅ Cleaned ${deletedCount} duplicate record(s). Only best results kept.`);
 };
 
-// ====================== EDIT STUDENT ======================
-let currentEditingStudentRoll = null;
-
-window.msEditStudent = function(btn){
+// ====================== EDIT STUDENT (Admin Office) ======================
+// Reuses the same ov-edit-student overlay as My Students.
+// The caller flag ('ao') tells saveEditedStudent to refresh the AO list on save.
+window.editStudent = function(btn){
   const roll = btn ? btn.dataset.roll : null;
-  if (!roll) {
-    alert("Error: Could not identify the student.");
-    return;
-  }
+  if (!roll) { alert("Error: Could not identify the student."); return; }
 
-  const student = msStudents.find(s => s.roll === roll);
-  if (!student) {
-    alert("Student data not found. Please refresh and try again.");
-    return;
-  }
+  const student = aoStudents.find(s => s.roll === roll);
+  if (!student) { alert("Student data not found. Please refresh and try again."); return; }
 
   currentEditingStudentRoll = roll;
-
   el('edit-stu-name').value  = student.name  || '';
   el('edit-stu-roll').value  = student.roll  || '';
   el('edit-stu-email').value = student.email || '';
-
   el('edit-stu-st').className = 'st';
-  el('ov-edit-student').dataset.caller = 'ms';
+  el('ov-edit-student').dataset.caller = 'ao';
   el('ov-edit-student').classList.add('on');
 };
 
-window.saveEditedStudent = async function(){   // ← MUST be async
-  if (!currentEditingStudentRoll) {
-    setSt('edit-stu-st', 'err', 'No student selected for editing.');
-    return;
-  }
-
-  const newName  = gv('edit-stu-name').trim();
-  const newRoll  = gv('edit-stu-roll').trim();
-  const newEmail = gv('edit-stu-email').trim();
-
-  if (!newName || !newRoll || !newEmail) {
-    setSt('edit-stu-st', 'err', 'All fields are required.');
-    return;
-  }
-
-  setSt('edit-stu-st', 'info', 'Updating student...');
-
-  try {
-    const toUpdate = allResults.filter(r => (r.roll || '').trim() === currentEditingStudentRoll);
-
-    if (toUpdate.length === 0) {
-      setSt('edit-stu-st', 'warn', 'No results found for this student.');
-      return;
+// ── Pause all polling when the browser tab is hidden ──────────────────────
+// This is the single biggest quota saver: a hidden tab burns reads for nothing.
+document.addEventListener('visibilitychange', function(){
+  if(document.hidden){
+    clearInterval(lobbyPollInt);
+    clearInterval(resultsRefreshInt);
+    // Student polls: pause but don't null them — finishQuiz checks quizActive
+    if(sessionPollInt){ clearInterval(sessionPollInt); sessionPollInt=null; }
+    if(endPollInt){     clearInterval(endPollInt);     endPollInt=null; }
+    if(unlockPollInt){  clearInterval(unlockPollInt);  unlockPollInt=null; }
+  } else {
+    // Tab is visible again — resume whichever loops are contextually appropriate.
+    // Teacher lobby: restart only if a session is actively open
+    if(activeSessionId && typeof startLobbyListener === 'function') startLobbyListener();
+    // Student waiting screen: restart session poller if still waiting
+    if(typeof qParams !== 'undefined' && qParams?.sessionId){
+      const sc = document.getElementById('s-stu-wait');
+      if(sc && sc.classList.contains('active')) startSessionPoller();
+      const sq = document.getElementById('s-quiz');
+      if(sq && sq.classList.contains('active') && !endPollInt) listenForSessionEnd();
     }
-
-    for (const result of toUpdate) {
-      const docId = result.id || 
-        ((result.roll || '').replace(/[^a-zA-Z0-9]/g, '_') + '__' + 
-         (result.sessionId || '').replace(/[^a-zA-Z0-9]/g, '_'));
-
-      await _fb.updateDoc(_fb.doc(db, 'results', docId), {
-        studentName: newName,
-        roll: newRoll,
-        email: newEmail
-      });
-    }
-
-    // Update local cache
-    allResults.forEach(r => {
-      if ((r.roll || '').trim() === currentEditingStudentRoll) {
-        r.studentName = newName;
-        r.roll = newRoll;
-        r.email = newEmail;
-      }
-    });
-
-    setSt('edit-stu-st', 'ok', `✅ Updated ${toUpdate.length} result(s) successfully.`);
-
-    setTimeout(() => {
-      const caller = el('ov-edit-student').dataset.caller || '';
-      closeOv('ov-edit-student');
-
-      if (caller === 'ms') {
-        msFilter();
-      } else {
-        aoStudentFilter();
-      }
-
-      currentEditingStudentRoll = null;
-    }, 1500);
-
-  } catch (e) {
-    console.error("saveEditedStudent error:", e);
-    setSt('edit-stu-st', 'err', 'Failed to update: ' + (e.message || e));
   }
-};
-// ====================== EDIT TEACHER (Basic) ======================
-let currentEditingTeacherId = null;
+});
 
-window.editTeacher = function(btn){
-  alert("Teacher editing is not fully implemented yet.\n\nYou can use 'Reset Password' for now.");
-};
-
-// Start the app
 bootstrap();
 </script>
 </body>
