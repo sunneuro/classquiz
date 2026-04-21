@@ -362,6 +362,15 @@ tr:hover td{background:var(--s2)}
 
 <!-- HOME -->
 <div id="s-home" class="screen center">
+  <div id="home-active-session-banner" class="btn-active-session" 
+     style="display:none;background:var(--warn,#f59e0b);color:#fff;
+            border-radius:var(--r);padding:12px 16px;margin-bottom:16px;
+            display:none;align-items:center;gap:12px;cursor:pointer"
+     onclick="goActiveSession()">
+  <span style="font-size:18px">🔴</span>
+  <span style="flex:1;font-weight:600">Session in progress — tap to return</span>
+  <span>↩</span>
+</div>
 <div class="mw-lg">
   <div class="row" style="margin-bottom:20px;flex-wrap:wrap;gap:10px">
     <div style="flex:1">
@@ -423,7 +432,9 @@ tr:hover td{background:var(--s2)}
 <div id="s-manage-teachers" class="screen center">
 <div class="mw-lg">
   <div class="row" style="margin-bottom:20px">
-    <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
+    <button class="btn btn-warn btn-sm btn-active-session" 
+        onclick="goActiveSession()" 
+        style="display:none">↩ Active Session</button>
     <h3 style="flex:1">👥 Manage Teachers</h3>
     <button class="btn btn-ghost btn-sm" onclick="renderMTList()">↻ Refresh</button>
   </div>
@@ -460,7 +471,9 @@ tr:hover td{background:var(--s2)}
 <div id="s-manage-students" class="screen center">
 <div class="mw-lg">
   <div class="row" style="margin-bottom:20px;flex-wrap:wrap;gap:10px">
-    <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
+    <button class="btn btn-warn btn-sm btn-active-session" 
+        onclick="goActiveSession()" 
+        style="display:none">↩ Active Session</button>
     <h3 style="flex:1">👥 My Students</h3>
     <button class="btn btn-ghost btn-sm" onclick="msLoad()">↻ Refresh</button>
   </div>
@@ -503,7 +516,9 @@ tr:hover td{background:var(--s2)}
 <div id="s-admin-office" class="screen center">
 <div class="mw-lg">
   <div class="row" style="margin-bottom:20px;flex-wrap:wrap;gap:10px">
-    <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
+    <button class="btn btn-warn btn-sm btn-active-session" 
+        onclick="goActiveSession()" 
+        style="display:none">↩ Active Session</button>
     <h3 style="flex:1">🔐 Admin Office</h3>
   </div>
   <!-- Password gate -->
@@ -671,7 +686,9 @@ tr:hover td{background:var(--s2)}
 <div id="s-addq" class="screen center">
 <div class="mw">
   <div class="row" style="margin-bottom:16px">
-    <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
+    <button class="btn btn-warn btn-sm btn-active-session" 
+        onclick="goActiveSession()" 
+        style="display:none">↩ Active Session</button>
     <h3 style="flex:1">Create Question Paper</h3>
     <span id="addq-count-badge" style="font-size:12px;color:var(--grn)"></span>
   </div>
@@ -768,7 +785,9 @@ tr:hover td{background:var(--s2)}
 <div id="s-bank" class="screen center">
 <div class="mw-lg">
   <div class="row" style="margin-bottom:10px;gap:8px;flex-wrap:wrap">
-    <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
+    <button class="btn btn-warn btn-sm btn-active-session" 
+        onclick="goActiveSession()" 
+        style="display:none">↩ Active Session</button>
     <button class="btn btn-ghost btn-sm" onclick="show('s-addq');showWizStep(1)">✏️ Create Question Paper</button>
     <button class="btn btn-ghost btn-sm" onclick="show('s-curate');renderCurate()">📋 Curate Quiz</button>
     <div style="flex:1"></div>
@@ -837,7 +856,9 @@ tr:hover td{background:var(--s2)}
 <div class="mw-lg">
   <!-- Launch button at top -->
   <div class="row" style="margin-bottom:10px;gap:8px;flex-wrap:wrap">
-    <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
+    <button class="btn btn-warn btn-sm btn-active-session" 
+        onclick="goActiveSession()" 
+        style="display:none">↩ Active Session</button>
     <button class="btn btn-ghost btn-sm" onclick="show('s-addq');showWizStep(1)">✏️ Create Question Paper</button>
     <button class="btn btn-ghost btn-sm" onclick="show('s-bank');renderBank()">📚 Master Question Bank</button>
     <div style="flex:1"></div>
@@ -1088,7 +1109,9 @@ tr:hover td{background:var(--s2)}
 <div id="s-results" class="screen center">
 <div class="mw-lg">
   <div class="row" style="margin-bottom:14px;flex-wrap:wrap;gap:10px">
-    <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
+    <button class="btn btn-warn btn-sm btn-active-session" 
+        onclick="goActiveSession()" 
+        style="display:none">↩ Active Session</button>
     <h3 style="flex:1">All Results</h3>
     <div style="font-size:11px;color:var(--m)" id="results-refreshed"></div>
   </div>
@@ -1325,10 +1348,12 @@ function hashStr(s){
 function hideSplash(){const s=el('s-splash');if(s)s.style.display='none';}
 function showSplash(msg){const s=el('s-splash');if(s)s.style.display='flex';const m=el('splash-msg');if(m)m.textContent=msg||'Loading…';}
 
-window.show=function(id){
+// existing show() 
+function show(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  el(id).classList.add('active');window.scrollTo(0,0);
-};
+  const s=el(id); if(s) s.classList.add('active');
+  syncActiveSessionBtn();   // 
+}
 window.closeOv=function(id){const e=el(id);if(e)e.classList.remove('on');};
 
 /* ═══════════════════════════════════════════
@@ -1595,7 +1620,11 @@ async function goHome(){
   renderHomeSubjects();
   loadRecentSessions();
 }
-
+window.goActiveSession = function(){
+  if(!activeSessionId) return;
+  show('s-launch');
+  startLobbyPoll();   // resume lobby polling
+};
 // ── Home screen tab state ─────────────────────────
 let homeTab = 'mine'; // 'mine' | 'teachers'
 
@@ -2848,6 +2877,7 @@ async function endSessionAuto(){
       answersLocked:false,
       autoEndedAt:Date.now()
     });
+    
     answersLocked=false;
     el('session-status-msg').textContent='⏹ Session auto-closed — open window elapsed.';
     el('btn-end-session').style.display='none';
@@ -2857,6 +2887,9 @@ async function endSessionAuto(){
     setSt('unlock-st','ok','✅ Session auto-ended — open window expired.');
   }catch(e){ console.warn('Auto-end failed:',e); }
 }
+activeSessionId = null;
+activeSessionDisplayId = '';
+syncActiveSessionBtn();
 
 let _windowTimer=null;
 
