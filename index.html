@@ -1636,6 +1636,89 @@ async function goHome(){
   await loadAllQuestions();
   renderHomeSubjects();
   loadRecentSessions();
+  // Attempt to recover a session that was interrupted by refresh or network drop
+  await restoreActiveSession();
+}
+
+// ── Session recovery after refresh / network drop ─────────────────────────
+// If the teacher had an active session when the page was lost, re-attach to it.
+async function restoreActiveSession(){
+  let saved;
+  try{ saved=JSON.parse(localStorage.getItem('cq5_active_session')||'null'); }catch(e){ return; }
+  if(!saved?.id) return;
+  // Only restore for the teacher who owns this session
+  if(saved.email && teacher?.email && saved.email !== teacher.email){
+    localStorage.removeItem('cq5_active_session');
+    return;
+  }
+  try{
+    const snap = await _fb.getDoc(_fb.doc(db,'sessions',saved.id));
+    if(!snap.exists() || snap.data().status==='ended'){
+      // Session is gone or finished — clean up silently
+      localStorage.removeItem('cq5_active_session');
+      return;
+    }
+    const data = snap.data();
+    // Re-attach app state
+    activeSessionId = saved.id;
+    activeSessionDisplayId = data.sessionDisplayId || '';
+    activeSessionFileId    = data.sessionFileId    || '';
+    answersLocked          = data.answersLocked !== false;
+
+    // Rebuild the launch screen
+    const base = window.location.href.split('?')[0].split('#')[0];
+    const url  = base+'?s='+activeSessionId;
+    el('launch-title').textContent = data.sessionName || 'Quiz';
+    el('launch-url').textContent   = url;
+
+    // QR code
+    el('qr-wrap').innerHTML='';
+    const img=document.createElement('img');
+    img.src=`https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=6&data=${encodeURIComponent(url)}`;
+    img.width=200;img.height=200;img.style.cssText='display:block;border-radius:4px';
+    img.alt='QR Code for students';
+    el('qr-wrap').appendChild(img);
+
+    // Status-dependent UI
+    if(data.status==='live'){
+      el('session-status-msg').textContent='✅ Test is live! Session: '+(data.sessionDisplayId||'');
+      el('btn-go-live').style.display='none';
+      el('btn-end-session').style.display='';
+      el('btn-go-live-2').style.display='none';
+      el('btn-end-2').style.display='';
+      // Restart the window timer if one was set
+      if(data.windowSecs>0 && data.liveAt) startWindowTimer(data.liveAt, data.windowSecs);
+    } else {
+      // status === 'waiting'
+      el('session-status-msg').textContent='Waiting for students to join…';
+      el('btn-go-live').style.display='';
+      el('btn-end-session').style.display='none';
+      el('btn-go-live-2').style.display='';
+      el('btn-end-2').style.display='none';
+    }
+
+    // Answers lock button
+    const unlockBtn=el('btn-unlock');
+    if(unlockBtn){
+      unlockBtn.textContent = answersLocked ? '🔒 Answers Locked' : '🔓 Answers Unlocked';
+      unlockBtn.className   = answersLocked ? 'btn btn-warn w100' : 'btn btn-grn w100';
+    }
+
+    // Resume lobby polling
+    startLobbyListener();
+    syncActiveSessionBtn();
+
+    // Show a non-intrusive banner instead of jumping screens automatically
+    const banner = el('home-active-session-banner');
+    if(banner){
+      banner.style.display='flex';
+      const txt = banner.querySelector('span');
+      if(txt) txt.textContent='Session "'+(data.sessionName||'Quiz')+'" is still active — tap to return';
+    }
+  }catch(e){
+    console.warn('Session restore failed:',e);
+    localStorage.removeItem('cq5_active_session');
+  }
 }
 
 // ── Home screen tab state ─────────────────────────
@@ -2685,8 +2768,9 @@ window.goLaunch=async function(){
 
   activeSessionId=uid16();
   answersLocked=true;
+  // Persist so teacher can recover session after refresh or internet drop
+  try{ localStorage.setItem('cq5_active_session', JSON.stringify({id:activeSessionId,email:teacher.email})); }catch(e){}
 
-  // Pick metadata from first question
   const fq=launchQs[0]||allPaper[0];
   try{
     await _fb.setDoc(_fb.doc(db,'sessions',activeSessionId),{
@@ -2898,6 +2982,7 @@ async function endSessionAuto(){
     if(btn){btn.textContent='🔓 Answers Unlocked (auto)';btn.className='btn btn-grn w100';}
     setSt('unlock-st','ok','✅ Session auto-ended — open window expired.');
     activeSessionId=null;activeSessionDisplayId='';activeSessionFileId='';
+    try{ localStorage.removeItem('cq5_active_session'); }catch(e){}
     syncActiveSessionBtn();
   }catch(e){ console.warn('Auto-end failed:',e); }
 }
@@ -2932,6 +3017,7 @@ async function endSessionAuto(){
     if(btn){btn.textContent='🔓 Answers Unlocked (auto)';btn.className='btn btn-grn w100';}
     setSt('unlock-st','ok','✅ Session auto-ended — open window expired.');
     activeSessionId=null;activeSessionDisplayId='';activeSessionFileId='';
+    try{ localStorage.removeItem('cq5_active_session'); }catch(e){}
     syncActiveSessionBtn();
   }catch(e){ console.warn('Auto-end failed:',e); }
 }
@@ -2954,6 +3040,7 @@ window.endSession=async function(){
     if(btn){btn.textContent='🔓 Answers Unlocked (auto)';btn.className='btn btn-grn w100';}
     setSt('unlock-st','ok','✅ Session ended — answers automatically unlocked for all students.');
     activeSessionId=null;activeSessionDisplayId='';activeSessionFileId='';
+    try{ localStorage.removeItem('cq5_active_session'); }catch(e){}
     syncActiveSessionBtn();
   }catch(e){alert('End session failed: '+e.message);}
 };
