@@ -3051,6 +3051,9 @@ window.stuJoin=async function(){
       return;
     }
   }
+
+  // If session has ended, allow review if a result exists
+  if(status==='ended'){
     const rec=await findResult(sid,roll);
     if(rec){
       stuName=name;stuRoll=roll;stuEmail=email;
