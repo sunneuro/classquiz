@@ -3056,16 +3056,7 @@ window.stuJoin=async function(){
     showStuError('This session has already ended. No submission was found for Roll: '+roll+'.');
     return;
   }
-The key fixes are:
 
-Remove the stray } on line 3056 that was prematurely closing stuJoin.
-Wrap the "already ended" block in its own if(status==='ended') guard — which was almost certainly the original intent before the edit got muddled.
-
-
-The favicon 404
-That's a separate, harmless warning — your site at sunneuro.github.io simply doesn't have a favicon.ico file. Add one to your repo root, or add this to your <head> to silence it:
-html<link rel="icon" href="data:,">
-Want me to apply the fix directly to the file and give you a corrected version to download?Want
   if(fbReady&&sid){
     try{
       const rec=await findResult(sid,roll);
