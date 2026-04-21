@@ -3036,7 +3036,7 @@ window.stuJoin=async function(){
     return null;
   }
 
-  // Block join if open window has expired
+// Block join if open window has expired
   if(status==='live' && qParams.windowSecs > 0 && qParams.liveAt){
     const elapsed=Date.now()-qParams.liveAt;
     if(elapsed > qParams.windowSecs*1000){
@@ -3044,6 +3044,8 @@ window.stuJoin=async function(){
       return;
     }
   }
+
+  if(status==='ended'){
     const rec=await findResult(sid,roll);
     if(rec){
       stuName=name;stuRoll=roll;stuEmail=email;
@@ -3054,7 +3056,16 @@ window.stuJoin=async function(){
     showStuError('This session has already ended. No submission was found for Roll: '+roll+'.');
     return;
   }
+The key fixes are:
 
+Remove the stray } on line 3056 that was prematurely closing stuJoin.
+Wrap the "already ended" block in its own if(status==='ended') guard — which was almost certainly the original intent before the edit got muddled.
+
+
+The favicon 404
+That's a separate, harmless warning — your site at sunneuro.github.io simply doesn't have a favicon.ico file. Add one to your repo root, or add this to your <head> to silence it:
+html<link rel="icon" href="data:,">
+Want me to apply the fix directly to the file and give you a corrected version to download?Want
   if(fbReady&&sid){
     try{
       const rec=await findResult(sid,roll);
