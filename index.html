@@ -3036,26 +3036,24 @@ window.stuJoin=async function(){
     return null;
   }
 
-// Block join if open window has expired
-if(status==='live' && qParams.windowSecs > 0 && qParams.liveAt){
-  const elapsed=Date.now()-qParams.liveAt;
-  if(elapsed > qParams.windowSecs*1000){
-    showStuError('This session has expired. The open window has closed.');
+  // Block join if open window has expired
+  if(status==='live' && qParams.windowSecs > 0 && qParams.liveAt){
+    const elapsed=Date.now()-qParams.liveAt;
+    if(elapsed > qParams.windowSecs*1000){
+      showStuError('This session has expired. The open window has closed.');
+      return;
+    }
+  }
+    const rec=await findResult(sid,roll);
+    if(rec){
+      stuName=name;stuRoll=roll;stuEmail=email;
+      quizQs=qParams.qs||[];
+      try{answers=typeof rec.answerMap==='string'?JSON.parse(rec.answerMap):(rec.answerMap||{});}catch(e){answers={};}
+      reviewMode=true;await showResult(rec);return;
+    }
+    showStuError('This session has already ended. No submission was found for Roll: '+roll+'.');
     return;
   }
-}
-
-if(status==='ended'){
-  const rec=await findResult(sid,roll);
-  if(rec){
-    stuName=name;stuRoll=roll;stuEmail=email;
-    quizQs=qParams.qs||[];
-    try{answers=typeof rec.answerMap==='string'?JSON.parse(rec.answerMap):(rec.answerMap||{});}catch(e){answers={};}
-    reviewMode=true;await showResult(rec);return;
-  }
-  showStuError('This session has already ended. No submission was found for Roll: '+roll+'.');
-  return;
-}
 
   if(fbReady&&sid){
     try{
