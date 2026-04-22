@@ -820,6 +820,22 @@ tr:hover td{background:var(--s2)}
         <select id="bf-testid" onchange="renderBank()"><option value="">All</option></select>
       </div>
       <div>
+        <label style="margin-top:0">Session</label>
+        <select id="bf-session" onchange="renderBank()"><option value="">All Sessions</option></select>
+      </div>
+      <div>
+        <label style="margin-top:0">Year</label>
+        <select id="bf-year" onchange="onBfYearChange()"><option value="">All Years</option></select>
+      </div>
+      <div>
+        <label style="margin-top:0">Month</label>
+        <select id="bf-month" onchange="onBfMonthChange()"><option value="">All Months</option></select>
+      </div>
+      <div>
+        <label style="margin-top:0">Date</label>
+        <select id="bf-date" onchange="renderBank()"><option value="">All Dates</option></select>
+      </div>
+      <div>
         <label style="margin-top:0">Type</label>
         <select id="bf-type" onchange="renderBank()">
           <option value="">All</option>
@@ -837,8 +853,8 @@ tr:hover td{background:var(--s2)}
         </select>
       </div>
     </div>
-    <input type="text" id="bf-search" placeholder="Search question text…" style="margin-top:10px" oninput="renderBank()"/>
-    <div style="text-align:right;margin-top:8px">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
+      <input type="text" id="bf-search" placeholder="Search question text…" style="flex:1;min-width:180px;margin-top:0" oninput="renderBank()"/>
       <button class="btn btn-ghost btn-sm" onclick="downloadBankPaper()">📄 Download Filtered Paper</button>
     </div>
   </div>
@@ -1831,7 +1847,7 @@ function homeUpdateHeadings(){
   }
 }
 
-window.goBank=async function(){clearInterval(resultsRefreshInt);await loadAllQuestions();populateBankFilters();renderBank();show('s-bank');};
+window.goBank=async function(){clearInterval(resultsRefreshInt);await loadAllQuestions();if(!allResults.length)await loadResults(false).catch(()=>{});populateBankFilters();renderBank();show('s-bank');};
 window.goCurate=async function(){clearInterval(resultsRefreshInt);await loadAllQuestions();populateCurateFilters();renderCurate();show('s-curate');};
 let resultsRefreshInt=null;
 window._sort={col:'ts',dir:'desc'}; // unified sort state
@@ -2340,11 +2356,44 @@ function populateBankFilters(){
   const subjs=[...new Set(allQuestions.map(q=>q.courseId+'::'+q.subjectName).filter(Boolean))].sort();
   const topics=[...new Set(allQuestions.map(q=>q.topicName).filter(Boolean))].sort();
   const testids=[...new Set(allQuestions.map(q=>q.testLabel).filter(Boolean))].sort();
+  // Session IDs from allResults (questions are tied to sessions via testLabel/courseId)
+  const sessions=[...new Set(allResults.map(r=>r.sessionDisplayId||'').filter(Boolean))].sort().reverse();
+  // Years from question ts timestamps
+  const years=[...new Set(allQuestions.map(q=>q.ts?new Date(q.ts).getFullYear():'').filter(Boolean))].sort().reverse();
   fillSelect('bf-prog',progs);
   fillSelect('bf-subj',subjs,x=>x.split('::')[0],x=>x.split('::').join(' — '));
   fillSelect('bf-topic',topics);
   fillSelect('bf-testid',testids);
+  fillSelect('bf-session',sessions);
+  fillSelect('bf-year',years);
 }
+window.onBfYearChange=function(){
+  const yr=parseInt(gv('bf-year')||'0');
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let months=[];
+  if(yr){
+    months=[...new Set(allQuestions.filter(q=>q.ts&&new Date(q.ts).getFullYear()===yr)
+      .map(q=>new Date(q.ts).getMonth()+1))].sort((a,b)=>a-b)
+      .map(m=>({val:m,lbl:MONTHS[m-1]}));
+  }
+  const mSel=el('bf-month');
+  if(mSel) mSel.innerHTML='<option value="">All Months</option>'+months.map(m=>'<option value="'+m.val+'">'+m.lbl+'</option>').join('');
+  const dSel=el('bf-date');
+  if(dSel) dSel.innerHTML='<option value="">All Dates</option>';
+  renderBank();
+};
+window.onBfMonthChange=function(){
+  const yr=parseInt(gv('bf-year')||'0');
+  const mo=parseInt(gv('bf-month')||'0');
+  let dates=[];
+  if(yr&&mo){
+    dates=[...new Set(allQuestions.filter(q=>q.ts&&new Date(q.ts).getFullYear()===yr&&new Date(q.ts).getMonth()+1===mo)
+      .map(q=>new Date(q.ts).getDate()))].sort((a,b)=>a-b);
+  }
+  const dSel=el('bf-date');
+  if(dSel) dSel.innerHTML='<option value="">All Dates</option>'+dates.map(d=>'<option value="'+d+'">'+d+'</option>').join('');
+  renderBank();
+};
 
 function fillSelect(id,items,valFn,lblFn){
   const sel=el(id);if(!sel)return;
@@ -2366,6 +2415,10 @@ function fillSelect(id,items,valFn,lblFn){
 function bankFilterFn(q){
   const prog=gv('bf-prog'),subj=gv('bf-subj'),topic=gv('bf-topic'),
         testid=gv('bf-testid'),type=gv('bf-type'),diff=gv('bf-diff'),
+        session_f=gv('bf-session'),
+        yr_f=parseInt(gv('bf-year')||'0'),
+        mo_f=parseInt(gv('bf-month')||'0'),
+        dt_f=parseInt(gv('bf-date')||'0'),
         srch=(gv('bf-search')||'').toLowerCase();
   if(prog&&q.programmeName!==prog)return false;
   if(subj&&q.courseId!==subj)return false;
@@ -2373,6 +2426,24 @@ function bankFilterFn(q){
   if(testid&&q.testLabel!==testid)return false;
   if(type&&q.type!==type)return false;
   if(diff&&q.difficulty!==diff)return false;
+  // Session filter: match questions that were used in this session (by testLabel+courseId)
+  if(session_f){
+    const sessionRec=allResults.find(r=>r.sessionDisplayId===session_f);
+    if(sessionRec){
+      const match=(!sessionRec.testLabel||q.testLabel===sessionRec.testLabel)&&
+                  (!sessionRec.courseId||q.courseId===sessionRec.courseId)&&
+                  (!sessionRec.topicName||q.topicName===sessionRec.topicName);
+      if(!match)return false;
+    }
+  }
+  // Year/Month/Date filter on question creation timestamp
+  if(yr_f||mo_f||dt_f){
+    const d=q.ts?new Date(q.ts):null;
+    if(!d)return false;
+    if(yr_f&&d.getFullYear()!==yr_f)return false;
+    if(mo_f&&d.getMonth()+1!==mo_f)return false;
+    if(dt_f&&d.getDate()!==dt_f)return false;
+  }
   if(srch&&!q.text.toLowerCase().includes(srch))return false;
   return true;
 }
@@ -2724,12 +2795,16 @@ window.loadTemplate=async function(id){
 /* ═══════════════════════════════════════════
    DOWNLOAD QUESTION PAPER (PDF-style HTML)
 ═══════════════════════════════════════════ */
-function buildPaperHTML(questions, meta){
+function buildPaperHTML(questions, meta, answerKeyAtEnd){
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const now=new Date();
   const dateStr=now.getDate()+' '+MONTHS[now.getMonth()]+' '+now.getFullYear();
   const optLabels=['A','B','C','D','E'];
-  let qHtml=questions.map((q,i)=>{
+
+  let qHtml='';
+  const keyLines=[];
+
+  questions.forEach((q,i)=>{
     let body='';
     if(q.type==='tf'){
       body='<div style="margin-left:18px"><span style="margin-right:20px">○ True</span><span>○ False</span></div>';
@@ -2739,16 +2814,43 @@ function buildPaperHTML(questions, meta){
         +opts.map((o,oi)=>`<li style="margin-bottom:4px"><b>${optLabels[oi]}.</b> ${esc(o)}</li>`).join('')
         +'</ol>';
     }
-    const ans=q.type==='tf'
-      ? `<b>Answer:</b> ${q.answer||'?'}`
-      : `<b>Answer:</b> ${optLabels[(q.options||[]).indexOf(q.answer)]||'?'}. ${esc(q.answer||'')}`;
-    const diff=q.difficulty?` &nbsp;[${q.difficulty}]`:'';
-    return `<div style="margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid #e5e7eb">
-      <div style="margin-bottom:6px"><b>${i+1}.</b> ${esc(q.text||'')}${diff}</div>
-      ${body}
-      <div style="margin-top:8px;color:#16a34a;font-size:12px">${ans}</div>
+
+    const diff=q.difficulty?` &nbsp;<span style="font-size:11px;color:#888">[${q.difficulty}]</span>`:'';
+
+    if(answerKeyAtEnd){
+      // Inline answer: just the question + options, no green answer
+      if(q.type==='tf'){
+        keyLines.push(`${i+1}. ${q.answer||'?'}`);
+      } else {
+        const ai=(q.options||[]).indexOf(q.answer);
+        keyLines.push(`${i+1}. ${ai>=0?optLabels[ai]:'?'}. ${esc(q.answer||'')}`);
+      }
+      qHtml+=`<div style="margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid #e5e7eb">
+        <div style="margin-bottom:6px"><b>${i+1}.</b> ${esc(q.text||'')}${diff}</div>
+        ${body}
+      </div>`;
+    } else {
+      // Green inline answer (original format — used for Results)
+      const ans=q.type==='tf'
+        ? `<b>Answer:</b> ${q.answer||'?'}`
+        : `<b>Answer:</b> ${optLabels[(q.options||[]).indexOf(q.answer)]||'?'}. ${esc(q.answer||'')}`;
+      qHtml+=`<div style="margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid #e5e7eb">
+        <div style="margin-bottom:6px"><b>${i+1}.</b> ${esc(q.text||'')}${diff}</div>
+        ${body}
+        <div style="margin-top:8px;color:#16a34a;font-size:12px">${ans}</div>
+      </div>`;
+    }
+  });
+
+  let keySection='';
+  if(answerKeyAtEnd&&keyLines.length){
+    keySection=`<div style="page-break-before:always;margin-top:30px;border-top:2px solid #333;padding-top:16px">
+      <h2 style="font-size:16px;margin-bottom:12px">Answer Key</h2>
+      <div style="columns:3;column-gap:20px;font-size:13px;line-height:2">
+        ${keyLines.map(l=>`<div>${l}</div>`).join('')}
+      </div>
     </div>`;
-  }).join('');
+  }
 
   return `<!DOCTYPE html>
 <html lang="en"><head><meta charset="UTF-8">
@@ -2758,7 +2860,7 @@ function buildPaperHTML(questions, meta){
   h1{font-size:20px;margin-bottom:4px} h2{font-size:15px;font-weight:normal;color:#555;margin-top:0}
   .hdr{border-bottom:2px solid #333;padding-bottom:12px;margin-bottom:20px}
   .meta{font-size:12px;color:#666;margin-top:6px}
-  @media print{body{margin:10px}button{display:none}}
+  @media print{body{margin:10px}.no-print{display:none}}
 </style>
 </head><body>
 <div class="hdr">
@@ -2772,139 +2874,101 @@ function buildPaperHTML(questions, meta){
     ${meta.teacher?' &nbsp;|&nbsp; Teacher: <b>'+esc(meta.teacher)+'</b>':''}
   </div>
 </div>
-<button onclick="window.print()" style="margin-bottom:20px;padding:8px 18px;background:#4f46e5;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨️ Print / Save as PDF</button>
+<div class="no-print" style="margin-bottom:20px">
+  <button onclick="window.print()" style="padding:8px 18px;background:#4f46e5;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨️ Print / Save as PDF</button>
+</div>
 ${qHtml}
+${keySection}
 </body></html>`;
 }
 
-// From Curate page — uses curSel + allQuestions
+// From Curate page — mirrors renderCurate's allPaper = [...curDraft, ...bankQs]
 window.downloadQuestionPaper=function(){
-  const paper=allQuestions.filter(q=>curSel.includes(q.id));
-  if(!paper.length){
-    // fall back to curDraft if no selection
-    if(!curDraft.length){alert('No questions selected or in the current paper.');return;}
-    const meta={
-      title:gv('cs-name')||'Question Paper',
-      subtitle:curDraftMeta.testid||'',
-      programme:curDraftMeta.prog||'',
-      course:curDraftMeta.cid||'',
-      subject:curDraftMeta.subj||'',
-      teacher:teacher?.name||''
-    };
-    const html=buildPaperHTML(curDraft,meta);
-    const a=document.createElement('a');
-    a.href='data:text/html;charset=utf-8,'+encodeURIComponent(html);
-    a.download='QuestionPaper_'+((curDraftMeta.cid||'paper').replace(/[^a-zA-Z0-9]/g,'_'))+'.html';
-    a.click();
+  const bankQs=allQuestions.filter(q=>curSel.includes(q.id));
+  const allPaperNow=[...curDraft,...bankQs];
+  if(!allPaperNow.length){
+    alert('No questions in the current paper. Add questions from the Master Question Bank or create new ones first.');
     return;
   }
-  const first=allQuestions.find(q=>q.id===curSel[0])||{};
+  const first=allPaperNow[0]||{};
   const meta={
-    title:gv('cs-name')||first.testid||'Question Paper',
-    subtitle:first.testid||'',
-    programme:first.programme||'',
-    course:first.courseId||'',
-    subject:first.subjectName||'',
+    title:gv('cs-name')||first.testLabel||first.testid||'Question Paper',
+    subtitle:curDraftMeta.testid||first.testLabel||'',
+    programme:curDraftMeta.prog||first.programmeName||first.programme||'',
+    course:curDraftMeta.cid||first.courseId||'',
+    subject:curDraftMeta.subj||first.subjectName||'',
     teacher:teacher?.name||''
   };
-  const html=buildPaperHTML(paper,meta);
+  const html=buildPaperHTML(allPaperNow,meta,true); // answer key at end
   const a=document.createElement('a');
   a.href='data:text/html;charset=utf-8,'+encodeURIComponent(html);
-  a.download='QuestionPaper_'+(meta.title.replace(/[^a-zA-Z0-9]/g,'_'))+'.html';
+  const fn=(meta.title||'paper').replace(/[^a-zA-Z0-9]/g,'_');
+  a.download='QuestionPaper_'+fn+'.html';
   a.click();
 };
 
-// From Results dashboard — uses selected session's questions
+// From Results dashboard — looks up session by display ID, fetches qs from Firestore
 window.downloadPaperFromSession=function(){
-  const sessionId=gv('rf-session');
-  if(!sessionId){alert('Please select a specific Session ID from the filter first, then click Download Paper.');return;}
-  // Find a result record for this session that has questions embedded
-  const rec=allResults.find(r=>r.sessionDisplayId===sessionId&&(r.questions||r.qs));
-  if(rec&&(rec.questions||rec.qs)){
-    const qs=rec.questions||rec.qs||[];
-    const meta={
-      title:rec.testLabel||rec.subjectName||'Question Paper',
-      subtitle:rec.topicName||'',
-      programme:rec.programmeName||'',
-      course:rec.courseId||'',
-      subject:rec.subjectName||'',
-      teacher:rec.teacherName||''
-    };
-    const html=buildPaperHTML(qs,meta);
-    const a=document.createElement('a');
-    a.href='data:text/html;charset=utf-8,'+encodeURIComponent(html);
-    a.download='QuestionPaper_'+(sessionId.replace(/[^a-zA-Z0-9]/g,'_'))+'.html';
-    a.click();
-    return;
-  }
-  // Fetch questions from Firebase sessions collection
+  const displayId=gv('rf-session');
+  if(!displayId){alert('Please select a specific Session ID from the filter first, then click Download Paper.');return;}
+  // Find the raw Firestore session doc ID from stored results
+  const rec=allResults.find(r=>r.sessionDisplayId===displayId);
+  const rawSessionId=rec?.sessionId||displayId; // fall back to displayId if not found
+  const meta={
+    title:rec?.testLabel||rec?.subjectName||'Question Paper',
+    subtitle:rec?.topicName||displayId,
+    programme:rec?.programmeName||'',
+    course:rec?.courseId||'',
+    subject:rec?.subjectName||'',
+    teacher:rec?.teacherName||''
+  };
   if(!fbReady){alert('Not connected to database.');return;}
-  _fb.getDoc(_fb.doc(db,'sessions',sessionId)).then(snap=>{
-    if(!snap.exists()){
-      // Try sessions_Classroom_Quiz
-      return _fb.getDoc(_fb.doc(db,'sessions_Classroom_Quiz',sessionId));
+  // Fetch the session document using the real Firestore doc ID
+  const tryFetch=function(docId){
+    return _fb.getDoc(_fb.doc(db,'sessions',docId)).then(snap=>{
+      if(snap.exists()) return snap.data();
+      return _fb.getDoc(_fb.doc(db,'sessions_Classroom_Quiz',docId)).then(s2=>s2.exists()?s2.data():null);
+    });
+  };
+  tryFetch(rawSessionId).then(data=>{
+    let qs=(data&&(data.qs||data.questions))||[];
+    if(!qs.length&&rawSessionId!==displayId){
+      // also try display ID as doc ID (legacy)
+      return tryFetch(displayId).then(d2=>{
+        qs=(d2&&(d2.qs||d2.questions))||[];
+        return qs;
+      });
     }
-    return snap;
-  }).then(snap=>{
-    let qs=[];
-    if(snap&&snap.exists()){
-      const sd=snap.data();
-      qs=sd.qs||sd.questions||[];
-    }
+    return qs;
+  }).then(qs=>{
     if(!qs.length){
-      // Fall back: reconstruct from allQuestions by testLabel match
-      const refRec=allResults.find(r=>r.sessionDisplayId===sessionId);
-      if(refRec){
-        const matchedQs=allQuestions.filter(q=>q.testid===refRec.testLabel||q.courseId===refRec.courseId);
-        if(matchedQs.length){ qs=matchedQs; }
-      }
+      alert('Could not retrieve questions for this session. The session data may have been cleared.');
+      return;
     }
-    if(!qs.length){alert('Could not retrieve questions for this session. The session data may have been cleared.');return;}
-    const refRec=allResults.find(r=>r.sessionDisplayId===sessionId)||{};
-    const meta={
-      title:refRec.testLabel||refRec.subjectName||'Question Paper',
-      subtitle:refRec.topicName||sessionId,
-      programme:refRec.programmeName||'',
-      course:refRec.courseId||'',
-      subject:refRec.subjectName||'',
-      teacher:refRec.teacherName||''
-    };
-    const html=buildPaperHTML(qs,meta);
+    const html=buildPaperHTML(qs,meta,false); // green inline answers for Results context
     const a=document.createElement('a');
     a.href='data:text/html;charset=utf-8,'+encodeURIComponent(html);
-    a.download='QuestionPaper_'+(sessionId.replace(/[^a-zA-Z0-9]/g,'_'))+'.html';
+    a.download='QuestionPaper_'+(displayId.replace(/[^a-zA-Z0-9]/g,'_'))+'.html';
     a.click();
   }).catch(e=>alert('Error fetching session: '+e.message));
 };
 
 // Download filtered questions from Master Question Bank
 window.downloadBankPaper=function(){
-  // Re-apply current bank filters to get visible questions
-  const prog=gv('bf-prog'),subj=gv('bf-subj'),topic=gv('bf-topic'),
-        testid=gv('bf-testid'),type_f=gv('bf-type'),diff_f=gv('bf-diff'),
-        srch=(gv('bf-search')||'').toLowerCase();
-  const filtered=allQuestions.filter(q=>{
-    if(q.draft)return false;
-    if(prog&&q.programme!==prog)return false;
-    if(subj&&q.courseId!==subj)return false;
-    if(topic&&q.topicName!==topic)return false;
-    if(testid&&q.testid!==testid)return false;
-    if(type_f&&q.type!==type_f)return false;
-    if(diff_f&&q.difficulty!==diff_f)return false;
-    if(srch&&!(q.text||'').toLowerCase().includes(srch))return false;
-    return true;
-  });
+  // Reuse bankFilterFn so all active filters apply (prog/subj/topic/testid/session/year/month/date/type/diff/search)
+  const filtered=allQuestions.filter(q=>!q.draft&&bankFilterFn(q));
   if(!filtered.length){alert('No questions match the current filters.');return;}
   const first=filtered[0]||{};
+  const testid=gv('bf-testid'),topic=gv('bf-topic'),subj=gv('bf-subj');
   const meta={
-    title:testid||first.testid||'Master Question Bank',
+    title:testid||topic||first.testLabel||'Master Question Bank',
     subtitle:topic||first.topicName||'',
-    programme:prog||first.programme||'',
+    programme:gv('bf-prog')||first.programmeName||'',
     course:subj||first.courseId||'',
     subject:first.subjectName||'',
     teacher:teacher?.name||''
   };
-  const html=buildPaperHTML(filtered,meta);
+  const html=buildPaperHTML(filtered,meta,true); // answer key at end
   const a=document.createElement('a');
   a.href='data:text/html;charset=utf-8,'+encodeURIComponent(html);
   a.download='QuestionBank_'+((testid||topic||'questions').replace(/[^a-zA-Z0-9]/g,'_'))+'.html';
