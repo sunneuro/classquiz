@@ -1096,6 +1096,7 @@ tr:hover td{background:var(--s2)}
   </div>
   <div class="col w100" style="max-width:520px">
     <button class="btn btn-pri w100" onclick="shareRes()">📤 Share Result</button>
+    <button class="btn btn-info w100" id="btn-download-answers" onclick="downloadAnswerSheet()" style="display:none">⬇️ Download Answer Sheet</button>
     <button class="btn btn-ghost btn-sm w100" id="btn-check-unlock" onclick="checkUnlock()" style="display:none">🔄 Check if answers are unlocked</button>
   </div>
 </div>
@@ -3147,6 +3148,7 @@ window.stuJoin=async function(){
       stuName=name;stuRoll=roll;stuEmail=email;
       quizQs=qParams.qs||[];
       try{answers=typeof rec.answerMap==='string'?JSON.parse(rec.answerMap):(rec.answerMap||{});}catch(e){answers={};}
+      try{optionShuffles=typeof rec.optionShuffles==='string'?JSON.parse(rec.optionShuffles):(rec.optionShuffles||{});}catch(e){optionShuffles={};}
       reviewMode=true;await showResult(rec);return;
     }
     showStuError('This session has already ended. No submission was found for Roll: '+roll+'.');
@@ -3160,6 +3162,7 @@ window.stuJoin=async function(){
         stuName=name;stuRoll=roll;stuEmail=email;
         quizQs=qParams.qs||[];
         try{answers=typeof rec.answerMap==='string'?JSON.parse(rec.answerMap):(rec.answerMap||{});}catch(e){answers={};}
+        try{optionShuffles=typeof rec.optionShuffles==='string'?JSON.parse(rec.optionShuffles):(rec.optionShuffles||{});}catch(e){optionShuffles={};}
         reviewMode=true;await showResult(rec);return;
       }
       const lobbyDocId=roll.replace(/[^a-zA-Z0-9]/g,'_');
@@ -3732,6 +3735,9 @@ window.finishQuiz=async function(){
     topicName:qParams?.topicName||'',
     teacherName:qParams?.teacherName||'',
     teacherEmail:qParams?.teacherEmail||'',
+    answerMap: JSON.stringify(answers),
+    optionShuffles: JSON.stringify(optionShuffles),
+    sessionTotalTime: qParams?.time||15,
     ts:Date.now()
   };
 
@@ -3861,22 +3867,43 @@ window.checkUnlock=async function(){
 
 function showAnswerReview(){
   const list=el('ans-review-list');if(!list)return;
+
+  // Resolve the shuffle map — may come from live optionShuffles or from a
+  // saved result loaded from Firestore (stored as JSON string in optionShuffles field)
+  let shuffleMap={};
+  if(Object.keys(optionShuffles||{}).length){
+    shuffleMap=optionShuffles;
+  } else if(typeof quizQs[0]!=='undefined'){
+    // Try to pull from a result record if available (reviewMode from Firestore)
+    try{
+      const raw=window._reviewShuffles;
+      if(raw) shuffleMap=typeof raw==='string'?JSON.parse(raw):raw;
+    }catch(e){}
+  }
+
   list.innerHTML=quizQs.map((q,i)=>{
     const ua=answers[i];
     let correct=false,uTxt='Not answered',cTxt='';
     if(q.type==='mcq'){
-      const uIdx=parseInt(ua);
-      correct=!isNaN(uIdx)&&uIdx===(q.correctIndex||0);
-      uTxt=!isNaN(uIdx)?`${'ABCD'[uIdx]}. ${q.options[uIdx]||''}`: 'Not answered';
-      cTxt=`${'ABCD'[q.correctIndex||0]}. ${q.options[q.correctIndex||0]||''}`;
+      const dispIdx=parseInt(ua);
+      // Apply shuffle: display index → original index
+      const shuffle=shuffleMap[i]||shuffleMap[String(i)];
+      const origIdx=shuffle&&!isNaN(dispIdx)?shuffle[dispIdx]:dispIdx;
+      const corrOrig=q.correctIndex||0;
+      correct=!isNaN(origIdx)&&origIdx===corrOrig;
+      // Show the actual option text using original indices
+      uTxt=!isNaN(origIdx)&&q.options[origIdx]!=null
+        ?`${('ABCD'[dispIdx]||'?')}. ${q.options[origIdx]}`
+        :'Not answered';
+      cTxt=`${'ABCD'[shuffle?shuffle.indexOf(corrOrig):corrOrig]||'?'}. ${q.options[corrOrig]||''}`;
     }else{
       const uText=['True','False'][parseInt(ua)]||'';
       correct=uText.toLowerCase()===(q.answer||'').toLowerCase();
       uTxt=uText||'Not answered';
       cTxt=q.answer||'';
     }
-    const cls=!ua?'ans-skip':correct?'ans-ok':'ans-ng';
-    const icon=!ua?'⬜':correct?'✅':'❌';
+    const cls=ua===undefined?'ans-skip':correct?'ans-ok':'ans-ng';
+    const icon=ua===undefined?'⬜':correct?'✅':'❌';
     return`<div class="ans-item ${cls}">
       <div class="ans-q">${icon} Q${i+1}. ${esc(q.text)}</div>
       <div class="ans-row">
@@ -3887,7 +3914,100 @@ function showAnswerReview(){
     </div>`;
   }).join('');
   el('ans-review-wrap').style.display='';
+
+  // Show download button once answers are visible
+  const dlBtn=el('btn-download-answers');
+  if(dlBtn) dlBtn.style.display='';
 }
+
+window.downloadAnswerSheet=function(){
+  const sessionTitle = qParams?.testLabel||qParams?.sessionName||'Quiz';
+  const sessionId    = qParams?.sessionDisplayId||'';
+  const date         = new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'});
+
+  let shuffleMap={};
+  if(Object.keys(optionShuffles||{}).length){
+    shuffleMap=optionShuffles;
+  } else {
+    try{ const raw=window._reviewShuffles; if(raw) shuffleMap=typeof raw==='string'?JSON.parse(raw):raw; }catch(e){}
+  }
+
+  const rows=quizQs.map((q,i)=>{
+    const ua=answers[i];
+    let uTxt='Not answered',cTxt='',correct=false;
+    if(q.type==='mcq'){
+      const dispIdx=parseInt(ua);
+      const shuffle=shuffleMap[i]||shuffleMap[String(i)];
+      const origIdx=shuffle&&!isNaN(dispIdx)?shuffle[dispIdx]:dispIdx;
+      const corrOrig=q.correctIndex||0;
+      correct=!isNaN(origIdx)&&origIdx===corrOrig;
+      uTxt=!isNaN(origIdx)&&q.options[origIdx]!=null
+        ?`${('ABCD'[dispIdx]||'?')}. ${q.options[origIdx]}`:'Not answered';
+      cTxt=`${'ABCD'[shuffle?shuffle.indexOf(corrOrig):corrOrig]||'?'}. ${q.options[corrOrig]||''}`;
+    } else {
+      const uText=['True','False'][parseInt(ua)]||'';
+      correct=uText.toLowerCase()===(q.answer||'').toLowerCase();
+      uTxt=uText||'Not answered';
+      cTxt=q.answer||'';
+    }
+    const bg=ua===undefined?'#f5f5f5':correct?'#e8f8f0':'#fdf0f0';
+    const icon=ua===undefined?'—':correct?'✅':'❌';
+    return `<tr style="background:${bg}">
+      <td style="padding:8px 10px;border-bottom:1px solid #eee;color:#555;width:36px;text-align:center">${icon}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #eee;font-weight:500;vertical-align:top">Q${i+1}. ${q.text}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #eee;color:${correct?'#1a7a4a':'#c0392b'};white-space:nowrap">${uTxt}</td>
+      <td style="padding:8px 10px;border-bottom:1px solid #eee;color:#1a7a4a;white-space:nowrap">${cTxt}</td>
+    </tr>`;
+  }).join('');
+
+  const correct=quizQs.reduce((n,q,i)=>{
+    const ua=answers[i];if(ua===undefined)return n;
+    if(q.type==='mcq'){
+      const dispIdx=parseInt(ua);
+      const shuffle=shuffleMap[i]||shuffleMap[String(i)];
+      const origIdx=shuffle&&!isNaN(dispIdx)?shuffle[dispIdx]:dispIdx;
+      return n+(origIdx===(q.correctIndex||0)?1:0);
+    }
+    return n+(['True','False'][parseInt(ua)]||'').toLowerCase()===(q.answer||'').toLowerCase()?1:0;
+  },0);
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+<title>Answer Sheet — ${sessionTitle}</title>
+<style>
+  body{font-family:Arial,sans-serif;font-size:13px;color:#222;margin:0;padding:24px}
+  h1{font-size:18px;margin:0 0 4px}
+  .meta{font-size:12px;color:#666;margin-bottom:18px}
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th{background:#f0f0f0;padding:8px 10px;text-align:left;border-bottom:2px solid #ddd;font-size:12px}
+  .summary{background:#f8f8f8;border:1px solid #ddd;border-radius:6px;padding:12px 16px;
+    margin-bottom:16px;display:flex;gap:24px;flex-wrap:wrap}
+  .s-item{text-align:center} .s-val{font-size:20px;font-weight:700} .s-lbl{font-size:11px;color:#888}
+  @media print{body{padding:10px}}
+</style></head><body>
+<h1>${sessionTitle}</h1>
+<div class="meta">${sessionId?'Session: '+sessionId+' &nbsp;·&nbsp; ':''}${date} &nbsp;·&nbsp; ${stuName} (${stuRoll})</div>
+<div class="summary">
+  <div class="s-item"><div class="s-val">${quizQs.length}</div><div class="s-lbl">Total</div></div>
+  <div class="s-item"><div class="s-val" style="color:#1a7a4a">${correct}</div><div class="s-lbl">Correct</div></div>
+  <div class="s-item"><div class="s-val" style="color:#c0392b">${quizQs.length-correct}</div><div class="s-lbl">Wrong / Skipped</div></div>
+  <div class="s-item"><div class="s-val">${Math.round(correct/quizQs.length*100)}%</div><div class="s-lbl">Score</div></div>
+</div>
+<table>
+  <thead><tr>
+    <th></th><th>Question</th><th>Your Answer</th><th>Correct Answer</th>
+  </tr></thead>
+  <tbody>${rows}</tbody>
+</table>
+<p style="font-size:11px;color:#aaa;margin-top:18px;text-align:center">Generated by ClassQuiz · ${new Date().toLocaleString()}</p>
+</body></html>`;
+
+  const blob=new Blob([html],{type:'text/html'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`AnswerSheet_${(stuRoll||'student').replace(/[^a-zA-Z0-9]/g,'_')}_${sessionTitle.replace(/[^a-zA-Z0-9]/g,'_')}.html`;
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);document.body.removeChild(a);},1000);
+};
 
 window.shareRes=function(){
   const pct=el('rpct').textContent;
