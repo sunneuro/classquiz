@@ -294,10 +294,18 @@ tr:hover td{background:var(--s2)}
       <option value="Ms.">Ms.</option>
     </select>
     <label>Your Full Name <span class="req">*</span></label>
-    <input type="text" id="tl-name" placeholder="e.g. Ahmed Khan" autocomplete="name"/>
+    <div class="ac-wrap">
+      <input type="text" id="tl-name" placeholder="e.g. Ahmed Khan" autocomplete="off"
+        oninput="tlAcFilter('name')" onfocus="tlAcShow('name')" onblur="tlAcHide('name',300)"/>
+      <div class="ac-drop" id="tl-name-drop"></div>
+    </div>
     <label>Your Email <span class="req">*</span></label>
-    <input type="email" id="tl-email" placeholder="your@email.com" autocomplete="email"
-      oninput="document.getElementById('tl-email-warn').style.display='none';document.getElementById('tl-email-warn').dataset.dismissed=''"/>
+    <div class="ac-wrap">
+      <input type="email" id="tl-email" placeholder="your@email.com" autocomplete="off"
+        oninput="document.getElementById('tl-email-warn').style.display='none';document.getElementById('tl-email-warn').dataset.dismissed='';tlAcFilter('email')"
+        onfocus="tlAcShow('email')" onblur="tlAcHide('email',300)"/>
+      <div class="ac-drop" id="tl-email-drop"></div>
+    </div>
     <div id="tl-email-warn" style="display:none;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);
       border-radius:8px;padding:8px 12px;font-size:12px;color:#fbbf24;margin-top:6px"></div>
     <label>Password <span class="req">*</span></label>
@@ -670,7 +678,7 @@ tr:hover td{background:var(--s2)}
     <label>Full Name <span class="req">*</span></label>
     <input type="text" id="edit-stu-name" placeholder="Student full name"/>
     <label>Roll Number <span class="req">*</span></label>
-    <input type="text" id="edit-stu-roll" placeholder="e.g. 2025MSNS010"/>
+    <input type="text" id="edit-stu-roll" placeholder="e.g. 2025MSNS010" autocapitalize="characters" oninput="this.value=this.value.toUpperCase()" onblur="this.value=this.value.toUpperCase()"/>
     <label>Email <span class="req">*</span></label>
     <input type="email" id="edit-stu-email" placeholder="student@email.com"/>
     <div class="row" style="gap:8px;margin-top:16px">
@@ -830,6 +838,9 @@ tr:hover td{background:var(--s2)}
       </div>
     </div>
     <input type="text" id="bf-search" placeholder="Search question text…" style="margin-top:10px" oninput="renderBank()"/>
+    <div style="text-align:right;margin-top:8px">
+      <button class="btn btn-ghost btn-sm" onclick="downloadBankPaper()">📄 Download Filtered Paper</button>
+    </div>
   </div>
   <!-- Bulk action bar — visible when in addToDraft mode OR always for selection -->
   <div id="bank-bulk-bar" style="display:none;margin-bottom:10px">
@@ -870,6 +881,7 @@ tr:hover td{background:var(--s2)}
       </div>
       <button class="btn btn-ghost btn-sm" onclick="showSaveTemplate()">💾 Save Template</button>
       <button class="btn btn-ghost btn-sm" onclick="showLoadTemplate()">📂 Load Template</button>
+      <button class="btn btn-ghost btn-sm" onclick="downloadQuestionPaper()">📄 Download Paper</button>
     </div>
   </div>
   <!-- Question list -->
@@ -1006,17 +1018,29 @@ tr:hover td{background:var(--s2)}
 <div class="mw" style="max-width:380px">
   <div style="text-align:center;margin-bottom:24px">
     <div class="logo-s" style="margin-bottom:5px" id="stu-appname-top">ClassQuiz</div>
-    <h1 id="stu-session-title" style="font-size:22px;margin-bottom:5px"></h1>
+    <h1 id="stu-session-title" style="font-size:22px;margin-bottom:5px;word-break:break-word;overflow-wrap:anywhere"></h1>
     <p id="stu-session-meta" style="font-size:13px;color:var(--m)"></p>
   </div>
   <div class="card" id="stu-login-card">
     <label>Full Name <span class="req">*</span></label>
-    <input type="text" id="sl-name" placeholder="Your full name" autocomplete="off" autocorrect="off" autocapitalize="words"/>
+    <div class="ac-wrap">
+      <input type="text" id="sl-name" placeholder="Your full name" autocomplete="off" autocorrect="off" autocapitalize="words"
+        oninput="stuAcFilter('name')" onfocus="stuAcShow('name')" onblur="stuAcHide('name',300)"/>
+      <div class="ac-drop" id="sl-name-drop"></div>
+    </div>
     <label>Roll Number <span class="req">*</span></label>
-    <input type="text" id="sl-roll" placeholder="e.g. 2024-CS-045" autocomplete="off"/>
+    <div class="ac-wrap">
+      <input type="text" id="sl-roll" placeholder="e.g. 2024-CS-045" autocomplete="off" autocapitalize="characters"
+        oninput="this.value=this.value.toUpperCase();stuAcFilter('roll')" onblur="this.value=this.value.toUpperCase();stuAcHide('roll',300)" onfocus="stuAcShow('roll')"/>
+      <div class="ac-drop" id="sl-roll-drop"></div>
+    </div>
     <label>Email Address <span class="req">*</span></label>
-    <input type="email" id="sl-email" placeholder="student@email.com" autocomplete="off"
-      oninput="document.getElementById('sl-email-warn').style.display='none';document.getElementById('sl-email-warn').dataset.dismissed=''"/>
+    <div class="ac-wrap">
+      <input type="email" id="sl-email" placeholder="student@email.com" autocomplete="off"
+        oninput="document.getElementById('sl-email-warn').style.display='none';document.getElementById('sl-email-warn').dataset.dismissed='';stuAcFilter('email')"
+        onfocus="stuAcShow('email')" onblur="stuAcHide('email',300)"/>
+      <div class="ac-drop" id="sl-email-drop"></div>
+    </div>
     <div id="sl-email-warn" style="display:none;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);
       border-radius:8px;padding:8px 12px;font-size:12px;color:#fbbf24;margin-top:6px"></div>
     <div style="margin-top:16px">
@@ -1070,7 +1094,7 @@ tr:hover td{background:var(--s2)}
 <div id="s-result" class="screen center">
 <div class="mw" style="align-items:center;display:flex;flex-direction:column">
   <div style="font-size:10px;color:var(--m);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px">Quiz Complete</div>
-  <div id="r-test-id" style="font-family:var(--fh);font-size:18px;font-weight:700;margin-bottom:4px;text-align:center"></div>
+  <div id="r-test-id" style="font-family:var(--fh);font-size:18px;font-weight:700;margin-bottom:4px;text-align:center;word-break:break-word;overflow-wrap:anywhere;max-width:100%"></div>
   <div id="r-session-id" style="font-size:11px;color:var(--m);margin-bottom:14px;text-align:center"></div>
   <div class="sring" id="sring">
     <div class="sinn"><span class="spct" id="rpct">--%</span><span class="slbl">score</span></div>
@@ -1128,10 +1152,19 @@ tr:hover td{background:var(--s2)}
         <select id="rf-testid" onchange="renderActiveTab()"><option value="">All</option></select></div>
       <div><label style="margin-top:0">Teacher</label>
         <select id="rf-teacher" onchange="renderActiveTab()"><option value="">All</option></select></div>
+      <div><label style="margin-top:0">Year</label>
+        <select id="rf-year" onchange="onRfYearChange()"><option value="">All Years</option></select></div>
+      <div><label style="margin-top:0">Month</label>
+        <select id="rf-month" onchange="onRfMonthChange()"><option value="">All Months</option></select></div>
+      <div><label style="margin-top:0">Date</label>
+        <select id="rf-date" onchange="renderActiveTab()"><option value="">All Dates</option></select></div>
       <div><label style="margin-top:0">Session ID</label>
         <select id="rf-session" onchange="renderActiveTab()"><option value="">All Sessions</option></select></div>
     </div>
-    <input type="text" id="rf-search" placeholder="Search student name, roll, or email…" style="margin-top:10px" oninput="renderActiveTab()"/>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
+      <input type="text" id="rf-search" placeholder="Search student name, roll, or email…" style="flex:1;min-width:180px;margin-top:0" oninput="renderActiveTab()"/>
+      <button class="btn btn-ghost btn-sm" onclick="downloadPaperFromSession()" title="Download question paper for the selected session">📄 Download Paper</button>
+    </div>
   </div>
   <!-- Summary -->
   <div id="results-summary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;margin-bottom:14px">
@@ -2689,6 +2722,196 @@ window.loadTemplate=async function(id){
 };
 
 /* ═══════════════════════════════════════════
+   DOWNLOAD QUESTION PAPER (PDF-style HTML)
+═══════════════════════════════════════════ */
+function buildPaperHTML(questions, meta){
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const now=new Date();
+  const dateStr=now.getDate()+' '+MONTHS[now.getMonth()]+' '+now.getFullYear();
+  const optLabels=['A','B','C','D','E'];
+  let qHtml=questions.map((q,i)=>{
+    let body='';
+    if(q.type==='tf'){
+      body='<div style="margin-left:18px"><span style="margin-right:20px">○ True</span><span>○ False</span></div>';
+    } else {
+      const opts=(q.options||[]);
+      body='<ol style="list-style:none;padding-left:18px;margin:6px 0 0">'
+        +opts.map((o,oi)=>`<li style="margin-bottom:4px"><b>${optLabels[oi]}.</b> ${esc(o)}</li>`).join('')
+        +'</ol>';
+    }
+    const ans=q.type==='tf'
+      ? `<b>Answer:</b> ${q.answer||'?'}`
+      : `<b>Answer:</b> ${optLabels[(q.options||[]).indexOf(q.answer)]||'?'}. ${esc(q.answer||'')}`;
+    const diff=q.difficulty?` &nbsp;[${q.difficulty}]`:'';
+    return `<div style="margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid #e5e7eb">
+      <div style="margin-bottom:6px"><b>${i+1}.</b> ${esc(q.text||'')}${diff}</div>
+      ${body}
+      <div style="margin-top:8px;color:#16a34a;font-size:12px">${ans}</div>
+    </div>`;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8">
+<title>Question Paper — ${esc(meta.title||'Quiz')}</title>
+<style>
+  body{font-family:Georgia,serif;max-width:750px;margin:30px auto;padding:24px;color:#111;font-size:14px;line-height:1.7}
+  h1{font-size:20px;margin-bottom:4px} h2{font-size:15px;font-weight:normal;color:#555;margin-top:0}
+  .hdr{border-bottom:2px solid #333;padding-bottom:12px;margin-bottom:20px}
+  .meta{font-size:12px;color:#666;margin-top:6px}
+  @media print{body{margin:10px}button{display:none}}
+</style>
+</head><body>
+<div class="hdr">
+  <h1>${esc(meta.title||'Question Paper')}</h1>
+  <h2>${esc(meta.subtitle||'')}</h2>
+  <div class="meta">
+    ${meta.programme?'Programme: <b>'+esc(meta.programme)+'</b> &nbsp;|&nbsp; ':''}
+    ${meta.course?'Course: <b>'+esc(meta.course)+'</b> &nbsp;|&nbsp; ':''}
+    ${meta.subject?'Subject: <b>'+esc(meta.subject)+'</b> &nbsp;|&nbsp; ':''}
+    Questions: <b>${questions.length}</b> &nbsp;|&nbsp; Date: <b>${dateStr}</b>
+    ${meta.teacher?' &nbsp;|&nbsp; Teacher: <b>'+esc(meta.teacher)+'</b>':''}
+  </div>
+</div>
+<button onclick="window.print()" style="margin-bottom:20px;padding:8px 18px;background:#4f46e5;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px">🖨️ Print / Save as PDF</button>
+${qHtml}
+</body></html>`;
+}
+
+// From Curate page — uses curSel + allQuestions
+window.downloadQuestionPaper=function(){
+  const paper=allQuestions.filter(q=>curSel.includes(q.id));
+  if(!paper.length){
+    // fall back to curDraft if no selection
+    if(!curDraft.length){alert('No questions selected or in the current paper.');return;}
+    const meta={
+      title:gv('cs-name')||'Question Paper',
+      subtitle:curDraftMeta.testid||'',
+      programme:curDraftMeta.prog||'',
+      course:curDraftMeta.cid||'',
+      subject:curDraftMeta.subj||'',
+      teacher:teacher?.name||''
+    };
+    const html=buildPaperHTML(curDraft,meta);
+    const a=document.createElement('a');
+    a.href='data:text/html;charset=utf-8,'+encodeURIComponent(html);
+    a.download='QuestionPaper_'+((curDraftMeta.cid||'paper').replace(/[^a-zA-Z0-9]/g,'_'))+'.html';
+    a.click();
+    return;
+  }
+  const first=allQuestions.find(q=>q.id===curSel[0])||{};
+  const meta={
+    title:gv('cs-name')||first.testid||'Question Paper',
+    subtitle:first.testid||'',
+    programme:first.programme||'',
+    course:first.courseId||'',
+    subject:first.subjectName||'',
+    teacher:teacher?.name||''
+  };
+  const html=buildPaperHTML(paper,meta);
+  const a=document.createElement('a');
+  a.href='data:text/html;charset=utf-8,'+encodeURIComponent(html);
+  a.download='QuestionPaper_'+(meta.title.replace(/[^a-zA-Z0-9]/g,'_'))+'.html';
+  a.click();
+};
+
+// From Results dashboard — uses selected session's questions
+window.downloadPaperFromSession=function(){
+  const sessionId=gv('rf-session');
+  if(!sessionId){alert('Please select a specific Session ID from the filter first, then click Download Paper.');return;}
+  // Find a result record for this session that has questions embedded
+  const rec=allResults.find(r=>r.sessionDisplayId===sessionId&&(r.questions||r.qs));
+  if(rec&&(rec.questions||rec.qs)){
+    const qs=rec.questions||rec.qs||[];
+    const meta={
+      title:rec.testLabel||rec.subjectName||'Question Paper',
+      subtitle:rec.topicName||'',
+      programme:rec.programmeName||'',
+      course:rec.courseId||'',
+      subject:rec.subjectName||'',
+      teacher:rec.teacherName||''
+    };
+    const html=buildPaperHTML(qs,meta);
+    const a=document.createElement('a');
+    a.href='data:text/html;charset=utf-8,'+encodeURIComponent(html);
+    a.download='QuestionPaper_'+(sessionId.replace(/[^a-zA-Z0-9]/g,'_'))+'.html';
+    a.click();
+    return;
+  }
+  // Fetch questions from Firebase sessions collection
+  if(!fbReady){alert('Not connected to database.');return;}
+  _fb.getDoc(_fb.doc(db,'sessions',sessionId)).then(snap=>{
+    if(!snap.exists()){
+      // Try sessions_Classroom_Quiz
+      return _fb.getDoc(_fb.doc(db,'sessions_Classroom_Quiz',sessionId));
+    }
+    return snap;
+  }).then(snap=>{
+    let qs=[];
+    if(snap&&snap.exists()){
+      const sd=snap.data();
+      qs=sd.qs||sd.questions||[];
+    }
+    if(!qs.length){
+      // Fall back: reconstruct from allQuestions by testLabel match
+      const refRec=allResults.find(r=>r.sessionDisplayId===sessionId);
+      if(refRec){
+        const matchedQs=allQuestions.filter(q=>q.testid===refRec.testLabel||q.courseId===refRec.courseId);
+        if(matchedQs.length){ qs=matchedQs; }
+      }
+    }
+    if(!qs.length){alert('Could not retrieve questions for this session. The session data may have been cleared.');return;}
+    const refRec=allResults.find(r=>r.sessionDisplayId===sessionId)||{};
+    const meta={
+      title:refRec.testLabel||refRec.subjectName||'Question Paper',
+      subtitle:refRec.topicName||sessionId,
+      programme:refRec.programmeName||'',
+      course:refRec.courseId||'',
+      subject:refRec.subjectName||'',
+      teacher:refRec.teacherName||''
+    };
+    const html=buildPaperHTML(qs,meta);
+    const a=document.createElement('a');
+    a.href='data:text/html;charset=utf-8,'+encodeURIComponent(html);
+    a.download='QuestionPaper_'+(sessionId.replace(/[^a-zA-Z0-9]/g,'_'))+'.html';
+    a.click();
+  }).catch(e=>alert('Error fetching session: '+e.message));
+};
+
+// Download filtered questions from Master Question Bank
+window.downloadBankPaper=function(){
+  // Re-apply current bank filters to get visible questions
+  const prog=gv('bf-prog'),subj=gv('bf-subj'),topic=gv('bf-topic'),
+        testid=gv('bf-testid'),type_f=gv('bf-type'),diff_f=gv('bf-diff'),
+        srch=(gv('bf-search')||'').toLowerCase();
+  const filtered=allQuestions.filter(q=>{
+    if(q.draft)return false;
+    if(prog&&q.programme!==prog)return false;
+    if(subj&&q.courseId!==subj)return false;
+    if(topic&&q.topicName!==topic)return false;
+    if(testid&&q.testid!==testid)return false;
+    if(type_f&&q.type!==type_f)return false;
+    if(diff_f&&q.difficulty!==diff_f)return false;
+    if(srch&&!(q.text||'').toLowerCase().includes(srch))return false;
+    return true;
+  });
+  if(!filtered.length){alert('No questions match the current filters.');return;}
+  const first=filtered[0]||{};
+  const meta={
+    title:testid||first.testid||'Master Question Bank',
+    subtitle:topic||first.topicName||'',
+    programme:prog||first.programme||'',
+    course:subj||first.courseId||'',
+    subject:first.subjectName||'',
+    teacher:teacher?.name||''
+  };
+  const html=buildPaperHTML(filtered,meta);
+  const a=document.createElement('a');
+  a.href='data:text/html;charset=utf-8,'+encodeURIComponent(html);
+  a.download='QuestionBank_'+((testid||topic||'questions').replace(/[^a-zA-Z0-9]/g,'_'))+'.html';
+  a.click();
+};
+
+/* ═══════════════════════════════════════════
    LAUNCH
 ═══════════════════════════════════════════ */
 window.updateCountHint=function(){
@@ -3089,6 +3312,7 @@ async function initStudentMode(){
     `${(qParams.qs||[]).length} questions • ${qParams.time||15} minutes`;
   el('stu-login-card').style.display='';
   el('sl-name').value='';el('sl-roll').value='';el('sl-email').value='';
+  loadStuAcData();
   show('s-stu-login');
 }
 
@@ -3099,8 +3323,93 @@ function showStuError(msg){
   show('s-stu-login');
 }
 
+/* ═══════════════════════════════════════════
+   STUDENT LOGIN AUTOCOMPLETE
+═══════════════════════════════════════════ */
+let stuAcProfiles = []; // [{name,roll,email}] from past results
+window.loadStuAcData = async function(){
+  if(!fbReady) return;
+  try{
+    // Load from results collection - public read (student side has no auth)
+    const snap = await _fb.getDocs(_fb.query(_fb.collection(db,'results'),_fb.orderBy('ts','desc'),_fb.limit(200)));
+    const map = {};
+    snap.docs.forEach(d=>{
+      const r=d.data();
+      const key=(r.roll||'').toUpperCase()+'__'+(r.email||'').toLowerCase();
+      if(key!=='__' && !map[key]) map[key]={
+        name:r.studentName||'', roll:(r.roll||'').toUpperCase(), email:(r.email||'').toLowerCase()
+      };
+    });
+    stuAcProfiles = Object.values(map).sort((a,b)=>a.name.localeCompare(b.name));
+  }catch(e){ stuAcProfiles=[]; }
+};
+window.stuAcFilter=function(field){
+  const val=(gv('sl-'+field)||'').toLowerCase();
+  const drop=el('sl-'+field+'-drop');
+  if(!drop) return;
+  let items=[];
+  if(field==='name'){
+    items=stuAcProfiles.filter(p=>val&&p.name.toLowerCase().includes(val))
+      .slice(0,8).map(p=>`<div class="ac-item" onmousedown="stuAcPick(${JSON.stringify(p)})">${esc(p.name)} <span style="font-size:11px;color:var(--m)">${esc(p.roll)}</span></div>`);
+  } else if(field==='roll'){
+    const v=(gv('sl-roll')||'').toUpperCase();
+    items=stuAcProfiles.filter(p=>v&&p.roll.toUpperCase().includes(v))
+      .slice(0,8).map(p=>`<div class="ac-item" onmousedown="stuAcPick(${JSON.stringify(p)})">${esc(p.roll)} <span style="font-size:11px;color:var(--m)">${esc(p.name)}</span></div>`);
+  } else if(field==='email'){
+    items=stuAcProfiles.filter(p=>val&&p.email.includes(val))
+      .slice(0,8).map(p=>`<div class="ac-item" onmousedown="stuAcPick(${JSON.stringify(p)})">${esc(p.email)} <span style="font-size:11px;color:var(--m)">${esc(p.name)}</span></div>`);
+  }
+  if(items.length){ drop.innerHTML=items.join(''); drop.classList.add('show'); }
+  else drop.classList.remove('show');
+};
+window.stuAcShow=function(field){ stuAcFilter(field); };
+window.stuAcHide=function(field,delay){ setTimeout(()=>{ const d=el('sl-'+field+'-drop'); if(d) d.classList.remove('show'); },delay); };
+window.stuAcPick=function(p){
+  if(el('sl-name')) el('sl-name').value=p.name||'';
+  if(el('sl-roll')){ el('sl-roll').value=(p.roll||'').toUpperCase(); }
+  if(el('sl-email')) el('sl-email').value=p.email||'';
+  ['name','roll','email'].forEach(f=>{ const d=el('sl-'+f+'-drop'); if(d) d.classList.remove('show'); });
+};
+
+/* ═══════════════════════════════════════════
+   TEACHER LOGIN AUTOCOMPLETE
+═══════════════════════════════════════════ */
+let tlAcProfiles = []; // [{name,email}]
+window.loadTlAcData = async function(){
+  if(!fbReady) return;
+  try{
+    const snap = await _fb.getDocs(_fb.collection(db,'teachers'));
+    tlAcProfiles = snap.docs.map(d=>({name:d.data().name||'',email:d.data().email||''}))
+      .filter(p=>p.name||p.email).sort((a,b)=>a.name.localeCompare(b.name));
+  }catch(e){ tlAcProfiles=[]; }
+};
+window.tlAcFilter=function(field){
+  const val=(gv('tl-'+field)||'').toLowerCase();
+  const drop=el('tl-'+field+'-drop');
+  if(!drop) return;
+  let items=[];
+  if(field==='name'){
+    items=tlAcProfiles.filter(p=>val&&p.name.toLowerCase().includes(val))
+      .slice(0,6).map(p=>`<div class="ac-item" onmousedown="tlAcPick(${JSON.stringify(p)})">${esc(p.name)} <span style="font-size:11px;color:var(--m)">${esc(p.email)}</span></div>`);
+  } else if(field==='email'){
+    items=tlAcProfiles.filter(p=>val&&p.email.toLowerCase().includes(val))
+      .slice(0,6).map(p=>`<div class="ac-item" onmousedown="tlAcPick(${JSON.stringify(p)})">${esc(p.email)} <span style="font-size:11px;color:var(--m)">${esc(p.name)}</span></div>`);
+  }
+  if(items.length){ drop.innerHTML=items.join(''); drop.classList.add('show'); }
+  else drop.classList.remove('show');
+};
+window.tlAcShow=function(field){ tlAcFilter(field); };
+window.tlAcHide=function(field,delay){ setTimeout(()=>{ const d=el('tl-'+field+'-drop'); if(d) d.classList.remove('show'); },delay); };
+window.tlAcPick=function(p){
+  if(el('tl-name')) el('tl-name').value=p.name||'';
+  if(el('tl-email')) el('tl-email').value=p.email||'';
+  ['name','email'].forEach(f=>{ const d=el('tl-'+f+'-drop'); if(d) d.classList.remove('show'); });
+};
+
 window.stuJoin=async function(){
-  const name=gv('sl-name'),roll=gv('sl-roll'),email=gv('sl-email');
+  // Normalize roll to uppercase before any processing
+  const rollInput=el('sl-roll'); if(rollInput) rollInput.value=(rollInput.value||'').toUpperCase();
+  const name=gv('sl-name'),roll=(gv('sl-roll')||'').toUpperCase(),email=gv('sl-email');
   if(!name){alert('Please enter your full name.');el('sl-name').focus();return;}
   if(!roll){alert('Please enter your roll number.');el('sl-roll').focus();return;}
   if(!email||!email.includes('@')){alert('Please enter a valid email.');el('sl-email').focus();return;}
@@ -4043,8 +4352,6 @@ function populateResultFilters(){
   const topics=[...new Set(allResults.map(r=>r.topicName).filter(Boolean))].sort();
   const testids=[...new Set(allResults.map(r=>r.testLabel).filter(Boolean))].sort();
   const teachers=[...new Set(allResults.map(r=>r.teacherName).filter(Boolean))].sort();
-  // Sessions: prefer human-readable sessionDisplayId, fall back to sessionId
-  // Only include sessions that have a readable display ID
   const sessions=[...new Set(
     allResults.map(r=>r.sessionDisplayId||'').filter(Boolean)
   )].sort().reverse();
@@ -4054,10 +4361,41 @@ function populateResultFilters(){
   fillSelect('rf-testid',testids);
   fillSelect('rf-teacher',teachers);
   fillSelect('rf-session',sessions);
+  // Year/Month/Date filters from ts timestamps
+  const years=[...new Set(allResults.map(r=>r.ts?new Date(r.ts).getFullYear():'').filter(Boolean))].sort().reverse();
+  fillSelect('rf-year',years);
   // Update table min-width for extra columns
   const tbl=document.querySelector('#s-results table');
   if(tbl) tbl.style.minWidth='900px';
 }
+window.onRfYearChange=function(){
+  // Repopulate months for selected year
+  const yr=parseInt(gv('rf-year')||'0');
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  let months=[];
+  if(yr){
+    months=[...new Set(allResults.filter(r=>r.ts&&new Date(r.ts).getFullYear()===yr)
+      .map(r=>new Date(r.ts).getMonth()+1))].sort((a,b)=>a-b)
+      .map(m=>({val:m,lbl:MONTHS[m-1]}));
+  }
+  const mSel=el('rf-month');
+  if(mSel){ mSel.innerHTML='<option value="">All Months</option>'+months.map(m=>'<option value="'+m.val+'">'+m.lbl+'</option>').join(''); }
+  const dSel=el('rf-date');
+  if(dSel) dSel.innerHTML='<option value="">All Dates</option>';
+  renderActiveTab();
+};
+window.onRfMonthChange=function(){
+  const yr=parseInt(gv('rf-year')||'0');
+  const mo=parseInt(gv('rf-month')||'0');
+  let dates=[];
+  if(yr&&mo){
+    dates=[...new Set(allResults.filter(r=>r.ts&&new Date(r.ts).getFullYear()===yr&&new Date(r.ts).getMonth()+1===mo)
+      .map(r=>new Date(r.ts).getDate()))].sort((a,b)=>a-b);
+  }
+  const dSel=el('rf-date');
+  if(dSel){ dSel.innerHTML='<option value="">All Dates</option>'+dates.map(d=>'<option value="'+d+'">'+d+'</option>').join(''); }
+  renderActiveTab();
+};
 
 window.sortResults=function(col){
   var s=window._sort;
@@ -4088,6 +4426,9 @@ window.renderResults=function(){
   const prog=gv('rf-prog'),subj=gv('rf-subj'),topic=gv('rf-topic'),
         testid=gv('rf-testid'),teacher_f=gv('rf-teacher'),
         session_f=gv('rf-session'),
+        yr_f=parseInt(gv('rf-year')||'0'),
+        mo_f=parseInt(gv('rf-month')||'0'),
+        dt_f=parseInt(gv('rf-date')||'0'),
         srch=(gv('rf-search')||'').toLowerCase();
 
   let filtered=allResults.filter(r=>{
@@ -4097,6 +4438,13 @@ window.renderResults=function(){
     if(testid&&r.testLabel!==testid)return false;
     if(teacher_f&&r.teacherName!==teacher_f)return false;
     if(session_f&&r.sessionDisplayId!==session_f)return false;
+    if(yr_f||mo_f||dt_f){
+      const d=r.ts?new Date(r.ts):null;
+      if(!d)return false;
+      if(yr_f&&d.getFullYear()!==yr_f)return false;
+      if(mo_f&&d.getMonth()+1!==mo_f)return false;
+      if(dt_f&&d.getDate()!==dt_f)return false;
+    }
     if(srch){
       const hay=[r.studentName,r.roll,r.email,r.programmeName,
         r.courseId,r.subjectName,r.topicName,r.testLabel,
@@ -4316,6 +4664,7 @@ async function bootstrap(){
     if(el('tl-name')) el('tl-name').value = cached.name||'';
     if(el('tl-email')) el('tl-email').value = cached.email||'';
   }
+  loadTlAcData();
   show('s-login-teacher');
 }
 
@@ -4420,6 +4769,9 @@ function renderLeaderboard(){
   const prog=gv('rf-prog'),subj=gv('rf-subj'),topic=gv('rf-topic'),
         testid=gv('rf-testid'),teacher_f=gv('rf-teacher'),
         session_f=gv('rf-session'),
+        yr_f=parseInt(gv('rf-year')||'0'),
+        mo_f=parseInt(gv('rf-month')||'0'),
+        dt_f=parseInt(gv('rf-date')||'0'),
         srch=(gv('rf-search')||'').toLowerCase();
   const filtered=allResults.filter(r=>{
     if(prog&&r.programmeName!==prog)return false;
@@ -4428,6 +4780,13 @@ function renderLeaderboard(){
     if(testid&&r.testLabel!==testid)return false;
     if(teacher_f&&r.teacherName!==teacher_f)return false;
     if(session_f&&r.sessionDisplayId!==session_f)return false;
+    if(yr_f||mo_f||dt_f){
+      const d=r.ts?new Date(r.ts):null;
+      if(!d)return false;
+      if(yr_f&&d.getFullYear()!==yr_f)return false;
+      if(mo_f&&d.getMonth()+1!==mo_f)return false;
+      if(dt_f&&d.getDate()!==dt_f)return false;
+    }
     if(srch){
       const hay=[r.studentName,r.roll,r.email,r.programmeName,
         r.courseId,r.subjectName,r.topicName,r.testLabel,
