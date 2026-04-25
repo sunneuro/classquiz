@@ -236,6 +236,104 @@ tr:hover td{background:var(--s2)}
   background:var(--s2);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:background .15s}
 .recent-item:hover{background:var(--s3)}
 @media(max-width:420px){.sgrid{grid-template-columns:1fr 1fr}.qhdr{padding:8px 12px}.subj-grid{grid-template-columns:1fr}}
+
+/* ── Bloom's chips ── */
+.chip-bloom{background:rgba(108,99,255,.18);color:#c4bfff;border:1px solid rgba(108,99,255,.35);font-size:10px;font-weight:700;letter-spacing:.5px;padding:3px 7px;border-radius:20px;cursor:default}
+
+/* ── Timer warnings ── */
+@keyframes pulse-warn  {0%,100%{opacity:1}50%{opacity:.5}}
+@keyframes pulse-danger{0%,100%{opacity:1}50%{opacity:.2}}
+.timer-warn  {color:#fbbf24!important;animation:pulse-warn   1.5s ease 2}
+.timer-danger{color:#f87171!important;animation:pulse-danger  .9s ease infinite}
+.timer-toast{position:fixed;top:18px;left:50%;transform:translateX(-50%);z-index:9998;
+  padding:9px 24px;border-radius:24px;font-family:var(--fh);font-size:13px;font-weight:700;
+  pointer-events:none;transition:opacity .35s;box-shadow:0 4px 24px rgba(0,0,0,.55)}
+.timer-toast.tw{background:rgba(245,158,11,.93);color:#fff}
+.timer-toast.td{background:rgba(239,68,68,.93);color:#fff}
+
+/* ── Confidence overlay ── */
+#ov-confidence{position:fixed;inset:0;background:rgba(0,0,0,.72);display:none;
+  align-items:flex-end;justify-content:center;z-index:9990;padding-bottom:28px}
+#ov-confidence.on{display:flex}
+.conf-card{background:var(--s1);border:1px solid var(--b2);border-radius:18px 18px 14px 14px;
+  padding:22px 18px 18px;width:100%;max-width:440px;text-align:center}
+.conf-title{font-family:var(--fh);font-size:15px;font-weight:700;margin-bottom:16px;color:var(--txt)}
+.conf-btns{display:flex;gap:8px;justify-content:center}
+.conf-btn{flex:1;padding:13px 6px;border-radius:12px;border:1.5px solid var(--b2);
+  background:var(--s2);color:var(--txt);font-family:var(--fh);font-size:11px;font-weight:700;
+  cursor:pointer;transition:all .14s;line-height:1.4;
+  display:flex;flex-direction:column;align-items:center;gap:5px}
+.conf-btn:active{transform:scale(.95)}
+.conf-btn.cs{border-color:#3ecf8e;background:rgba(62,207,142,.1);color:#3ecf8e}
+.conf-btn.cu{border-color:#fbbf24;background:rgba(251,191,36,.1);color:#fbbf24}
+.conf-btn.cg{border-color:#f87171;background:rgba(248,113,113,.1);color:#f87171}
+.conf-btn .ci{font-size:22px}
+.cbadge{display:inline-flex;align-items:center;gap:3px;font-size:10px;font-weight:700;
+  padding:2px 8px;border-radius:10px;letter-spacing:.2px;margin-left:6px}
+.cbadge-s{background:rgba(62,207,142,.15);color:#3ecf8e}
+.cbadge-u{background:rgba(251,191,36,.15);color:#fbbf24}
+.cbadge-g{background:rgba(248,113,113,.15);color:#f87171}
+
+/* ── Analytics ── */
+.an-sect{margin-bottom:28px}
+.an-sect h4{font-family:var(--fh);font-size:11px;font-weight:700;color:var(--m);
+  text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;padding-bottom:6px;
+  border-bottom:1px solid var(--b)}
+.anbar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.anbar-lbl{width:190px;min-width:110px;font-size:11px;color:var(--txt);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.anbar-track{flex:1;height:16px;background:var(--s2);border-radius:4px;
+  position:relative;overflow:visible}
+.anbar-fill{height:100%;border-radius:4px;min-width:3px}
+.anbar-val{width:40px;text-align:right;font-size:11px;color:var(--m)}
+.qtick{position:absolute;top:-3px;bottom:-3px;width:1.5px;background:rgba(255,255,255,.3);pointer-events:none}
+.distbar{display:flex;height:20px;border-radius:4px;overflow:hidden;gap:1px;margin-bottom:3px}
+.distbar-seg{display:flex;align-items:center;justify-content:center;font-size:9px;
+  font-weight:700;color:#fff;transition:flex .3s;min-width:0}
+.di-chip{display:inline-block;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700}
+.di-ex{background:rgba(62,207,142,.2);color:#3ecf8e}
+.di-ok{background:rgba(251,191,36,.2);color:#fbbf24}
+.di-wk{background:rgba(249,115,22,.2);color:#fb923c}
+.di-rv{background:rgba(239,68,68,.25);color:#f87171}
+.bloom-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.bloom-lbl{width:88px;font-size:11px;color:var(--txt)}
+.bloom-track{flex:1;height:13px;background:var(--s2);border-radius:3px;overflow:hidden}
+.bloom-fill{height:100%;background:rgba(108,99,255,.65);border-radius:3px;transition:width .5s}
+.bloom-pct{width:38px;font-size:11px;color:var(--m);text-align:right}
+.conf-matrix{width:100%;border-collapse:collapse;font-size:12px;margin-top:4px}
+.conf-matrix th,.conf-matrix td{padding:7px 10px;border:1px solid var(--b);text-align:center}
+.conf-matrix th{background:var(--s2);font-family:var(--fh);font-size:10px;
+  text-transform:uppercase;letter-spacing:.5px;color:var(--m)}
+.an-stat-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+.an-stat{background:var(--s2);border:1px solid var(--b);border-radius:10px;
+  padding:10px 16px;flex:1;min-width:110px;text-align:center}
+.an-stat-n{font-family:var(--fh);font-size:20px;font-weight:800;color:var(--acc)}
+.an-stat-l{font-size:10px;color:var(--m);margin-top:2px}
+.an-empty{padding:40px 16px;text-align:center;color:var(--m);font-size:13px}
+
+/* ── Bloom legend ── */
+#bloom-legend{position:fixed;bottom:20px;right:16px;z-index:8000;font-size:12px;display:none}
+#bloom-legend-body{background:var(--s1);border:1px solid var(--b2);border-radius:12px;
+  padding:14px 16px;margin-bottom:8px;min-width:240px;box-shadow:0 8px 32px rgba(0,0,0,.5);
+  display:none}
+#bloom-legend-body.open{display:block}
+#bloom-legend-pill{background:var(--s2);border:1px solid var(--b2);border-radius:20px;
+  padding:6px 14px;cursor:pointer;font-family:var(--fh);font-size:11px;font-weight:700;
+  color:var(--acc);display:flex;align-items:center;gap:6px}
+#bloom-legend-pill:hover{border-color:var(--acc)}
+.bl-row{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.bl-row:last-child{margin-bottom:0}
+.bl-acr{font-family:var(--fh);font-weight:800;font-size:12px;color:var(--acc);width:40px;flex-shrink:0}
+.bl-full{font-size:12px;color:var(--txt);font-weight:600;width:110px;flex-shrink:0}
+.bl-desc{font-size:11px;color:var(--m);line-height:1.4}
+
+/* ── Bank tag mode ── */
+.inline-bloom-sel{font-size:11px;padding:3px 7px;border-radius:6px;
+  background:var(--s2);border:1px solid var(--b);color:var(--txt);cursor:pointer;margin-left:4px}
+.tag-mode-bar{display:none;background:rgba(108,99,255,.1);border:1px solid rgba(108,99,255,.3);
+  border-radius:8px;padding:8px 12px;align-items:center;justify-content:space-between;
+  gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.tag-mode-bar.on{display:flex}
 </style>
 <!-- Firebase compat SDK — works on file:// in all browsers including Chrome -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -769,6 +867,18 @@ tr:hover td{background:var(--s2)}
         <button class="btn btn-sm w100" id="diff-medium" onclick="setDiff('medium')" style="background:var(--warn);color:#fff;border:none">Medium</button>
         <button class="btn btn-sm w100 btn-ghost" id="diff-hard" onclick="setDiff('hard')">Hard</button>
       </div>
+      <label style="margin-top:14px">Cognitive Level — Bloom's <span style="font-weight:400;color:var(--m)">(optional)</span></label>
+      <select id="aq-bloom" style="margin-top:6px">
+        <option value="">— Not tagged —</option>
+        <option value="recall">Recal — Recall</option>
+        <option value="comprehension">Compr — Comprehension</option>
+        <option value="application">Appli — Application</option>
+        <option value="analysis">Analy — Analysis</option>
+        <option value="synthesis">Synth — Synthesis</option>
+        <option value="evaluation">Evalu — Evaluation</option>
+      </select>
+      <label style="margin-top:14px">Explanation <span style="font-weight:400;color:var(--m)">(shown to students after quiz — optional)</span></label>
+      <textarea id="aq-rationale" rows="2" placeholder="Why is this the correct answer? Optionally explain why other options are wrong." style="font-size:13px;resize:vertical"></textarea>
     </div>
     <div class="row" style="gap:8px;margin-top:10px">
       <button class="btn btn-ghost" style="flex:1" onclick="wizBack(0)">← Back</button>
@@ -852,10 +962,32 @@ tr:hover td{background:var(--s2)}
           <option value="hard">Hard</option>
         </select>
       </div>
+      <div>
+        <label style="margin-top:0">Cognitive Level</label>
+        <select id="bf-bloom" onchange="renderBank()">
+          <option value="">All</option>
+          <option value="recall">Recal — Recall</option>
+          <option value="comprehension">Compr — Comprehension</option>
+          <option value="application">Appli — Application</option>
+          <option value="analysis">Analy — Analysis</option>
+          <option value="synthesis">Synth — Synthesis</option>
+          <option value="evaluation">Evalu — Evaluation</option>
+        </select>
+      </div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
       <input type="text" id="bf-search" placeholder="Search question text…" style="flex:1;min-width:180px;margin-top:0" oninput="renderBank()"/>
       <button class="btn btn-ghost btn-sm" onclick="downloadBankPaper()">📄 Download Filtered Paper</button>
+      <button class="btn btn-ghost btn-sm" id="btn-tag-mode" onclick="toggleTagMode()">🏷️ Tag Bloom's</button>
+    </div>
+    <div class="tag-mode-bar" id="tag-mode-bar">
+      <span style="font-size:12px;color:var(--acc);font-weight:700">🏷️ Tag Mode active — set Bloom's level on each card below</span>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span id="tag-mode-count" style="font-size:12px;color:var(--m)"></span>
+        <button class="btn btn-sm btn-ghost" onclick="aiAutoTag()">✨ AI Suggest</button>
+        <button class="btn btn-sm" style="background:var(--acc);color:#fff;border:none" onclick="saveTagBatch()">💾 Save Tags</button>
+        <button class="btn btn-sm btn-ghost" onclick="toggleTagMode()">✕ Exit</button>
+      </div>
     </div>
   </div>
   <!-- Bulk action bar — visible when in addToDraft mode OR always for selection -->
@@ -955,6 +1087,18 @@ tr:hover td{background:var(--s2)}
     <button class="btn btn-sm w100" id="eq-diff-medium" onclick="setEditDiff('medium')" style="background:var(--warn);color:#fff;border:none">Medium</button>
     <button class="btn btn-sm w100 btn-ghost" id="eq-diff-hard" onclick="setEditDiff('hard')">Hard</button>
   </div>
+  <label style="margin-top:14px">Cognitive Level — Bloom's <span style="font-weight:400;color:var(--m)">(optional)</span></label>
+  <select id="eq-bloom" style="margin-top:6px">
+    <option value="">— Not tagged —</option>
+    <option value="recall">Recal — Recall</option>
+    <option value="comprehension">Compr — Comprehension</option>
+    <option value="application">Appli — Application</option>
+    <option value="analysis">Analy — Analysis</option>
+    <option value="synthesis">Synth — Synthesis</option>
+    <option value="evaluation">Evalu — Evaluation</option>
+  </select>
+  <label style="margin-top:14px">Explanation <span style="font-weight:400;color:var(--m)">(shown to students after quiz — optional)</span></label>
+  <textarea id="eq-rationale" rows="2" placeholder="Why is this the correct answer?" style="font-size:13px;resize:vertical"></textarea>
   <div style="display:flex;gap:8px;margin-top:16px">
     <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-edit-q')">Cancel</button>
     <button class="btn btn-grn" style="flex:2" onclick="saveEditQuestion()">💾 Save Changes</button>
@@ -1154,6 +1298,8 @@ tr:hover td{background:var(--s2)}
   <div class="tabs">
     <div class="tab on" id="tab-results" onclick="switchResultsTab('results')">Results Table</div>
     <div class="tab" id="tab-leaderboard" onclick="switchResultsTab('leaderboard')">🏆 Leaderboard</div>
+    <div class="tab" id="tab-profiles" onclick="switchResultsTab('profiles')">👤 Profiles</div>
+    <div class="tab" id="tab-analytics" onclick="switchResultsTab('analytics')">📊 Analytics</div>
   </div>
   <!-- Universal filters -->
   <div id="results-filters" class="card" style="padding:14px">
@@ -1228,6 +1374,56 @@ tr:hover td{background:var(--s2)}
   </div>
   <div id="leaderboard-list"></div>
 </div>
+</div>
+
+<!-- PROFILES PANEL -->
+<div id="panel-profiles" style="display:none;width:100%;max-width:920px;padding:0 16px 60px">
+  <div id="profiles-list"></div>
+</div>
+
+<!-- ANALYTICS PANEL -->
+<div id="panel-analytics" style="display:none;width:100%;max-width:920px;padding:0 16px 60px">
+  <div id="analytics-body">
+    <div class="an-empty">
+      <div style="font-size:32px;margin-bottom:12px">📊</div>
+      Select a specific <b>Session ID</b> from the filter above to view question-level analytics.
+    </div>
+  </div>
+</div>
+
+<!-- CONFIDENCE OVERLAY (student quiz) -->
+<div id="ov-confidence">
+  <div class="conf-card">
+    <div class="conf-title">How confident are you?</div>
+    <div class="conf-btns">
+      <button class="conf-btn cs" onclick="pickConfidence('sure')">
+        <span class="ci">✅</span>Sure
+      </button>
+      <button class="conf-btn cu" onclick="pickConfidence('unsure')">
+        <span class="ci">🤔</span>Not So Sure
+      </button>
+      <button class="conf-btn cg" onclick="pickConfidence('guessing')">
+        <span class="ci">🎲</span>Wild Guess
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- BLOOM'S LEGEND (floating) -->
+<div id="bloom-legend">
+  <div id="bloom-legend-body">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <span style="font-family:var(--fh);font-size:12px;font-weight:700;color:var(--txt)">🧠 Bloom's Taxonomy</span>
+      <button onclick="bloomLegendToggle()" style="background:none;border:none;color:var(--m);cursor:pointer;font-size:18px;line-height:1;padding:0">−</button>
+    </div>
+    <div class="bl-row"><span class="bl-acr">Recal</span><span class="bl-full">Recall</span><span class="bl-desc">Remembering facts &amp; definitions</span></div>
+    <div class="bl-row"><span class="bl-acr">Compr</span><span class="bl-full">Comprehension</span><span class="bl-desc">Explaining &amp; interpreting concepts</span></div>
+    <div class="bl-row"><span class="bl-acr">Appli</span><span class="bl-full">Application</span><span class="bl-desc">Using knowledge in new situations</span></div>
+    <div class="bl-row"><span class="bl-acr">Analy</span><span class="bl-full">Analysis</span><span class="bl-desc">Breaking down &amp; examining</span></div>
+    <div class="bl-row"><span class="bl-acr">Synth</span><span class="bl-full">Synthesis</span><span class="bl-desc">Combining ideas to form new ones</span></div>
+    <div class="bl-row"><span class="bl-acr">Evalu</span><span class="bl-full">Evaluation</span><span class="bl-desc">Judging, critiquing &amp; justifying</span></div>
+  </div>
+  <div id="bloom-legend-pill" onclick="bloomLegendToggle()">🧠 Bloom's <span id="bloom-pill-arrow">▲</span></div>
 </div>
 
 <!-- OVERLAYS -->
@@ -1368,6 +1564,10 @@ let lastQType='mcq';   // remembers last used question type across saves
 let lastDiff='medium'; // remembers last used difficulty across saves
 let qParams=null;      // student: parsed session data
 let activeSessionId=null;
+/* ── timing, confidence, timer warning flags ── */
+let questionStartTime=0, timingsMap={}, confidenceMap={};
+let warnedAt5=false, warnedAt1=false, confReady=false;
+let tagModeActive=false, tagModeChanges={};
 let activeSessionDisplayId='';
 let activeSessionFileId='';  // teacher: current session ID
 let answersLocked=true;
@@ -2294,6 +2494,8 @@ window.saveQuestion=async function(){
   const q={
     text,type:wizData.type,options,correctIndex,answer,
     difficulty:wizData.diff,
+    bloomTag:(el('aq-bloom')?.value||'').trim(),
+    rationale:(el('aq-rationale')?.value||'').trim(),
     programmeName:wizData.prog,
     courseId:wizData.cid,
     subjectName:wizData.subj,
@@ -2415,6 +2617,7 @@ function fillSelect(id,items,valFn,lblFn){
 function bankFilterFn(q){
   const prog=gv('bf-prog'),subj=gv('bf-subj'),topic=gv('bf-topic'),
         testid=gv('bf-testid'),type=gv('bf-type'),diff=gv('bf-diff'),
+        bloom=gv('bf-bloom'),
         session_f=gv('bf-session'),
         yr_f=parseInt(gv('bf-year')||'0'),
         mo_f=parseInt(gv('bf-month')||'0'),
@@ -2426,6 +2629,7 @@ function bankFilterFn(q){
   if(testid&&q.testLabel!==testid)return false;
   if(type&&q.type!==type)return false;
   if(diff&&q.difficulty!==diff)return false;
+  if(bloom&&(q.bloomTag||'')!==bloom)return false;
   // Session filter: match questions that were used in this session (by testLabel+courseId)
   if(session_f){
     const sessionRec=allResults.find(r=>r.sessionDisplayId===session_f);
@@ -2485,6 +2689,7 @@ window.renderBank=function(){
             +(isDraft?'<span class="chip" style="background:rgba(245,158,11,.15);color:#f59e0b">Draft</span>':'')
             +'<span class="chip chip-'+q.type+'">'+(q.type==='mcq'?'MCQ':'T/F')+'</span>'
             +'<span class="chip chip-'+(q.difficulty||'medium')+'">'+(q.difficulty||'medium')+'</span>'
+            +bloomChipHtml(q.bloomTag||'',q.id)
             +'<span class="qi-tag">'+esc(q.courseId)+' '+esc(q.subjectName)+'</span>'
             +'<span class="qi-tag">'+esc(q.topicName)+'</span>'
             +'<span class="qi-tag" style="color:var(--acc)">'+esc(q.testLabel)+'</span>'
@@ -2692,6 +2897,7 @@ window.renderCurate=function(){
           +'<div class="qi-meta">'
             +'<span class="chip chip-'+q.type+'">'+typLbl+'</span>'
             +'<span class="chip chip-'+(q.difficulty||'medium')+'">'+(q.difficulty||'medium')+'</span>'
+            +(q.bloomTag&&BLOOM_ACR[q.bloomTag]?'<span class="chip chip-bloom">'+BLOOM_ACR[q.bloomTag]+'</span>':'')
             +(isNew?'<span class="chip" style="background:rgba(16,185,129,.15);color:#10b981">New</span>':'')
           +'</div>'
           +'<div class="qi-text" style="margin-top:6px">'+esc(q.text)+'</div>'
@@ -3696,6 +3902,7 @@ function beginQuiz(){
   quizQs=cnt>0?pool.slice(0,cnt):pool;
 
   answers={};lockedAnswers={};optionShuffles={};vioLockedQs={};curQ=0;vioCount=0;offSecs=0;firstVio=true;quizActive=true;reviewMode=false;
+  timingsMap={};confidenceMap={};questionStartTime=Date.now();warnedAt5=false;warnedAt1=false;
   timeLeft=(qParams.time||15)*60;
 
   // Update lobby status
@@ -3886,6 +4093,7 @@ function retVio(){
 function restartVio(){
   clearInterval(vioTimer);closeOv('ov-vio');
   answers={};lockedAnswers={};optionShuffles={};vioLockedQs={};curQ=0;firstVio=true;
+  timingsMap={};confidenceMap={};questionStartTime=Date.now();warnedAt5=false;warnedAt1=false;
   for(let i=quizQs.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[quizQs[i],quizQs[j]]=[quizQs[j],quizQs[i]];}
   renderQ();renderDots();reqFS();
 }
@@ -3895,15 +4103,38 @@ function restartVio(){
 ═══════════════════════════════════════════ */
 function startTmr(){
   clearInterval(timerInt);
+  warnedAt5=false; warnedAt1=false;
   timerInt=setInterval(()=>{
     timeLeft--;updTmr();
+    if(timeLeft===300&&!warnedAt5){warnedAt5=true;fireTimerWarning('⏰  5 minutes remaining','tw');}
+    if(timeLeft===60 &&!warnedAt1){warnedAt1=true;fireTimerWarning('⚠️  1 minute remaining!','td');}
     if(timeLeft<=0){clearInterval(timerInt);finishQuiz();}
   },1000);
   updTmr();
 }
 function updTmr(){
   const m=String(Math.floor(timeLeft/60)).padStart(2,'0'),s=String(timeLeft%60).padStart(2,'0');
-  const t=el('htmr');t.textContent=`⏱ ${m}:${s}`;t.classList.toggle('warn',timeLeft<=60);
+  const t=el('htmr');if(!t)return;
+  t.textContent=`⏱ ${m}:${s}`;
+  t.classList.remove('timer-warn','timer-danger');
+  if(timeLeft<=60)t.classList.add('timer-danger');
+  else if(timeLeft<=300)t.classList.add('timer-warn');
+}
+function fireTimerWarning(msg,cls){
+  const old=document.getElementById('_tmr_toast');if(old)old.remove();
+  const d=document.createElement('div');
+  d.id='_tmr_toast';d.className='timer-toast '+cls;d.textContent=msg;
+  document.body.appendChild(d);
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    const osc=ctx.createOscillator(),g=ctx.createGain();
+    osc.connect(g);g.connect(ctx.destination);
+    osc.frequency.value=cls==='tw'?520:880;
+    g.gain.setValueAtTime(.15,ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+(cls==='tw'?0.2:0.3));
+    osc.start();osc.stop(ctx.currentTime+(cls==='tw'?0.2:0.3));
+  }catch(e){}
+  setTimeout(()=>{d.style.opacity='0';setTimeout(()=>d.remove(),400);},cls==='tw'?4000:5500);
 }
 
 /* ═══════════════════════════════════════════
@@ -3918,10 +4149,16 @@ function renderQ(){
   const _prv=el('btn-prv'); if(_prv) _prv.style.display='none';
   const _nxt=el('btn-nxt'); if(_nxt) _nxt.style.display='none';
   const _sub=el('btn-sub'); if(_sub) _sub.style.display='none';
-
+  // Record when this question was displayed (for timing analytics)
+  if(!reviewMode) questionStartTime=Date.now();
+  // Bloom chip
+  const BLOOM_ACR={recall:'Recal',comprehension:'Compr',application:'Appli',
+    analysis:'Analy',synthesis:'Synth',evaluation:'Evalu'};
+  const bloomChip=q.bloomTag&&BLOOM_ACR[q.bloomTag]
+    ?` <span class="chip chip-bloom">${BLOOM_ACR[q.bloomTag]}</span>`:'';
   const tl=q.type==='mcq'?'Multiple Choice':'True / False';
   let html=`<div class="qnum">Question ${curQ+1} of ${quizQs.length}${reviewMode?' — Review':''}${q.difficulty?' · '+q.difficulty:''}</div>
-    <span class="chip chip-${q.type}" style="margin-bottom:10px;display:inline-block">${tl}</span>
+    <span class="chip chip-${q.type}" style="margin-bottom:10px;display:inline-block">${tl}</span>${bloomChip}
     <div class="qtxt">${esc(q.text)}</div>`;
 
   if(q.type==='mcq'||q.type==='tf'){
@@ -4020,18 +4257,36 @@ function renderDots(){
 }
 
 window.jumpQ=function(i){
-  // Lock current answer before jumping
+  if(!reviewMode&&questionStartTime) timingsMap[curQ]=Math.round((Date.now()-questionStartTime)/1000);
   if(answers[curQ]!==undefined) lockedAnswers[curQ]=true;
   curQ=i;renderQ();renderDots();
 };
 window.pickOpt=function(i){
   if(reviewMode)return;
-  if(lockedAnswers[curQ])return; // locked after navigating away
-  answers[curQ]=String(i); // freely changeable on current question
+  if(lockedAnswers[curQ])return;
+  answers[curQ]=String(i);
   renderQ();renderDots();
+  // Show confidence overlay after 260ms gate (prevents accidental double-tap)
+  confReady=false;
+  setTimeout(()=>{confReady=true;},260);
+  el('ov-confidence').classList.add('on');
+};
+window.pickConfidence=function(level){
+  if(!confReady)return;
+  confidenceMap[curQ]=level;
+  el('ov-confidence').classList.remove('on');
+  // Lock answer and record timing
+  lockedAnswers[curQ]=true;
+  if(questionStartTime) timingsMap[curQ]=Math.round((Date.now()-questionStartTime)/1000);
+  // Auto-advance to next question, or stay on last (submit button visible)
+  if(curQ<quizQs.length-1){
+    curQ++;renderQ();renderDots();
+  } else {
+    renderQ();renderDots();
+  }
 };
 window.navQ=function(d){
-  // Lock current answer before navigating away
+  if(!reviewMode&&questionStartTime) timingsMap[curQ]=Math.round((Date.now()-questionStartTime)/1000);
   if(answers[curQ]!==undefined) lockedAnswers[curQ]=true;
   curQ=Math.max(0,Math.min(quizQs.length-1,curQ+d));
   renderQ();renderDots();
@@ -4110,6 +4365,8 @@ window.finishQuiz=async function(){
     teacherEmail:qParams?.teacherEmail||'',
     answerMap: JSON.stringify(answers),
     optionShuffles: JSON.stringify(optionShuffles),
+    timings: JSON.stringify(timingsMap),
+    confidenceMap: JSON.stringify(confidenceMap),
     sessionTotalTime: qParams?.time||15,
     ts:Date.now()
   };
@@ -4277,13 +4534,21 @@ function showAnswerReview(){
     }
     const cls=ua===undefined?'ans-skip':correct?'ans-ok':'ans-ng';
     const icon=ua===undefined?'⬜':correct?'✅':'❌';
+    const conf=confidenceMap[i];
+    const confBadge=conf
+      ?`<span class="cbadge cbadge-${conf==='sure'?'s':conf==='unsure'?'u':'g'}">`
+        +(conf==='sure'?'✅ Sure':conf==='unsure'?'🤔 Not So Sure':'🎲 Wild Guess')+'</span>':'' ;
+    const rationaleBox=q.rationale
+      ?`<div style="margin-top:8px;padding:8px 10px;background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.2);border-radius:7px;font-size:12px;color:#93c5fd;line-height:1.6"><span style="font-weight:700">ℹ️ </span>${esc(q.rationale)}</div>`:'';
     return`<div class="ans-item ${cls}">
       <div class="ans-q">${icon} Q${i+1}. ${esc(q.text)}</div>
       <div class="ans-row">
         <span style="color:var(--m)">Your answer:</span>
         <span style="color:${correct?'var(--grn)':'var(--err)'};font-weight:600">${esc(uTxt)}</span>
         ${!correct&&cTxt?`<span style="color:var(--m)">· Correct:</span><span style="color:var(--grn);font-weight:600">${esc(cTxt)}</span>`:''}
+        ${confBadge}
       </div>
+      ${rationaleBox}
     </div>`;
   }).join('');
   el('ans-review-wrap').style.display='';
@@ -4806,20 +5071,24 @@ function calcPerformance(pct, timeTakenSecs, totalTimeSecs, violations){
 
 
 window.switchResultsTab=function(tab){
-  ['results','leaderboard'].forEach(function(t){
-    var tb=el('tab-'+t); if(tb) tb.classList.toggle('on',t===tab);
+  ['results','leaderboard','profiles','analytics'].forEach(function(t){
+    var tb=el('tab-'+t);if(tb)tb.classList.toggle('on',t===tab);
   });
-  var fc=el('results-filters');
-  if(fc) fc.style.display='';
   ['results-summary','results-table-wrap','results-actions'].forEach(function(id){
-    var e=el(id); if(e) e.style.display=(tab==='results')?'':'none';
+    var e=el(id);if(e)e.style.display=(tab==='results')?'':'none';
   });
-  var lb=el('panel-leaderboard');
-  if(lb) lb.style.display=(tab==='leaderboard')?'':'none';
+  var lb=el('panel-leaderboard');if(lb)lb.style.display=(tab==='leaderboard')?'':'none';
+  var pf=el('panel-profiles');if(pf)pf.style.display=(tab==='profiles')?'':'none';
+  var pa=el('panel-analytics');if(pa)pa.style.display=(tab==='analytics')?'':'none';
   if(tab==='leaderboard'){
-    if(!allResults.length) loadResults(false).then(renderLeaderboard);
+    if(!allResults.length)loadResults(false).then(renderLeaderboard);
     else renderLeaderboard();
   }
+  if(tab==='profiles'){
+    if(!allResults.length)loadResults(false).then(renderStudentProfiles);
+    else renderStudentProfiles();
+  }
+  if(tab==='analytics') renderSessionAnalytics();
 };
 
 function renderLeaderboard(){
@@ -4904,6 +5173,459 @@ function renderLeaderboard(){
 
 
 
+
+/* ═══════════════════════════════════════════
+   BLOOM'S LEGEND (floating, session-persistent)
+═══════════════════════════════════════════ */
+const BLOOM_CONTEXTS=['s-curate','s-bank','s-add-q'];
+function bloomLegendVisible(){
+  return BLOOM_CONTEXTS.some(id=>{ const s=el(id); return s&&s.style.display!=='none'&&s.classList.contains('active')||
+    (s&&getComputedStyle(s).display!=='none'); });
+}
+window.bloomLegendToggle=function(){
+  const body=el('bloom-legend-body');
+  const arrow=el('bloom-pill-arrow');
+  if(!body)return;
+  const open=body.classList.toggle('open');
+  if(arrow)arrow.textContent=open?'▲':'▼';
+};
+function maybeShowBloomLegend(){
+  const leg=el('bloom-legend');if(!leg)return;
+  if(sessionStorage.getItem('bloomLegendShown')){
+    leg.style.display='';return;
+  }
+  sessionStorage.setItem('bloomLegendShown','1');
+  leg.style.display='';
+  const body=el('bloom-legend-body');
+  if(body){body.classList.add('open');const ar=el('bloom-pill-arrow');if(ar)ar.textContent='▲';}
+}
+
+/* ═══════════════════════════════════════════
+   BANK: BLOOM CHIP RENDERING + TAG MODE
+═══════════════════════════════════════════ */
+const BLOOM_ACR={recall:'Recal',comprehension:'Compr',application:'Appli',
+  analysis:'Analy',synthesis:'Synth',evaluation:'Evalu'};
+const BLOOM_OPTS=['recall','comprehension','application','analysis','synthesis','evaluation'];
+
+function bloomChipHtml(tag,qid){
+  if(tagModeActive){
+    const cur=tagModeChanges[qid]!==undefined?tagModeChanges[qid]:(tag||'');
+    return `<select class="inline-bloom-sel" onchange="tagModeSet('${qid}',this.value)" data-qid="${qid}">
+      <option value="">— Tag —</option>
+      ${BLOOM_OPTS.map(o=>`<option value="${o}"${cur===o?' selected':''}>${BLOOM_ACR[o]}</option>`).join('')}
+    </select>`;
+  }
+  if(!tag||!BLOOM_ACR[tag]) return
+    `<select class="inline-bloom-sel" onchange="quickBloomTag('${qid}',this.value)" style="opacity:.6">
+      <option value="">＋ Tag</option>
+      ${BLOOM_OPTS.map(o=>`<option value="${o}">${BLOOM_ACR[o]}</option>`).join('')}
+    </select>`;
+  return `<span class="chip chip-bloom" title="Click to change" style="cursor:pointer"
+    onclick="showQuickBloom('${qid}',this)">${BLOOM_ACR[tag]}</span>`;
+}
+
+window.showQuickBloom=function(qid,chipEl){
+  // Replace chip with inline select
+  const q=allQuestions.find(x=>x.id===qid);if(!q)return;
+  const sel=document.createElement('select');
+  sel.className='inline-bloom-sel';
+  sel.innerHTML=BLOOM_OPTS.map(o=>`<option value="${o}"${q.bloomTag===o?' selected':''}>${BLOOM_ACR[o]}</option>`).join('');
+  sel.onchange=function(){quickBloomTag(qid,this.value);};
+  sel.onblur=function(){renderBank();};
+  chipEl.replaceWith(sel);sel.focus();
+};
+window.quickBloomTag=async function(qid,tag){
+  const q=allQuestions.find(x=>x.id===qid);if(!q)return;
+  q.bloomTag=tag;
+  try{await _fb.updateDoc(_fb.doc(db,'questions',qid),{bloomTag:tag});}catch(e){}
+  renderBank();
+};
+
+window.toggleTagMode=function(){
+  tagModeActive=!tagModeActive;
+  tagModeChanges={};
+  const bar=el('tag-mode-bar');
+  if(bar)bar.classList.toggle('on',tagModeActive);
+  const btn=el('btn-tag-mode');
+  if(btn)btn.textContent=tagModeActive?'✕ Exit Tag Mode':'🏷️ Tag Bloom\'s';
+  renderBank();updateTagModeCount();
+};
+window.tagModeSet=function(qid,val){
+  tagModeChanges[qid]=val;updateTagModeCount();
+};
+function updateTagModeCount(){
+  const c=el('tag-mode-count');
+  if(!c)return;
+  const n=Object.keys(tagModeChanges).length;
+  c.textContent=n?`${n} change${n>1?'s':''} pending`:'No changes yet';
+}
+window.saveTagBatch=async function(){
+  const ids=Object.keys(tagModeChanges);
+  if(!ids.length){alert('No tags changed yet.');return;}
+  const btn=document.querySelector('.tag-mode-bar .btn[onclick="saveTagBatch()"]');
+  if(btn){btn.textContent='Saving…';btn.disabled=true;}
+  try{
+    const batch=_fb.writeBatch(db);
+    ids.forEach(id=>{
+      const q=allQuestions.find(x=>x.id===id);
+      if(q){q.bloomTag=tagModeChanges[id];}
+      batch.update(_fb.doc(db,'questions',id),{bloomTag:tagModeChanges[id]});
+    });
+    await batch.commit();
+    tagModeChanges={};
+    alert(`✅ ${ids.length} question${ids.length>1?'s':''} tagged successfully.`);
+    renderBank();updateTagModeCount();
+  }catch(e){alert('Save failed: '+e.message);}
+  if(btn){btn.textContent='💾 Save Tags';btn.disabled=false;}
+};
+
+window.aiAutoTag=async function(){
+  const visible=allQuestions.filter(q=>!q.draft&&bankFilterFn(q)&&!q.bloomTag);
+  if(!visible.length){alert('All visible questions already have Bloom\'s tags.');return;}
+  const btn=document.querySelector('.tag-mode-bar .btn[onclick="aiAutoTag()"]');
+  if(btn){btn.textContent='✨ Thinking…';btn.disabled=true;}
+  try{
+    const qs=visible.slice(0,40); // max 40 per call
+    const prompt='Classify each question by Bloom\'s Taxonomy level.\n'
+      +'Return ONLY a JSON array: [{idx:0,tag:"recall"},{idx:1,tag:"application"}...]\n'
+      +'Valid tags: recall, comprehension, application, analysis, synthesis, evaluation\n'
+      +'Questions:\n'+qs.map((q,i)=>i+': '+q.text).join('\n');
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,
+        messages:[{role:'user',content:prompt}]})
+    });
+    const data=await resp.json();
+    const txt=data.content?.map(x=>x.text||'').join('');
+    const json=JSON.parse(txt.replace(/```json?|```/g,'').trim());
+    json.forEach(item=>{ if(qs[item.idx]) tagModeChanges[qs[item.idx].id]=item.tag; });
+    renderBank();updateTagModeCount();
+    alert(`✨ AI suggested tags for ${json.length} questions. Review and click Save Tags to apply.`);
+  }catch(e){alert('AI tagging failed: '+e.message);}
+  if(btn){btn.textContent='✨ AI Suggest';btn.disabled=false;}
+};
+
+/* ═══════════════════════════════════════════
+   STUDENT PROFILES TAB
+═══════════════════════════════════════════ */
+function renderStudentProfiles(){
+  const list=el('profiles-list');if(!list)return;
+  // Apply same filters as results table
+  const prog=gv('rf-prog'),subj=gv('rf-subj'),topic=gv('rf-topic'),
+        testid=gv('rf-testid'),teacher_f=gv('rf-teacher'),
+        session_f=gv('rf-session'),srch=(gv('rf-search')||'').toLowerCase();
+  let filtered=allResults.filter(r=>{
+    if(prog&&r.programmeName!==prog)return false;
+    if(subj&&r.courseId!==subj)return false;
+    if(topic&&r.topicName!==topic)return false;
+    if(testid&&r.testLabel!==testid)return false;
+    if(teacher_f&&r.teacherName!==teacher_f)return false;
+    if(session_f&&r.sessionDisplayId!==session_f)return false;
+    if(srch){const s=(r.studentName||'').toLowerCase()+(r.roll||'').toLowerCase()+(r.email||'').toLowerCase();
+      if(!s.includes(srch))return false;}
+    return true;
+  });
+  if(!filtered.length){list.innerHTML='<div class="an-empty">No results match the current filters.</div>';return;}
+  // Group by roll+email
+  const map={};
+  filtered.forEach(r=>{
+    const key=(r.roll||'').toUpperCase()+'::'+((r.email||'').toLowerCase());
+    if(!map[key])map[key]={name:r.studentName||'',roll:(r.roll||'').toUpperCase(),
+      email:(r.email||'').toLowerCase(),sessions:[],scores:[],perfs:[],
+      blooms:{},conf:{sure:{c:0,t:0},unsure:{c:0,t:0},guessing:{c:0,t:0}}};
+    const p=map[key];
+    p.sessions.push(r.sessionDisplayId||r.sessionId||'');
+    p.scores.push(r.pct||0);
+    p.perfs.push(r.performanceScore||r.pct||0);
+  });
+  const profiles=Object.values(map).sort((a,b)=>a.name.localeCompare(b.name));
+  list.innerHTML=profiles.map(p=>{
+    const avgScore=(p.scores.reduce((a,b)=>a+b,0)/p.scores.length).toFixed(1);
+    const avgPerf=(p.perfs.reduce((a,b)=>a+b,0)/p.perfs.length).toFixed(1);
+    return`<div class="card" style="margin-bottom:10px;padding:14px 16px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:120px">
+          <div style="font-weight:700;font-size:14px">${esc(p.name)}</div>
+          <div style="font-size:11px;color:var(--m)">${esc(p.roll)} · ${esc(p.email)}</div>
+        </div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap">
+          <div style="text-align:center"><div style="font-family:var(--fh);font-size:20px;font-weight:800;color:var(--acc)">${avgScore}%</div><div style="font-size:10px;color:var(--m)">Avg Score</div></div>
+          <div style="text-align:center"><div style="font-family:var(--fh);font-size:20px;font-weight:800;color:var(--grn)">${avgPerf}</div><div style="font-size:10px;color:var(--m)">Avg Perf</div></div>
+          <div style="text-align:center"><div style="font-family:var(--fh);font-size:20px;font-weight:800;color:var(--txt)">${p.sessions.length}</div><div style="font-size:10px;color:var(--m)">Sessions</div></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════
+   SESSION ANALYTICS TAB
+═══════════════════════════════════════════ */
+function renderSessionAnalytics(){
+  const body=el('analytics-body');if(!body)return;
+  const sid=gv('rf-session');
+  if(!sid){
+    body.innerHTML='<div class="an-empty"><div style="font-size:32px;margin-bottom:12px">📊</div>Select a specific <b>Session ID</b> from the filter to view question-level analytics.</div>';
+    return;
+  }
+  const sessionResults=allResults.filter(r=>r.sessionDisplayId===sid);
+  if(!sessionResults.length){
+    body.innerHTML='<div class="an-empty">No results found for this session.</div>';return;
+  }
+  // Parse question array from first result that has it, or from session doc
+  let qs=null;
+  for(const r of sessionResults){
+    if(r.qs&&r.qs.length){qs=r.qs;break;}
+    if(r.questions&&r.questions.length){qs=r.questions;break;}
+  }
+  // Try to match from allQuestions by testLabel+courseId
+  if(!qs||!qs.length){
+    const ref=sessionResults[0];
+    qs=allQuestions.filter(q=>q.testLabel===ref.testLabel&&q.courseId===ref.courseId);
+  }
+  // Build analytics
+  const nStudents=sessionResults.length;
+  const analytics=computeAnalytics(qs||[],sessionResults);
+  body.innerHTML=renderAnalyticsHTML(analytics,nStudents,sid,sessionResults);
+}
+
+function computeAnalytics(qs,results){
+  const nQ=qs.length;
+  const perQ=qs.map((q,qi)=>{
+    let correct=0,total=0;
+    const optDist={}; // option label → count
+    const timings=[]; const timingsWrong=[];
+    const confData={sure:{c:0,t:0},unsure:{c:0,t:0},guessing:{c:0,t:0}};
+    results.forEach(r=>{
+      const am=safeParseJson(r.answerMap)||{};
+      const sh=safeParseJson(r.optionShuffles)||{};
+      const tm=safeParseJson(r.timings)||{};
+      const cm=safeParseJson(r.confidenceMap)||{};
+      const ua=am[qi];
+      if(ua===undefined||ua==='')return;
+      total++;
+      // Determine if correct
+      let isCorrect=false;
+      if(q.type==='tf'){
+        isCorrect=(ua===q.answer);
+        optDist[ua]=(optDist[ua]||0)+1;
+      } else {
+        const shuffle=sh[qi];
+        const origIdx=shuffle?shuffle[parseInt(ua)]:parseInt(ua);
+        isCorrect=(origIdx===q.correctIndex);
+        const dispLabel=shuffle?'ABCD'[parseInt(ua)]:'ABCD'[parseInt(ua)];
+        optDist[dispLabel||ua]=(optDist[dispLabel||ua]||0)+1;
+      }
+      if(isCorrect)correct++;
+      // Timing
+      const t=tm[qi];
+      if(t!==undefined){timings.push(t);if(!isCorrect)timingsWrong.push(t);}
+      // Confidence
+      const c=cm[qi];
+      if(c&&confData[c]){confData[c].t++;if(isCorrect)confData[c].c++;}
+    });
+    const pctCorrect=total?Math.round(correct/total*100):0;
+    const avgTime=timings.length?Math.round(timings.reduce((a,b)=>a+b,0)/timings.length):null;
+    const avgTimeWrong=timingsWrong.length?Math.round(timingsWrong.reduce((a,b)=>a+b,0)/timingsWrong.length):null;
+    const sortedT=[...timings].sort((a,b)=>a-b);
+    const q1t=sortedT[Math.floor(sortedT.length*.25)]??null;
+    const q3t=sortedT[Math.floor(sortedT.length*.75)]??null;
+    // Discrimination index (top 27% vs bottom 27% by pct)
+    const sorted=[...results].sort((a,b)=>(b.pct||0)-(a.pct||0));
+    const n27=Math.max(1,Math.floor(sorted.length*.27));
+    const top=sorted.slice(0,n27),bot=sorted.slice(sorted.length-n27);
+    function isCorr(r){
+      const am2=safeParseJson(r.answerMap)||{};
+      const sh2=safeParseJson(r.optionShuffles)||{};
+      const ua2=am2[qi];if(ua2===undefined||ua2==='')return false;
+      if(q.type==='tf')return ua2===q.answer;
+      const sh=sh2[qi];
+      const origIdx=sh?sh[parseInt(ua2)]:parseInt(ua2);
+      return origIdx===q.correctIndex;
+    }
+    const pHigh=top.filter(isCorr).length/n27;
+    const pLow=bot.filter(isCorr).length/n27;
+    const di=Math.round((pHigh-pLow)*100)/100;
+    return{qi,text:q.text,type:q.type,bloomTag:q.bloomTag||'',difficulty:q.difficulty||'',
+      options:q.options||[],correctIndex:q.correctIndex,answer:q.answer,
+      correct,total,pctCorrect,optDist,avgTime,avgTimeWrong,
+      timingQ1:q1t,timingQ3:q3t,di,confData};
+  });
+  // Bloom breakdown
+  const blooms={};
+  perQ.forEach(pq=>{
+    const bt=pq.bloomTag;if(!bt)return;
+    if(!blooms[bt])blooms[bt]={correct:0,total:0};
+    blooms[bt].correct+=pq.correct;blooms[bt].total+=pq.total;
+  });
+  // Confidence matrix across all questions
+  const confMatrix={sure:{c:0,t:0},unsure:{c:0,t:0},guessing:{c:0,t:0}};
+  perQ.forEach(pq=>{
+    Object.keys(confMatrix).forEach(k=>{
+      confMatrix[k].c+=pq.confData[k].c;
+      confMatrix[k].t+=pq.confData[k].t;
+    });
+  });
+  return{perQ,blooms,confMatrix};
+}
+
+function safeParseJson(v){try{return typeof v==='string'?JSON.parse(v):v;}catch(e){return null;}}
+
+function renderAnalyticsHTML(an,nStudents,sid,results){
+  const {perQ,blooms,confMatrix}=an;
+  const avgScore=results.length?Math.round(results.reduce((a,r)=>a+(r.pct||0),0)/results.length):0;
+  const hasTimings=perQ.some(pq=>pq.avgTime!==null);
+  const hasBlooms=Object.keys(blooms).length>0;
+  const hasConf=confMatrix.sure.t+confMatrix.unsure.t+confMatrix.guessing.t>0;
+
+  // ── Section 1: Summary stats ──
+  let html=`<div class="an-stat-row">
+    <div class="an-stat"><div class="an-stat-n">${nStudents}</div><div class="an-stat-l">Students</div></div>
+    <div class="an-stat"><div class="an-stat-n">${avgScore}%</div><div class="an-stat-l">Mean Score</div></div>
+    <div class="an-stat"><div class="an-stat-n">${perQ.length}</div><div class="an-stat-l">Questions</div></div>
+    <div class="an-stat"><div class="an-stat-n">${perQ.filter(pq=>pq.pctCorrect>=70).length}</div><div class="an-stat-l">Well-answered (≥70%)</div></div>
+    <div class="an-stat"><div class="an-stat-n">${perQ.filter(pq=>pq.di<0.2&&pq.total>1).length}</div><div class="an-stat-l">Weak discriminators</div></div>
+  </div>`;
+
+  // ── Section 2: Time distribution ──
+  if(hasTimings){
+    const maxT=Math.max(...perQ.filter(p=>p.avgTime!==null).map(p=>p.avgTime),1);
+    html+=`<div class="card an-sect"><h4>⏱ Time per Question (average seconds)</h4>`;
+    html+=perQ.map((pq,i)=>{
+      if(pq.avgTime===null)return'';
+      const pct=Math.round(pq.avgTime/maxT*100);
+      const col=pq.difficulty==='hard'?'#f87171':pq.difficulty==='easy'?'#3ecf8e':'#fbbf24';
+      const q1pct=pq.timingQ1!==null?Math.round(pq.timingQ1/maxT*100):null;
+      const q3pct=pq.timingQ3!==null?Math.round(pq.timingQ3/maxT*100):null;
+      const bloomBit=pq.bloomTag?` <span class="chip chip-bloom" style="font-size:9px;padding:1px 5px">${BLOOM_ACR[pq.bloomTag]||''}</span>`:'';
+      return`<div class="anbar-row">
+        <div class="anbar-lbl" title="${esc(pq.text)}">Q${i+1}. ${esc(pq.text.slice(0,42))}${pq.text.length>42?'…':''}${bloomBit}</div>
+        <div class="anbar-track">
+          <div class="anbar-fill" style="width:${pct}%;background:${col}"></div>
+          ${q1pct!==null?`<div class="qtick" style="left:${q1pct}%" title="Q1"></div>`:''}
+          ${q3pct!==null?`<div class="qtick" style="left:${q3pct}%" title="Q3"></div>`:''}
+        </div>
+        <div class="anbar-val">${pq.avgTime}s</div>
+      </div>`;
+    }).join('');
+    html+=`<div style="font-size:10px;color:var(--m);margin-top:6px">Bar colour: <span style="color:#3ecf8e">■</span> Easy <span style="color:#fbbf24">■</span> Medium <span style="color:#f87171">■</span> Hard &nbsp;·&nbsp; Tick marks = Q1/Q3 quartiles</div></div>`;
+  }
+
+  // ── Section 3: Wrong answer distribution ──
+  html+=`<div class="card an-sect"><h4>📊 Answer Distribution &amp; Discrimination Index</h4>
+  <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+  <thead><tr style="background:var(--s2)">
+    <th style="padding:7px 10px;text-align:left;border:1px solid var(--b)">Q#</th>
+    <th style="padding:7px 10px;text-align:left;border:1px solid var(--b)">Question</th>
+    <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Bloom</th>
+    <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">% Correct</th>
+    <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Answer Distribution</th>
+    <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Discrimination</th>
+    ${hasTimings?'<th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Avg Time Wrong</th>':''}
+  </tr></thead><tbody>`;
+  perQ.forEach((pq,i)=>{
+    const diChip=pq.total<2?'<span style="color:var(--m);font-size:10px">n/a</span>':
+      pq.di>=0.4?`<span class="di-chip di-ex">D=${pq.di} Excellent</span>`:
+      pq.di>=0.2?`<span class="di-chip di-ok">D=${pq.di} Acceptable</span>`:
+      pq.di>=0.1?`<span class="di-chip di-wk">D=${pq.di} Weak</span>`:
+      pq.di>=0?`<span class="di-chip di-rv">D=${pq.di} Poor</span>`:
+      `<span class="di-chip di-rv">⚠️ D=${pq.di} Review</span>`;
+    // Distribution bar
+    const total=Object.values(pq.optDist).reduce((a,b)=>a+b,0)||1;
+    const COLS={'A':'#60a5fa','B':'#f472b6','C':'#fb923c','D':'#a78bfa',
+      'True':'#3ecf8e','False':'#f87171'};
+    const correctLabel=pq.type==='tf'?pq.answer:'ABCD'[pq.correctIndex];
+    const distBar=Object.entries(pq.optDist).sort((a,b)=>b[1]-a[1]).map(([lbl,cnt])=>{
+      const pct2=Math.round(cnt/total*100);
+      const isRight=lbl===correctLabel;
+      const col=isRight?'#3ecf8e':(COLS[lbl]||'#6b7280');
+      return`<div class="distbar-seg" style="flex:${pct2};background:${col};min-width:${pct2>5?0:2}px" title="${lbl}: ${cnt} (${pct2}%)">${pct2>12?lbl:''}${pct2>18?'·'+pct2+'%':''}</div>`;
+    }).join('');
+    const bloomChipTd=pq.bloomTag?`<span class="chip chip-bloom" style="font-size:10px">${BLOOM_ACR[pq.bloomTag]||''}</span>`:'<span style="color:var(--m);font-size:10px">—</span>';
+    html+=`<tr>
+      <td style="padding:8px 10px;border:1px solid var(--b);font-weight:700;color:var(--acc)">Q${i+1}</td>
+      <td style="padding:8px 10px;border:1px solid var(--b);max-width:220px;font-size:11px">${esc(pq.text.slice(0,80))}${pq.text.length>80?'…':''}</td>
+      <td style="padding:8px 10px;border:1px solid var(--b);text-align:center">${bloomChipTd}</td>
+      <td style="padding:8px 10px;border:1px solid var(--b);text-align:center;font-weight:700;color:${pq.pctCorrect>=70?'var(--grn)':pq.pctCorrect>=40?'var(--warn)':'var(--err)'}">${pq.pctCorrect}%</td>
+      <td style="padding:8px 10px;border:1px solid var(--b);min-width:120px">
+        <div class="distbar">${distBar}</div>
+        <div style="font-size:9px;color:var(--m)">${Object.entries(pq.optDist).map(([l,c])=>`${l}:${c}`).join(' ')}</div>
+      </td>
+      <td style="padding:8px 10px;border:1px solid var(--b);text-align:center">${diChip}</td>
+      ${hasTimings?`<td style="padding:8px 10px;border:1px solid var(--b);text-align:center;color:var(--m)">${pq.avgTimeWrong!==null?pq.avgTimeWrong+'s':'—'}</td>`:''}
+    </tr>`;
+  });
+  html+=`</tbody></table></div></div>`;
+
+  // ── Section 4: Bloom's breakdown ──
+  if(hasBlooms){
+    const BLOOM_ORDER=['recall','comprehension','application','analysis','synthesis','evaluation'];
+    html+=`<div class="card an-sect"><h4>🧠 Performance by Bloom's Level</h4>`;
+    BLOOM_ORDER.filter(b=>blooms[b]).forEach(b=>{
+      const bd=blooms[b];
+      const pct=bd.total?Math.round(bd.correct/bd.total*100):0;
+      html+=`<div class="bloom-row">
+        <div class="bloom-lbl">${BLOOM_ACR[b]||b}</div>
+        <div class="bloom-track"><div class="bloom-fill" style="width:${pct}%"></div></div>
+        <div class="bloom-pct">${pct}%</div>
+        <div style="font-size:10px;color:var(--m);margin-left:6px">${bd.correct}/${bd.total}</div>
+      </div>`;
+    });
+    const weakBloom=BLOOM_ORDER.filter(b=>blooms[b]&&blooms[b].total>0)
+      .sort((a,b)=>blooms[a].correct/blooms[a].total-blooms[b].correct/blooms[b].total)[0];
+    const strongBloom=BLOOM_ORDER.filter(b=>blooms[b]&&blooms[b].total>0)
+      .sort((a,b)=>blooms[b].correct/blooms[b].total-blooms[a].correct/blooms[a].total)[0];
+    if(weakBloom&&strongBloom&&weakBloom!==strongBloom){
+      const wp=Math.round(blooms[weakBloom].correct/blooms[weakBloom].total*100);
+      const sp=Math.round(blooms[strongBloom].correct/blooms[strongBloom].total*100);
+      html+=`<div style="margin-top:10px;padding:8px 10px;background:rgba(108,99,255,.07);border-radius:8px;font-size:12px;color:var(--txt);line-height:1.6">
+        Strongest: <b>${strongBloom} (${sp}%)</b> · Weakest: <b>${weakBloom} (${wp}%)</b>.<br>
+        ${wp<50?`Consider revisiting ${weakBloom}-level practice before the next assessment.`:'Class shows balanced cognitive engagement.'}
+      </div>`;
+    }
+    html+=`</div>`;
+  }
+
+  // ── Section 5: Confidence-Accuracy Matrix ──
+  if(hasConf){
+    html+=`<div class="card an-sect"><h4>🎯 Confidence vs Accuracy</h4>
+    <table class="conf-matrix">
+      <thead><tr><th>Confidence</th><th>Correct</th><th>Wrong</th><th>Total</th><th>Accuracy</th></tr></thead>
+      <tbody>`;
+    [['sure','✅ Sure'],['unsure','🤔 Not So Sure'],['guessing','🎲 Wild Guess']].forEach(([k,lbl])=>{
+      const d=confMatrix[k];
+      const acc=d.t?Math.round(d.c/d.t*100):0;
+      const col=acc>=75?'var(--grn)':acc>=50?'var(--warn)':'var(--err)';
+      html+=`<tr><td style="text-align:left;font-weight:600">${lbl}</td>
+        <td style="color:var(--grn)">${d.c}</td>
+        <td style="color:var(--err)">${d.t-d.c}</td>
+        <td>${d.t}</td>
+        <td style="font-weight:700;color:${col}">${d.t?acc+'%':'—'}</td></tr>`;
+    });
+    const totalConf=confMatrix.sure.t+confMatrix.unsure.t+confMatrix.guessing.t;
+    html+=`</tbody></table>
+    <div style="font-size:11px;color:var(--m);margin-top:8px">
+      ${totalConf?`Based on ${totalConf} confidence responses across all questions.`:'No confidence data in this session (collected from next session onwards).'}
+    </div></div>`;
+  }
+
+  return html;
+}
+
+/* ═══════════════════════════════════════════
+   BLOOM LEGEND SHOW ON CONTEXT SWITCH
+═══════════════════════════════════════════ */
+// Hook into existing show() to detect when bank/curate/add-q opens
+const _origShow=window.show||(function(id){const e=el(id);if(e)e.style.display='';});
+window.show=function(id){
+  _origShow(id);
+  if(['s-bank','s-curate','s-add-q'].includes(id)){
+    maybeShowBloomLegend();
+    el('bloom-legend').style.display='';
+  } else {
+    const leg=el('bloom-legend');if(leg)leg.style.display='none';
+  }
+};
 
 window.toggleProfile=function(idOrEl){
   var id=typeof idOrEl==='string'?idOrEl:(idOrEl.dataset?idOrEl.dataset.id:null);
@@ -5139,6 +5861,8 @@ window.openEditQ=function(qKey,isNew){
       +'</div>';
   }
   setEditDiff(editQDiff);
+  const _eqb=el('eq-bloom');if(_eqb)_eqb.value=q.bloomTag||'';
+  const _eqr=el('eq-rationale');if(_eqr)_eqr.value=q.rationale||'';
   el('ov-edit-q').classList.add('on');
 };
 
@@ -5175,6 +5899,8 @@ window.saveEditQuestion=async function(){
   // Update question fields
   q.text=text;
   q.difficulty=editQDiff;
+  q.bloomTag=(el('eq-bloom')?.value||'').trim();
+  q.rationale=(el('eq-rationale')?.value||'').trim();
   if(q.type==='mcq'){
     q.options=['A','B','C','D'].map((_,i)=>(el('eq-opt'+i)?.value||'').trim()).filter(Boolean);
     q.correctIndex=parseInt(document.querySelector('input[name="eqcr"]:checked')?.value||0);
