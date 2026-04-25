@@ -1406,6 +1406,11 @@ tr:hover td{background:var(--s2)}
         <span class="ci">🎲</span>Wild Guess
       </button>
     </div>
+    <div style="text-align:center;margin-top:14px">
+      <button onclick="redoAnswer()" style="background:none;border:none;color:var(--m);
+        font-size:12px;cursor:pointer;padding:4px 12px;border-radius:8px;
+        border:1px solid var(--b);font-family:var(--fh)">↩ Redo — change my answer</button>
+    </div>
   </div>
 </div>
 
@@ -2540,6 +2545,8 @@ window.saveQuestion=async function(){
     setSt('wiz1-st','ok','✅ Added to draft ('+count+' questions). Not in Master Bank yet.');
     setTimeout(()=>{
       el('aq-text').value='';
+      if(el('aq-rationale'))el('aq-rationale').value='';
+      if(el('aq-bloom'))el('aq-bloom').value='';
       setQType(lastQType);setDiff(lastDiff);
       el('wiz1-st').className='st';
       showWizStep(1);
@@ -2656,6 +2663,8 @@ let bankSel=new Set(); // selected question IDs in bank
 let bankMode='';         // 'addToDraft' when opened from Create Question Paper
 
 window.renderBank=function(){
+  // Always re-populate filters so dropdowns reflect current allQuestions
+  populateBankFilters();
   const qs=allQuestions.filter(bankFilterFn);
   el('bank-total').textContent=qs.length+' of '+allQuestions.length+' questions';
   const list=el('bank-list');
@@ -2800,29 +2809,42 @@ window.bankAddSelected=function(){
   setTimeout(()=>{const s=el('bank-add-st');if(s)s.className='st';},2500);
 };
 
-window.editQ=async function(id){
-  const q=allQuestions.find(x=>x.id===id);if(!q)return;
-  editQId=id;
-  wizData={prog:q.programmeName,cid:q.courseId,subj:q.subjectName,
-    topic:q.topicName,testid:q.testLabel,type:q.type,diff:q.difficulty};
-  el('aq-prog').value=q.programmeName||'';
-  el('aq-cid').value=q.courseId||'';
-  el('aq-subj').value=q.subjectName||'';
-  el('aq-topic').value=q.topicName||'';
-  el('aq-testid').value=q.testLabel||'';
-  el('aq-text').value=q.text||'';
-  setQType(q.type);
-  setDiff(q.difficulty||'medium');
-  if(q.type==='mcq'){
-    (q.options||[]).forEach((o,i)=>{const inp=el('ao'+i);if(inp)inp.value=o;});
-    document.querySelectorAll('input[name="acr"]').forEach(r=>{r.checked=parseInt(r.value)===(q.correctIndex||0);});
-  }else{
-    const rad=document.querySelector(`input[name="atf"][value="${q.answer}"]`);
-    if(rad){rad.checked=true;rad.dispatchEvent(new Event('change'));}
+window.editQ=function(id){
+  // Find question in allQuestions
+  const q=allQuestions.find(x=>x.id===id);
+  if(!q){alert('Question not found.');return;}
+  // Use openEditQ with isNew=false — this opens the ov-edit-q overlay directly
+  editingQKey=id;
+  editingQIsNew=false;
+  editQDiff=q.difficulty||'medium';
+  // Populate text
+  if(el('eq-text'))el('eq-text').value=q.text||'';
+  // Populate bloom and rationale
+  if(el('eq-bloom'))el('eq-bloom').value=q.bloomTag||'';
+  if(el('eq-rationale'))el('eq-rationale').value=q.rationale||'';
+  // Populate answer fields
+  const aWrap=el('eq-answer-fields');
+  if(aWrap){
+    if(q.type==='mcq'){
+      let html='';
+      for(let i=0;i<4;i++){
+        const opt=(q.options||[])[i]||'';
+        html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
+          +'<input type="radio" name="eqcr" value="'+i+'"'+(q.correctIndex===i?' checked':'')+'>'
+          +'<input type="text" id="eq-opt'+i+'" value="'+esc(opt)+'" placeholder="Option '+('ABCD'[i])+'" style="flex:1">'
+          +'</div>';
+      }
+      aWrap.innerHTML=html;
+    }else{
+      aWrap.innerHTML='<div style="display:flex;gap:10px">'
+        +'<label><input type="radio" name="eqtf" value="True"'+(q.answer==='True'?' checked':'')+' style="margin-right:4px">True</label>'
+        +'<label><input type="radio" name="eqtf" value="False"'+(q.answer==='False'?' checked':'')+' style="margin-right:4px">False</label>'
+        +'</div>';
+    }
   }
-  el('addq-count-badge').textContent='Editing';
-  showWizStep(0);
-  show('s-addq');
+  setEditDiff(editQDiff);
+  const st=el('eq-st');if(st)st.className='st';
+  el('ov-edit-q').classList.add('on');
 };
 
 window.deleteQ=async function(id){
@@ -3617,29 +3639,31 @@ window.stuAcFilter=function(field){
   const val=(gv('sl-'+field)||'').toLowerCase();
   const drop=el('sl-'+field+'-drop');
   if(!drop) return;
-  let items=[];
+  let matches=[];
   if(field==='name'){
-    items=stuAcProfiles.filter(p=>val&&p.name.toLowerCase().includes(val))
-      .slice(0,8).map(p=>`<div class="ac-item" onmousedown="stuAcPick(${JSON.stringify(p)})">${esc(p.name)} <span style="font-size:11px;color:var(--m)">${esc(p.roll)}</span></div>`);
+    matches=stuAcProfiles.filter(p=>val&&p.name.toLowerCase().includes(val)).slice(0,8);
+    drop.innerHTML=matches.map((p,i)=>`<div class="ac-item" onmousedown="stuAcPickIdx(${stuAcProfiles.indexOf(p)})">${esc(p.name)} <span style="font-size:11px;color:var(--m)">${esc(p.roll)}</span></div>`).join('');
   } else if(field==='roll'){
     const v=(gv('sl-roll')||'').toUpperCase();
-    items=stuAcProfiles.filter(p=>v&&p.roll.toUpperCase().includes(v))
-      .slice(0,8).map(p=>`<div class="ac-item" onmousedown="stuAcPick(${JSON.stringify(p)})">${esc(p.roll)} <span style="font-size:11px;color:var(--m)">${esc(p.name)}</span></div>`);
+    matches=stuAcProfiles.filter(p=>v&&p.roll.toUpperCase().includes(v)).slice(0,8);
+    drop.innerHTML=matches.map((p,i)=>`<div class="ac-item" onmousedown="stuAcPickIdx(${stuAcProfiles.indexOf(p)})">${esc(p.roll)} <span style="font-size:11px;color:var(--m)">${esc(p.name)}</span></div>`).join('');
   } else if(field==='email'){
-    items=stuAcProfiles.filter(p=>val&&p.email.includes(val))
-      .slice(0,8).map(p=>`<div class="ac-item" onmousedown="stuAcPick(${JSON.stringify(p)})">${esc(p.email)} <span style="font-size:11px;color:var(--m)">${esc(p.name)}</span></div>`);
+    matches=stuAcProfiles.filter(p=>val&&p.email.includes(val)).slice(0,8);
+    drop.innerHTML=matches.map((p,i)=>`<div class="ac-item" onmousedown="stuAcPickIdx(${stuAcProfiles.indexOf(p)})">${esc(p.email)} <span style="font-size:11px;color:var(--m)">${esc(p.name)}</span></div>`).join('');
   }
-  if(items.length){ drop.innerHTML=items.join(''); drop.classList.add('show'); }
+  if(matches.length) drop.classList.add('show');
   else drop.classList.remove('show');
 };
 window.stuAcShow=function(field){ stuAcFilter(field); };
 window.stuAcHide=function(field,delay){ setTimeout(()=>{ const d=el('sl-'+field+'-drop'); if(d) d.classList.remove('show'); },delay); };
-window.stuAcPick=function(p){
+window.stuAcPickIdx=function(idx){
+  const p=stuAcProfiles[idx];if(!p)return;
   if(el('sl-name')) el('sl-name').value=p.name||'';
-  if(el('sl-roll')){ el('sl-roll').value=(p.roll||'').toUpperCase(); }
-  if(el('sl-email')) el('sl-email').value=p.email||'';
+  if(el('sl-roll')) el('sl-roll').value=(p.roll||'').toUpperCase();
+  if(el('sl-email'))el('sl-email').value=p.email||'';
   ['name','roll','email'].forEach(f=>{ const d=el('sl-'+f+'-drop'); if(d) d.classList.remove('show'); });
 };
+window.stuAcPick=window.stuAcPickIdx; // alias for backward compat
 
 /* ═══════════════════════════════════════════
    TEACHER LOGIN AUTOCOMPLETE
@@ -3657,24 +3681,26 @@ window.tlAcFilter=function(field){
   const val=(gv('tl-'+field)||'').toLowerCase();
   const drop=el('tl-'+field+'-drop');
   if(!drop) return;
-  let items=[];
+  let matches=[];
   if(field==='name'){
-    items=tlAcProfiles.filter(p=>val&&p.name.toLowerCase().includes(val))
-      .slice(0,6).map(p=>`<div class="ac-item" onmousedown="tlAcPick(${JSON.stringify(p)})">${esc(p.name)} <span style="font-size:11px;color:var(--m)">${esc(p.email)}</span></div>`);
+    matches=tlAcProfiles.filter(p=>val&&p.name.toLowerCase().includes(val)).slice(0,6);
+    drop.innerHTML=matches.map(p=>`<div class="ac-item" onmousedown="tlAcPickIdx(${tlAcProfiles.indexOf(p)})">${esc(p.name)} <span style="font-size:11px;color:var(--m)">${esc(p.email)}</span></div>`).join('');
   } else if(field==='email'){
-    items=tlAcProfiles.filter(p=>val&&p.email.toLowerCase().includes(val))
-      .slice(0,6).map(p=>`<div class="ac-item" onmousedown="tlAcPick(${JSON.stringify(p)})">${esc(p.email)} <span style="font-size:11px;color:var(--m)">${esc(p.name)}</span></div>`);
+    matches=tlAcProfiles.filter(p=>val&&p.email.toLowerCase().includes(val)).slice(0,6);
+    drop.innerHTML=matches.map(p=>`<div class="ac-item" onmousedown="tlAcPickIdx(${tlAcProfiles.indexOf(p)})">${esc(p.email)} <span style="font-size:11px;color:var(--m)">${esc(p.name)}</span></div>`).join('');
   }
-  if(items.length){ drop.innerHTML=items.join(''); drop.classList.add('show'); }
+  if(matches.length) drop.classList.add('show');
   else drop.classList.remove('show');
 };
 window.tlAcShow=function(field){ tlAcFilter(field); };
 window.tlAcHide=function(field,delay){ setTimeout(()=>{ const d=el('tl-'+field+'-drop'); if(d) d.classList.remove('show'); },delay); };
-window.tlAcPick=function(p){
+window.tlAcPickIdx=function(idx){
+  const p=tlAcProfiles[idx];if(!p)return;
   if(el('tl-name')) el('tl-name').value=p.name||'';
-  if(el('tl-email')) el('tl-email').value=p.email||'';
+  if(el('tl-email'))el('tl-email').value=p.email||'';
   ['name','email'].forEach(f=>{ const d=el('tl-'+f+'-drop'); if(d) d.classList.remove('show'); });
 };
+window.tlAcPick=window.tlAcPickIdx;
 
 window.stuJoin=async function(){
   // Normalize roll to uppercase before any processing
@@ -4285,6 +4311,15 @@ window.pickConfidence=function(level){
     renderQ();renderDots();
   }
 };
+window.redoAnswer=function(){
+  // Close overlay without recording confidence, clear the answer so student can re-select
+  el('ov-confidence').classList.remove('on');
+  delete answers[curQ];
+  delete confidenceMap[curQ];
+  lockedAnswers[curQ]=false;
+  questionStartTime=Date.now(); // reset timing for this question
+  renderQ();renderDots();
+};
 window.navQ=function(d){
   if(!reviewMode&&questionStartTime) timingsMap[curQ]=Math.round((Date.now()-questionStartTime)/1000);
   if(answers[curQ]!==undefined) lockedAnswers[curQ]=true;
@@ -4894,10 +4929,35 @@ window.renderResults=function(){
 };
   
 window.dlCSV=function(){
+  // Apply same filters as the Results Table so CSV matches what teacher sees
+  const prog=gv('rf-prog'),subj=gv('rf-subj'),topic=gv('rf-topic'),
+        testid=gv('rf-testid'),teacher_f=gv('rf-teacher'),
+        session_f=gv('rf-session'),
+        yr_f=parseInt(gv('rf-year')||'0'),
+        mo_f=parseInt(gv('rf-month')||'0'),
+        dt_f=parseInt(gv('rf-date')||'0'),
+        srch=(gv('rf-search')||'').toLowerCase();
+  const filtered=allResults.filter(r=>{
+    if(prog&&r.programmeName!==prog)return false;
+    if(subj&&r.courseId!==subj)return false;
+    if(topic&&r.topicName!==topic)return false;
+    if(testid&&r.testLabel!==testid)return false;
+    if(teacher_f&&r.teacherName!==teacher_f)return false;
+    if(session_f&&r.sessionDisplayId!==session_f)return false;
+    if(yr_f||mo_f||dt_f){
+      const d=r.ts?new Date(r.ts):null;if(!d)return false;
+      if(yr_f&&d.getFullYear()!==yr_f)return false;
+      if(mo_f&&d.getMonth()+1!==mo_f)return false;
+      if(dt_f&&d.getDate()!==dt_f)return false;
+    }
+    if(srch){const s=(r.studentName||'').toLowerCase()+(r.roll||'').toLowerCase()+(r.email||'').toLowerCase();if(!s.includes(srch))return false;}
+    return true;
+  });
+  if(!filtered.length){alert('No results match the current filters.');return;}
   const headers=['#','Name','Roll','Email','Performance','Score %','Time','Violations',
     'Programme','Course ID','Subject','Unit/Topic','Test ID/Comment','Session ID','Teacher',
     'Attempted','Correct','Wrong','Off-screen(s)'];
-  const rows=allResults.map((r,i)=>{
+  const rows=filtered.map((r,i)=>{
     const perf=r.performanceScore!=null?r.performanceScore:(()=>{
       const m=(r.timeTaken||'').match(/(\d+)m\s*(\d+)s/);
       const t=m?parseInt(m[1])*60+parseInt(m[2]):0;
@@ -4915,9 +4975,12 @@ window.dlCSV=function(){
   const blob=new Blob([csv],{type:'text/csv'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  // Use session file ID as filename if available
-  const fname=(activeSessionFileId||'SelfAssessment_Results')+'_results.csv';
-  a.href=url;a.download=fname;a.click();
+  // Smart filename: sessionID_date or filtered label_date
+  const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const now=new Date();
+  const datePart=now.getDate()+MONTHS[now.getMonth()]+now.getFullYear();
+  const sessionPart=session_f?session_f.replace(/[^a-zA-Z0-9_]/g,'_'):(activeSessionFileId||'Results');
+  a.href=url;a.download=sessionPart+'_'+datePart+'.csv';a.click();
   URL.revokeObjectURL(url);
 };
 
@@ -5279,30 +5342,34 @@ window.saveTagBatch=async function(){
   if(btn){btn.textContent='💾 Save Tags';btn.disabled=false;}
 };
 
-window.aiAutoTag=async function(){
+window.aiAutoTag=function(){
   const visible=allQuestions.filter(q=>!q.draft&&bankFilterFn(q)&&!q.bloomTag);
   if(!visible.length){alert('All visible questions already have Bloom\'s tags.');return;}
-  const btn=document.querySelector('.tag-mode-bar .btn[onclick="aiAutoTag()"]');
-  if(btn){btn.textContent='✨ Thinking…';btn.disabled=true;}
-  try{
-    const qs=visible.slice(0,40); // max 40 per call
-    const prompt='Classify each question by Bloom\'s Taxonomy level.\n'
-      +'Return ONLY a JSON array: [{idx:0,tag:"recall"},{idx:1,tag:"application"}...]\n'
-      +'Valid tags: recall, comprehension, application, analysis, synthesis, evaluation\n'
-      +'Questions:\n'+qs.map((q,i)=>i+': '+q.text).join('\n');
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,
-        messages:[{role:'user',content:prompt}]})
-    });
-    const data=await resp.json();
-    const txt=data.content?.map(x=>x.text||'').join('');
-    const json=JSON.parse(txt.replace(/```json?|```/g,'').trim());
-    json.forEach(item=>{ if(qs[item.idx]) tagModeChanges[qs[item.idx].id]=item.tag; });
-    renderBank();updateTagModeCount();
-    alert(`✨ AI suggested tags for ${json.length} questions. Review and click Save Tags to apply.`);
-  }catch(e){alert('AI tagging failed: '+e.message);}
-  if(btn){btn.textContent='✨ AI Suggest';btn.disabled=false;}
+  // Heuristic classification based on question stem keywords
+  const rules=[
+    {tag:'evaluation', patterns:[/evaluat|critic|justify|assess|judge|argue|defend|recommend|prioriti/i]},
+    {tag:'synthesis',  patterns:[/design|creat|formulat|construct|develop|plan|produc|combin|invent|hypothes/i]},
+    {tag:'analysis',   patterns:[/analys|analyz|compar|contrast|distinguis|examin|classif|what.*cause|why.*differ|break.*down|identify.*reason/i]},
+    {tag:'application',patterns:[/apply|use|calculat|demonstrat|solv|predict|show.*how|what.*happen|patient.*present|case|scenario|which.*drug|which.*nerve|which.*structure/i]},
+    {tag:'comprehension',patterns:[/explain|describ|summar|interpret|defin.*in.*own|what.*mean|paraphras|illustrat|classify/i]},
+    {tag:'recall',     patterns:[/what is|which is|name|list|identif|state|when was|where is|who is|define|what are/i]},
+  ];
+  let tagged=0;
+  visible.forEach(q=>{
+    const text=(q.text||'').toLowerCase();
+    for(const rule of rules){
+      if(rule.patterns.some(p=>p.test(text))){
+        tagModeChanges[q.id]=rule.tag;
+        tagged++;
+        break;
+      }
+    }
+    // Default unmatched to recall
+    if(!tagModeChanges[q.id]){ tagModeChanges[q.id]='recall'; tagged++; }
+  });
+  renderBank();
+  updateTagModeCount();
+  alert('✨ Suggested Bloom\'s tags for '+tagged+' questions based on question wording. Review and adjust before saving.');
 };
 
 /* ═══════════════════════════════════════════
@@ -5365,28 +5432,40 @@ function renderSessionAnalytics(){
   const body=el('analytics-body');if(!body)return;
   const sid=gv('rf-session');
   if(!sid){
-    body.innerHTML='<div class="an-empty"><div style="font-size:32px;margin-bottom:12px">📊</div>Select a specific <b>Session ID</b> from the filter to view question-level analytics.</div>';
+    const firstOpt=el('rf-session')?.options[1];
+    body.innerHTML='<div class="an-empty">'
+      +'<div style="font-size:32px;margin-bottom:12px">📊</div>'
+      +'<div>Select a <b>Session ID</b> from the filter above to view question-level analytics.</div>'
+      +(firstOpt?'<div style="margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="el(\'rf-session\').value=\''+firstOpt.value+'\';renderActiveTab()">Load most recent session</button></div>':'')
+      +'<div style="margin-top:10px;font-size:12px;color:var(--m)">Analytics include time distribution, answer patterns, discrimination index, Bloom\'s breakdown, and confidence accuracy.</div>'
+      +'</div>';
     return;
   }
   const sessionResults=allResults.filter(r=>r.sessionDisplayId===sid);
   if(!sessionResults.length){
-    body.innerHTML='<div class="an-empty">No results found for this session.</div>';return;
+    body.innerHTML='<div class="an-empty">No results found for this session. Results are collected when students submit.</div>';return;
   }
-  // Parse question array from first result that has it, or from session doc
+  // Try to get questions: from embedded qs/questions field, then from allQuestions bank
   let qs=null;
   for(const r of sessionResults){
-    if(r.qs&&r.qs.length){qs=r.qs;break;}
-    if(r.questions&&r.questions.length){qs=r.questions;break;}
+    const rqs=safeParseJson(r.qs)||(Array.isArray(r.qs)?r.qs:null)||safeParseJson(r.questions)||(Array.isArray(r.questions)?r.questions:null);
+    if(rqs&&rqs.length){qs=rqs;break;}
   }
-  // Try to match from allQuestions by testLabel+courseId
   if(!qs||!qs.length){
     const ref=sessionResults[0];
-    qs=allQuestions.filter(q=>q.testLabel===ref.testLabel&&q.courseId===ref.courseId);
+    qs=allQuestions.filter(q=>
+      (!ref.testLabel||q.testLabel===ref.testLabel)&&
+      (!ref.courseId||q.courseId===ref.courseId)&&
+      (!ref.topicName||q.topicName===ref.topicName)
+    );
   }
-  // Build analytics
-  const nStudents=sessionResults.length;
-  const analytics=computeAnalytics(qs||[],sessionResults);
-  body.innerHTML=renderAnalyticsHTML(analytics,nStudents,sid,sessionResults);
+  if(!qs||!qs.length){
+    body.innerHTML='<div class="an-empty">Could not retrieve questions for this session.<br>'
+      +'<span style="font-size:12px;color:var(--m)">Questions are matched by Test ID, Course ID, and Topic. Ensure the questions are still in the bank.</span></div>';
+    return;
+  }
+  const analytics=computeAnalytics(qs,sessionResults);
+  body.innerHTML=renderAnalyticsHTML(analytics,sessionResults.length,sid,sessionResults);
 }
 
 function computeAnalytics(qs,results){
@@ -5915,7 +5994,9 @@ window.saveEditQuestion=async function(){
     if(idx>=0) curDraft[idx]=q;
     await saveDraft();
   }else{
-    // Update in Master Bank immediately
+    // Update in Master Bank immediately — include bloomTag and rationale
+    q.bloomTag=(el('eq-bloom')?.value||'').trim();
+    q.rationale=(el('eq-rationale')?.value||'').trim();
     try{
       await _fb.setDoc(_fb.doc(db,'questions',editingQKey),q);
       await loadAllQuestions();
@@ -5924,6 +6005,7 @@ window.saveEditQuestion=async function(){
 
   closeOv('ov-edit-q');
   renderCurate();
+  renderBank();
   if(btn){btn.disabled=false;btn.textContent='💾 Save Changes';}
 };
 
