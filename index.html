@@ -1568,7 +1568,8 @@ async function initFB(key,pid,aid){
                   }); },
       updateDoc:  function(ref,data){ return ref.update(data); },
       deleteDoc:  function(ref){ return ref.delete(); },
-      onSnapshot: function(ref,cb){ return ref.onSnapshot(cb); }
+      onSnapshot: function(ref,cb){ return ref.onSnapshot(cb); },
+      writeBatch: function(db){ return db.batch(); }
     };
     fbReady=true;
     return true;
