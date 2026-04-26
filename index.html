@@ -1040,7 +1040,35 @@ tr:hover td{background:var(--s2)}
     <label>Session Name</label>
     <input type="text" id="cs-name" placeholder="e.g. Chapter 3 Mid-Term"/>
     <label>Time Limit (minutes) — per student</label>
-    <input type="number" id="cs-time" value="15" min="1" max="180"/>
+    <input type="number" id="cs-time" value="15" min="1" max="180" oninput="clearTimeSuggestions()"/>
+    <div id="cs-time-suggestions" style="margin-top:8px;display:none">
+      <div id="cs-sugg-a" style="display:flex;align-items:center;justify-content:space-between;
+        padding:8px 12px;background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.2);
+        border-radius:8px;margin-bottom:6px;flex-wrap:wrap;gap:6px">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--acc)">⏱ Bloom's formula default</div>
+          <div id="cs-sugg-a-detail" style="font-size:11px;color:var(--m);margin-top:2px"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="cs-sugg-a-val" style="font-family:var(--fh);font-size:18px;font-weight:800;color:var(--acc)"></span>
+          <button class="btn btn-sm" style="background:var(--acc);color:#fff;border:none;white-space:nowrap"
+            onclick="useTimeSuggestion('a')">Use this</button>
+        </div>
+      </div>
+      <div id="cs-sugg-b" style="display:flex;align-items:center;justify-content:space-between;
+        padding:8px 12px;background:rgba(62,207,142,.07);border:1px solid rgba(62,207,142,.2);
+        border-radius:8px;flex-wrap:wrap;gap:6px">
+        <div>
+          <div style="font-size:12px;font-weight:700;color:var(--grn)">📊 Your students' past performance</div>
+          <div id="cs-sugg-b-detail" style="font-size:11px;color:var(--m);margin-top:2px"></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="cs-sugg-b-val" style="font-family:var(--fh);font-size:18px;font-weight:800;color:var(--grn)"></span>
+          <button id="cs-sugg-b-btn" class="btn btn-sm" style="background:var(--grn);color:#fff;border:none;white-space:nowrap;display:none"
+            onclick="useTimeSuggestion('b')">Use this</button>
+        </div>
+      </div>
+    </div>
     <label>Open Window (HH:MM) — session auto-ends after this long
       <span style="font-weight:400;color:var(--m)"> — leave blank for manual close</span>
     </label>
@@ -2919,6 +2947,8 @@ window.renderCurate=function(){
     draftLabel.textContent=meta.testid||(meta.cid&&meta.topic?(meta.cid+' / '+meta.topic):'No active paper');
   }
   el('cur-sel-count').textContent=allPaper.length+' question'+(allPaper.length!==1?'s':'');
+  // Update time suggestions whenever paper changes
+  updateTimeSuggestions();
   updateCountHint();
 
   if(!allPaper.length){
@@ -5289,8 +5319,125 @@ function renderLeaderboard(){
 
 
 /* ═══════════════════════════════════════════
-   BLOOM'S LEGEND (floating, session-persistent)
+   BLOOM'S TIMING — shared constants & helpers
 ═══════════════════════════════════════════ */
+const BLOOM_SECS={recall:30,comprehension:45,application:75,analysis:90,synthesis:120,evaluation:120,_untagged:60};
+const BLOOM_ORDER_ALL=['recall','comprehension','application','analysis','synthesis','evaluation'];
+
+function medianArr(arr){
+  if(!arr||!arr.length)return null;
+  const s=[...arr].sort((a,b)=>a-b);
+  const m=Math.floor(s.length/2);
+  return s.length%2?s[m]:Math.round((s[m-1]+s[m])/2);
+}
+
+// Returns {recall:{med,mean,n}, comprehension:{...}, ...} from result records + matched questions
+// Option C: match questions from allQuestions bank, skip sessions where no match possible
+function computeBloomTimingStats(results){
+  const buckets={};
+  BLOOM_ORDER_ALL.forEach(b=>buckets[b]=[]);
+  results.forEach(r=>{
+    const tm=safeParseJson(r.timings);
+    if(!tm||!Object.keys(tm).length)return;
+    // Match questions for this session from allQuestions bank
+    const matchedQs=allQuestions.filter(q=>
+      (!r.testLabel||q.testLabel===r.testLabel)&&
+      (!r.courseId||q.courseId===r.courseId)&&
+      (!r.topicName||q.topicName===r.topicName)
+    );
+    if(!matchedQs.length)return; // skip if no match (Option C)
+    Object.entries(tm).forEach(([qi,secs])=>{
+      const q=matchedQs[parseInt(qi)];
+      if(!q||!q.bloomTag||!buckets[q.bloomTag])return;
+      const s=parseInt(secs);
+      if(isNaN(s)||s<=0||s>600)return; // ignore outliers >10min
+      buckets[q.bloomTag].push(s);
+    });
+  });
+  const stats={};
+  BLOOM_ORDER_ALL.forEach(b=>{
+    const arr=buckets[b];
+    if(!arr.length){stats[b]=null;return;}
+    const med=medianArr(arr);
+    const mean=Math.round(arr.reduce((a,x)=>a+x,0)/arr.length);
+    stats[b]={med,mean,n:arr.length};
+  });
+  return stats;
+}
+
+/* ═══════════════════════════════════════════
+   CURATE PAGE — TIME SUGGESTIONS
+═══════════════════════════════════════════ */
+let _suggAVal=null,_suggBVal=null;
+
+window.clearTimeSuggestions=function(){
+  const box=el('cs-time-suggestions');if(box)box.style.display='none';
+};
+
+window.updateTimeSuggestions=function(){
+  const bankQs=allQuestions.filter(q=>curSel.includes(q.id));
+  const allPaper=[...curDraft,...bankQs];
+  if(!allPaper.length)return;
+  const box=el('cs-time-suggestions');if(!box)return;
+  box.style.display='';
+
+  // Suggestion A: Bloom's formula
+  let totalSecsA=0,untagged=0;
+  const tagCounts={};
+  allPaper.forEach(q=>{
+    const secs=q.bloomTag&&BLOOM_SECS[q.bloomTag]?BLOOM_SECS[q.bloomTag]:BLOOM_SECS._untagged;
+    if(!q.bloomTag)untagged++;else tagCounts[q.bloomTag]=(tagCounts[q.bloomTag]||0)+1;
+    totalSecsA+=secs;
+  });
+  _suggAVal=Math.ceil(totalSecsA/60);
+  const valA=el('cs-sugg-a-val');if(valA)valA.textContent=_suggAVal+' min';
+  const detA=el('cs-sugg-a-detail');
+  if(detA){
+    const parts=BLOOM_ORDER_ALL.filter(b=>tagCounts[b])
+      .map(b=>BLOOM_ACR[b]+'×'+tagCounts[b]+'('+BLOOM_SECS[b]+'s)').join(' · ');
+    detA.textContent=(parts||'No tagged questions')+(untagged?' + '+untagged+' untagged (60s each)':'');
+  }
+
+  // Suggestion B: empirical from past sessions for this subject
+  const prog=curDraftMeta.prog||'',cid=curDraftMeta.cid||'',subj=curDraftMeta.subj||'';
+  const subjResults=allResults.filter(r=>
+    (!prog||r.programmeName===prog)&&(!cid||r.courseId===cid)&&(!subj||r.subjectName===subj)&&
+    r.timings&&r.timings!=='{}'&&r.timings!=='null'&&r.timings!=='""'
+  );
+  const detB=el('cs-sugg-b-detail'),valB=el('cs-sugg-b-val'),btnB=el('cs-sugg-b-btn');
+  if(!subjResults.length){
+    _suggBVal=null;
+    if(detB)detB.textContent='No past timing data for '+(subj||cid||'this subject')+' yet — run sessions to build norms';
+    if(valB)valB.textContent='—';
+    if(btnB)btnB.style.display='none';
+  }else{
+    const stats=computeBloomTimingStats(subjResults);
+    let totalSecsB=0;
+    allPaper.forEach(q=>{
+      const bt=q.bloomTag;
+      totalSecsB+=(bt&&stats[bt]&&stats[bt].med)?stats[bt].med:(bt&&BLOOM_SECS[bt]?BLOOM_SECS[bt]:BLOOM_SECS._untagged);
+    });
+    _suggBVal=Math.ceil(totalSecsB/60);
+    const sessIds=[...new Set(subjResults.map(r=>r.sessionDisplayId||'').filter(Boolean))];
+    const dataLevels=BLOOM_ORDER_ALL.filter(b=>stats[b]&&stats[b].n>0);
+    if(detB)detB.textContent=sessIds.length+' past session'+(sessIds.length!==1?'s':'')+
+      ', '+subjResults.length+' records'+(dataLevels.length?' · data for: '+dataLevels.map(b=>BLOOM_ACR[b]).join(', '):'');
+    if(valB)valB.textContent=_suggBVal+' min';
+    if(btnB)btnB.style.display='';
+  }
+};
+
+window.useTimeSuggestion=function(which){
+  const val=which==='a'?_suggAVal:_suggBVal;
+  if(!val)return;
+  const inp=el('cs-time');if(!inp)return;
+  inp.value=val;
+  inp.style.borderColor='var(--acc)';
+  setTimeout(()=>{inp.style.borderColor='';},1200);
+  // Hide suggestions after use so it's clear the value is set
+  const box=el('cs-time-suggestions');if(box)box.style.display='none';
+};
+
 const BLOOM_CONTEXTS=['s-curate','s-bank','s-add-q'];
 function bloomLegendVisible(){
   return BLOOM_CONTEXTS.some(id=>{ const s=el(id); return s&&s.style.display!=='none'&&s.classList.contains('active')||
@@ -5503,11 +5650,24 @@ function renderSessionAnalytics(){
   const body=el('analytics-body');if(!body)return;
   const sid=gv('rf-session');
   if(!sid){
-    body.innerHTML='<div class="an-empty">'
-      +'<div style="font-size:32px;margin-bottom:12px">📊</div>'
-      +'<div>Select a <b>Session ID</b> from the filter above to view analytics.</div>'
-      +'<div style="margin-top:10px;font-size:12px;color:var(--m)">Then choose Class Overview, By Question, or By Student view.</div>'
-      +'</div>';
+    // No session selected — show cross-session Bloom speed summary
+    const prog=gv('rf-prog'),subj=gv('rf-subj');
+    const filteredResults=allResults.filter(r=>
+      (!prog||r.programmeName===prog)&&(!subj||r.courseId===subj)&&
+      r.timings&&r.timings!=='{}'&&r.timings!=='null'&&r.timings!=='""'
+    );
+    const label=(subj&&prog)?prog+' · '+subj:subj||prog||'All Subjects';
+    if(filteredResults.length){
+      const chart=renderBloomSpeedChart(filteredResults,label+' (all sessions)');
+      body.innerHTML=chart||'<div class="an-empty"><div style="font-size:32px;margin-bottom:12px">📊</div>'
+        +'<div>No Bloom\'s timing data yet. Tag questions and run sessions to build norms.</div></div>';
+    }else{
+      body.innerHTML='<div class="an-empty">'
+        +'<div style="font-size:32px;margin-bottom:12px">📊</div>'
+        +'<div>Select a <b>Session ID</b> above for session analytics.</div>'
+        +'<div style="margin-top:8px;font-size:12px;color:var(--m)">Or use the Programme/Subject filters to see cross-session Bloom\'s cognitive speed once timing data is collected.</div>'
+        +'</div>';
+    }
     _analyticsQs=null;_analyticsResults=null;
     return;
   }
@@ -5737,7 +5897,8 @@ function renderAnalyticsClass(an,nStudents,results,qs){
     html+=`</tbody></table></div>`;
   }
 
-  // Teaching strategy summary
+  // Teaching strategy summary + Bloom cognitive speed
+  html+=renderBloomSpeedChart(results,'This Session');
   html+=renderTeachingStrategy(an,results,qs);
   return html;
 }
@@ -5901,6 +6062,43 @@ function renderAnalyticsStudent(an,nStudents,results,qs){
 }
 
 // ── TEACHING STRATEGY SUMMARY ────────────────────────────────
+// ── BLOOM COGNITIVE SPEED BAR CHART ──────────────────────────
+function renderBloomSpeedChart(results,label){
+  const stats=computeBloomTimingStats(results);
+  const levelsWithData=BLOOM_ORDER_ALL.filter(b=>stats[b]&&stats[b].n>0);
+  if(!levelsWithData.length) return '';
+  const maxSecs=Math.max(...levelsWithData.map(b=>stats[b].med),1);
+  let html=`<div class="card an-sect"><h4>⏱ Cognitive Speed by Bloom's Level — ${esc(label)}</h4>`;
+  levelsWithData.forEach(b=>{
+    const s=stats[b];
+    const pct=Math.round(s.med/maxSecs*100);
+    const formula=BLOOM_SECS[b];
+    const refPct=Math.round(formula/maxSecs*100);
+    const col=s.med>formula*1.2?'#fbbf24':s.med<formula*0.8?'#3ecf8e':'#818cf8';
+    const cmp=s.med>formula*1.2?'▲ above formula':s.med<formula*0.8?'▼ below formula':'≈ on target';
+    const cmpCol=s.med>formula*1.2?'var(--warn)':s.med<formula*0.8?'var(--grn)':'var(--m)';
+    html+=`<div class="anbar-row">
+      <div class="anbar-lbl"><span class="chip chip-bloom" style="font-size:10px;margin-right:4px">${BLOOM_ACR[b]}</span></div>
+      <div class="anbar-track">
+        <div class="anbar-fill" style="width:${pct}%;background:${col}"></div>
+        <div class="qtick" style="left:${refPct}%;background:rgba(255,255,255,.6)" title="Formula default: ${formula}s"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;min-width:100px;padding-left:8px">
+        <span style="font-size:12px;font-weight:700;color:var(--txt)">${s.med}s median</span>
+        <span style="font-size:10px;color:${cmpCol}">${cmp} (${formula}s)</span>
+        <span style="font-size:10px;color:var(--m)">n=${s.n}</span>
+      </div>
+    </div>`;
+  });
+  html+=`<div style="font-size:11px;color:var(--m);margin-top:8px">
+    Bar = median seconds · White tick = formula default · 
+    <span style="color:#3ecf8e">■</span> faster than formula &nbsp;
+    <span style="color:#fbbf24">■</span> slower than formula &nbsp;
+    <span style="color:#818cf8">■</span> on target
+  </div></div>`;
+  return html;
+}
+
 function renderTeachingStrategy(an,results,qs){
   const {perQ,blooms,confMatrix}=an;
   const hasTimings=perQ.some(pq=>pq.avgTime!==null);
