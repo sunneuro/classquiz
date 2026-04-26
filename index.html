@@ -915,15 +915,15 @@ tr:hover td{background:var(--s2)}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
       <div>
         <label style="margin-top:0">Programme</label>
-        <select id="bf-prog" onchange="renderBank()"><option value="">All</option></select>
+        <select id="bf-prog" onchange="cascadeBankFilters();renderBank()"><option value="">All</option></select>
       </div>
       <div>
         <label style="margin-top:0">Subject</label>
-        <select id="bf-subj" onchange="renderBank()"><option value="">All</option></select>
+        <select id="bf-subj" onchange="cascadeBankFilters('subj');renderBank()"><option value="">All</option></select>
       </div>
       <div>
         <label style="margin-top:0">Unit/Topic</label>
-        <select id="bf-topic" onchange="renderBank()"><option value="">All</option></select>
+        <select id="bf-topic" onchange="cascadeBankFilters('topic');renderBank()"><option value="">All</option></select>
       </div>
       <div>
         <label style="margin-top:0">Test ID/Comment</label>
@@ -1305,11 +1305,11 @@ tr:hover td{background:var(--s2)}
   <div id="results-filters" class="card" style="padding:14px">
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
       <div><label style="margin-top:0">Programme</label>
-        <select id="rf-prog" onchange="renderActiveTab()"><option value="">All</option></select></div>
+        <select id="rf-prog" onchange="cascadeResultFilters();renderActiveTab()"><option value="">All</option></select></div>
       <div><label style="margin-top:0">Subject</label>
-        <select id="rf-subj" onchange="renderActiveTab()"><option value="">All</option></select></div>
+        <select id="rf-subj" onchange="cascadeResultFilters('subj');renderActiveTab()"><option value="">All</option></select></div>
       <div><label style="margin-top:0">Unit/Topic</label>
-        <select id="rf-topic" onchange="renderActiveTab()"><option value="">All</option></select></div>
+        <select id="rf-topic" onchange="cascadeResultFilters('topic');renderActiveTab()"><option value="">All</option></select></div>
       <div><label style="margin-top:0">Test ID/Comment</label>
         <select id="rf-testid" onchange="renderActiveTab()"><option value="">All</option></select></div>
       <div><label style="margin-top:0">Teacher</label>
@@ -1363,7 +1363,7 @@ tr:hover td{background:var(--s2)}
 </div>
 
 <!-- LEADERBOARD PANEL -->
-<div id="panel-leaderboard" style="display:none;width:100%;max-width:920px;padding:0 16px 60px">
+<div id="panel-leaderboard" style="display:none;width:100%;max-width:920px;margin:0 auto;padding:0 16px 60px">
   <div class="card" style="margin-bottom:14px">
     <h2>Performance Formula</h2>
     <p style="font-size:12px;color:var(--m);line-height:1.8">
@@ -1374,19 +1374,26 @@ tr:hover td{background:var(--s2)}
   </div>
   <div id="leaderboard-list"></div>
 </div>
-</div>
 
 <!-- PROFILES PANEL -->
-<div id="panel-profiles" style="display:none;width:100%;max-width:920px;padding:0 16px 60px">
+<div id="panel-profiles" style="display:none;width:100%;max-width:920px;margin:0 auto;padding:0 16px 60px">
   <div id="profiles-list"></div>
 </div>
 
 <!-- ANALYTICS PANEL -->
-<div id="panel-analytics" style="display:none;width:100%;max-width:920px;padding:0 16px 60px">
+<div id="panel-analytics" style="display:none;width:100%;max-width:920px;margin:0 auto;padding:0 16px 60px">
+  <!-- Analytics view selector -->
+  <div class="card" style="padding:12px 14px;margin-bottom:12px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+    <span style="font-size:12px;font-weight:700;color:var(--m);font-family:var(--fh);letter-spacing:.5px">VIEW:</span>
+    <button class="btn btn-sm" id="av-btn-class" onclick="setAnalyticsView('class')" style="background:var(--acc);color:#fff;border:none">📊 Class Overview</button>
+    <button class="btn btn-sm btn-ghost" id="av-btn-question" onclick="setAnalyticsView('question')">🔍 By Question</button>
+    <button class="btn btn-sm btn-ghost" id="av-btn-student" onclick="setAnalyticsView('student')">👤 By Student</button>
+    <span style="font-size:11px;color:var(--m);margin-left:4px">← Select a Session ID above first</span>
+  </div>
   <div id="analytics-body">
     <div class="an-empty">
       <div style="font-size:32px;margin-bottom:12px">📊</div>
-      Select a specific <b>Session ID</b> from the filter above to view question-level analytics.
+      Select a <b>Session ID</b> from the filter above, then choose a view.
     </div>
   </div>
 </div>
@@ -2562,20 +2569,31 @@ window.saveQuestion=async function(){
 ═══════════════════════════════════════════ */
 function populateBankFilters(){
   const progs=[...new Set(allQuestions.map(q=>q.programmeName).filter(Boolean))].sort();
-  const subjs=[...new Set(allQuestions.map(q=>q.courseId+'::'+q.subjectName).filter(Boolean))].sort();
-  const topics=[...new Set(allQuestions.map(q=>q.topicName).filter(Boolean))].sort();
-  const testids=[...new Set(allQuestions.map(q=>q.testLabel).filter(Boolean))].sort();
-  // Session IDs from allResults (questions are tied to sessions via testLabel/courseId)
-  const sessions=[...new Set(allResults.map(r=>r.sessionDisplayId||'').filter(Boolean))].sort().reverse();
-  // Years from question ts timestamps
-  const years=[...new Set(allQuestions.map(q=>q.ts?new Date(q.ts).getFullYear():'').filter(Boolean))].sort().reverse();
   fillSelect('bf-prog',progs);
-  fillSelect('bf-subj',subjs,x=>x.split('::')[0],x=>x.split('::').join(' — '));
-  fillSelect('bf-topic',topics);
-  fillSelect('bf-testid',testids);
-  fillSelect('bf-session',sessions);
-  fillSelect('bf-year',years);
+  cascadeBankFilters('prog');
 }
+
+window.cascadeBankFilters=function(level){
+  const prog=gv('bf-prog'),subj=gv('bf-subj'),topic=gv('bf-topic');
+  let pool=allQuestions.filter(q=>!q.draft);
+  if(prog) pool=pool.filter(q=>q.programmeName===prog);
+  if(!level||level==='prog'){
+    const subjs=[...new Set(pool.map(q=>q.courseId+'::'+q.subjectName).filter(Boolean))].sort();
+    fillSelect('bf-subj',subjs,x=>x.split('::')[0],x=>x.split('::').join(' — '));
+  }
+  if(subj) pool=pool.filter(q=>q.courseId===subj);
+  if(!level||level==='prog'||level==='subj'){
+    const topics=[...new Set(pool.map(q=>q.topicName).filter(Boolean))].sort();
+    fillSelect('bf-topic',topics);
+  }
+  if(topic) pool=pool.filter(q=>q.topicName===topic);
+  const testids=[...new Set(pool.map(q=>q.testLabel).filter(Boolean))].sort();
+  const years=[...new Set(pool.map(q=>q.ts?new Date(q.ts).getFullYear():'').filter(Boolean))].sort().reverse();
+  const sessions=[...new Set(allResults.map(r=>r.sessionDisplayId||'').filter(Boolean))].sort().reverse();
+  fillSelect('bf-testid',testids);
+  fillSelect('bf-year',years);
+  fillSelect('bf-session',sessions);
+};
 window.onBfYearChange=function(){
   const yr=parseInt(gv('bf-year')||'0');
   const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -4711,27 +4729,44 @@ window.shareRes=function(){
    RESULTS DASHBOARD
 ═══════════════════════════════════════════ */
 function populateResultFilters(){
+  // Always start from scratch — populate prog from full allResults
   const progs=[...new Set(allResults.map(r=>r.programmeName).filter(Boolean))].sort();
-  const subjs=[...new Set(allResults.map(r=>r.courseId+'::'+r.subjectName).filter(Boolean))].sort();
-  const topics=[...new Set(allResults.map(r=>r.topicName).filter(Boolean))].sort();
-  const testids=[...new Set(allResults.map(r=>r.testLabel).filter(Boolean))].sort();
-  const teachers=[...new Set(allResults.map(r=>r.teacherName).filter(Boolean))].sort();
-  const sessions=[...new Set(
-    allResults.map(r=>r.sessionDisplayId||'').filter(Boolean)
-  )].sort().reverse();
   fillSelect('rf-prog',progs);
-  fillSelect('rf-subj',subjs,x=>x.split('::')[0],x=>x.split('::').join(' — '));
-  fillSelect('rf-topic',topics);
+  // Cascade from current prog selection downward
+  cascadeResultFilters('prog');
+}
+
+// Cascade result filters: repopulate dependent dropdowns based on current selections
+// level: 'prog' repopulates everything, 'subj' repopulates topic+testid+session, 'topic' repopulates testid+session
+window.cascadeResultFilters=function(level){
+  const prog=gv('rf-prog'),subj=gv('rf-subj'),topic=gv('rf-topic');
+  // Filter the pool for each level
+  let pool=allResults;
+  if(prog) pool=pool.filter(r=>r.programmeName===prog);
+  // Populate Subject (filtered by prog)
+  if(!level||level==='prog'){
+    const subjs=[...new Set(pool.map(r=>r.courseId+'::'+r.subjectName).filter(Boolean))].sort();
+    fillSelect('rf-subj',subjs,x=>x.split('::')[0],x=>x.split('::').join(' — '));
+  }
+  // Apply subj filter for subsequent levels
+  if(subj) pool=pool.filter(r=>r.courseId===subj);
+  // Populate Topic (filtered by prog+subj)
+  if(!level||level==='prog'||level==='subj'){
+    const topics=[...new Set(pool.map(r=>r.topicName).filter(Boolean))].sort();
+    fillSelect('rf-topic',topics);
+  }
+  // Apply topic filter
+  if(topic) pool=pool.filter(r=>r.topicName===topic);
+  // Populate Test ID, Teacher, Session (filtered by prog+subj+topic)
+  const testids=[...new Set(pool.map(r=>r.testLabel).filter(Boolean))].sort();
+  const teachers=[...new Set(pool.map(r=>r.teacherName).filter(Boolean))].sort();
+  const sessions=[...new Set(pool.map(r=>r.sessionDisplayId||'').filter(Boolean))].sort().reverse();
+  const years=[...new Set(pool.map(r=>r.ts?new Date(r.ts).getFullYear():'').filter(Boolean))].sort().reverse();
   fillSelect('rf-testid',testids);
   fillSelect('rf-teacher',teachers);
   fillSelect('rf-session',sessions);
-  // Year/Month/Date filters from ts timestamps
-  const years=[...new Set(allResults.map(r=>r.ts?new Date(r.ts).getFullYear():'').filter(Boolean))].sort().reverse();
   fillSelect('rf-year',years);
-  // Update table min-width for extra columns
-  const tbl=document.querySelector('#s-results table');
-  if(tbl) tbl.style.minWidth='900px';
-}
+};
 window.onRfYearChange=function(){
   // Repopulate months for selected year
   const yr=parseInt(gv('rf-year')||'0');
@@ -5152,6 +5187,7 @@ window.switchResultsTab=function(tab){
   ['results','leaderboard','profiles','analytics'].forEach(function(t){
     var tb=el('tab-'+t);if(tb)tb.classList.toggle('on',t===tab);
   });
+  // The results table content lives inside mw-lg; hide it for other tabs
   ['results-summary','results-table-wrap','results-actions'].forEach(function(id){
     var e=el(id);if(e)e.style.display=(tab==='results')?'':'none';
   });
@@ -5443,30 +5479,46 @@ function renderStudentProfiles(){
 /* ═══════════════════════════════════════════
    SESSION ANALYTICS TAB
 ═══════════════════════════════════════════ */
+// Current analytics view state
+let _analyticsView='class';
+let _analyticsQs=null;
+let _analyticsResults=null;
+
+window.setAnalyticsView=function(view){
+  _analyticsView=view;
+  ['class','question','student'].forEach(v=>{
+    const btn=el('av-btn-'+v);
+    if(!btn)return;
+    if(v===view){btn.style.background='var(--acc)';btn.style.color='#fff';btn.style.border='none';}
+    else{btn.style.background='';btn.style.color='';btn.style.border='';}
+  });
+  if(_analyticsQs&&_analyticsResults){
+    const body=el('analytics-body');if(!body)return;
+    const an=computeAnalytics(_analyticsQs,_analyticsResults);
+    body.innerHTML=renderAnalyticsHTML(an,_analyticsResults.length,'',_analyticsResults,_analyticsQs,view);
+  }
+};
+
 function renderSessionAnalytics(){
   const body=el('analytics-body');if(!body)return;
   const sid=gv('rf-session');
   if(!sid){
-    const firstOpt=el('rf-session')?.options[1];
     body.innerHTML='<div class="an-empty">'
       +'<div style="font-size:32px;margin-bottom:12px">📊</div>'
-      +'<div>Select a <b>Session ID</b> from the filter above to view question-level analytics.</div>'
-      +(firstOpt?'<div style="margin-top:12px"><button class="btn btn-ghost btn-sm" onclick="el(\'rf-session\').value=\''+firstOpt.value+'\';renderActiveTab()">Load most recent session</button></div>':'')
-      +'<div style="margin-top:10px;font-size:12px;color:var(--m)">Analytics show time distribution, answer patterns, discrimination index, Bloom\'s performance, and confidence accuracy.</div>'
+      +'<div>Select a <b>Session ID</b> from the filter above to view analytics.</div>'
+      +'<div style="margin-top:10px;font-size:12px;color:var(--m)">Then choose Class Overview, By Question, or By Student view.</div>'
       +'</div>';
+    _analyticsQs=null;_analyticsResults=null;
     return;
   }
   const sessionResults=allResults.filter(r=>r.sessionDisplayId===sid);
   if(!sessionResults.length){
     body.innerHTML='<div class="an-empty">No student results found for this session yet.</div>';
+    _analyticsQs=null;_analyticsResults=null;
     return;
   }
   body.innerHTML='<div class="an-empty"><div style="font-size:24px;margin-bottom:8px">⏳</div>Loading analytics…</div>';
-
-  // Get the raw Firestore session doc ID from any result record
   const rawSessionId=sessionResults[0]?.sessionId||sid;
-
-  // Fetch the session document to get the canonical question list
   const tryFetch=async(docId)=>{
     try{
       const snap=await _fb.getDoc(_fb.doc(db,'sessions',docId));
@@ -5474,22 +5526,19 @@ function renderSessionAnalytics(){
     }catch(e){}
     return null;
   };
-
   (async()=>{
     let qs=null;
-    // 1. Try session doc by raw sessionId
+    // 1. Fetch from Firestore session document
     const sessionDoc=await tryFetch(rawSessionId);
     if(sessionDoc&&(sessionDoc.qs||sessionDoc.questions)){
       qs=sessionDoc.qs||sessionDoc.questions;
     }
-    // 2. If rawSessionId differed from display ID, also try display ID as doc ID (legacy)
+    // 2. Try display ID as legacy doc ID
     if((!qs||!qs.length)&&rawSessionId!==sid){
-      const sessionDoc2=await tryFetch(sid);
-      if(sessionDoc2&&(sessionDoc2.qs||sessionDoc2.questions)){
-        qs=sessionDoc2.qs||sessionDoc2.questions;
-      }
+      const doc2=await tryFetch(sid);
+      if(doc2&&(doc2.qs||doc2.questions)) qs=doc2.qs||doc2.questions;
     }
-    // 3. Fall back to allQuestions bank — match by testLabel+courseId+topicName
+    // 3. Fall back to allQuestions bank match
     if(!qs||!qs.length){
       const ref=sessionResults[0];
       qs=allQuestions.filter(q=>
@@ -5500,13 +5549,15 @@ function renderSessionAnalytics(){
     }
     if(!qs||!qs.length){
       body.innerHTML='<div class="an-empty">Could not retrieve the question list for this session.<br>'
-        +'<span style="font-size:12px;color:var(--m)">The session document may have been deleted, or questions do not match by Test ID + Course + Topic.</span></div>';
+        +'<span style="font-size:12px;color:var(--m)">The session document may have expired, or questions no longer match by Test ID + Course + Topic.</span></div>';
       return;
     }
-    const analytics=computeAnalytics(qs,sessionResults);
-    body.innerHTML=renderAnalyticsHTML(analytics,sessionResults.length,sid,sessionResults);
+    _analyticsQs=qs;
+    _analyticsResults=sessionResults;
+    const an=computeAnalytics(qs,sessionResults);
+    body.innerHTML=renderAnalyticsHTML(an,sessionResults.length,sid,sessionResults,qs,_analyticsView);
   })().catch(e=>{
-    body.innerHTML='<div class="an-empty">Error loading analytics: '+esc(e.message)+'</div>';
+    body.innerHTML='<div class="an-empty">Error loading analytics: '+esc(String(e.message||e))+'</div>';
   });
 }
 
@@ -5592,14 +5643,21 @@ function computeAnalytics(qs,results){
 
 function safeParseJson(v){try{return typeof v==='string'?JSON.parse(v):v;}catch(e){return null;}}
 
-function renderAnalyticsHTML(an,nStudents,sid,results){
+function renderAnalyticsHTML(an,nStudents,sid,results,qs,view){
+  view=view||'class';
+  if(view==='question') return renderAnalyticsQuestion(an,nStudents,results,qs);
+  if(view==='student')  return renderAnalyticsStudent(an,nStudents,results,qs);
+  return renderAnalyticsClass(an,nStudents,results,qs);
+}
+
+// ── CLASS OVERVIEW ──────────────────────────────────────────
+function renderAnalyticsClass(an,nStudents,results,qs){
   const {perQ,blooms,confMatrix}=an;
   const avgScore=results.length?Math.round(results.reduce((a,r)=>a+(r.pct||0),0)/results.length):0;
   const hasTimings=perQ.some(pq=>pq.avgTime!==null);
   const hasBlooms=Object.keys(blooms).length>0;
   const hasConf=confMatrix.sure.t+confMatrix.unsure.t+confMatrix.guessing.t>0;
 
-  // ── Section 1: Summary stats ──
   let html=`<div class="an-stat-row">
     <div class="an-stat"><div class="an-stat-n">${nStudents}</div><div class="an-stat-l">Students</div></div>
     <div class="an-stat"><div class="an-stat-n">${avgScore}%</div><div class="an-stat-l">Mean Score</div></div>
@@ -5608,7 +5666,7 @@ function renderAnalyticsHTML(an,nStudents,sid,results){
     <div class="an-stat"><div class="an-stat-n">${perQ.filter(pq=>pq.di<0.2&&pq.total>1).length}</div><div class="an-stat-l">Weak discriminators</div></div>
   </div>`;
 
-  // ── Section 2: Time distribution ──
+  // Time distribution
   if(hasTimings){
     const maxT=Math.max(...perQ.filter(p=>p.avgTime!==null).map(p=>p.avgTime),1);
     html+=`<div class="card an-sect"><h4>⏱ Time per Question (average seconds)</h4>`;
@@ -5618,70 +5676,24 @@ function renderAnalyticsHTML(an,nStudents,sid,results){
       const col=pq.difficulty==='hard'?'#f87171':pq.difficulty==='easy'?'#3ecf8e':'#fbbf24';
       const q1pct=pq.timingQ1!==null?Math.round(pq.timingQ1/maxT*100):null;
       const q3pct=pq.timingQ3!==null?Math.round(pq.timingQ3/maxT*100):null;
-      const bloomBit=pq.bloomTag?` <span class="chip chip-bloom" style="font-size:9px;padding:1px 5px">${BLOOM_ACR[pq.bloomTag]||''}</span>`:'';
+      const bloomBit=pq.bloomTag&&BLOOM_ACR[pq.bloomTag]?` <span class="chip chip-bloom" style="font-size:9px;padding:1px 5px">${BLOOM_ACR[pq.bloomTag]}</span>`:'';
       return`<div class="anbar-row">
-        <div class="anbar-lbl" title="${esc(pq.text)}">Q${i+1}. ${esc(pq.text.slice(0,42))}${pq.text.length>42?'…':''}${bloomBit}</div>
+        <div class="anbar-lbl" title="${esc(pq.text)}">Q${i+1}. ${esc(pq.text.slice(0,40))}${pq.text.length>40?'…':''}${bloomBit}</div>
         <div class="anbar-track">
           <div class="anbar-fill" style="width:${pct}%;background:${col}"></div>
-          ${q1pct!==null?`<div class="qtick" style="left:${q1pct}%" title="Q1"></div>`:''}
-          ${q3pct!==null?`<div class="qtick" style="left:${q3pct}%" title="Q3"></div>`:''}
+          ${q1pct!==null?`<div class="qtick" style="left:${q1pct}%"></div>`:''}
+          ${q3pct!==null?`<div class="qtick" style="left:${q3pct}%"></div>`:''}
         </div>
         <div class="anbar-val">${pq.avgTime}s</div>
       </div>`;
     }).join('');
-    html+=`<div style="font-size:10px;color:var(--m);margin-top:6px">Bar colour: <span style="color:#3ecf8e">■</span> Easy <span style="color:#fbbf24">■</span> Medium <span style="color:#f87171">■</span> Hard &nbsp;·&nbsp; Tick marks = Q1/Q3 quartiles</div></div>`;
+    html+=`<div style="font-size:10px;color:var(--m);margin-top:6px">■ Easy=green ■ Medium=amber ■ Hard=red · ticks=Q1/Q3</div></div>`;
   }
 
-  // ── Section 3: Wrong answer distribution ──
-  html+=`<div class="card an-sect"><h4>📊 Answer Distribution &amp; Discrimination Index</h4>
-  <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
-  <thead><tr style="background:var(--s2)">
-    <th style="padding:7px 10px;text-align:left;border:1px solid var(--b)">Q#</th>
-    <th style="padding:7px 10px;text-align:left;border:1px solid var(--b)">Question</th>
-    <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Bloom</th>
-    <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">% Correct</th>
-    <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Answer Distribution</th>
-    <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Discrimination</th>
-    ${hasTimings?'<th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Avg Time Wrong</th>':''}
-  </tr></thead><tbody>`;
-  perQ.forEach((pq,i)=>{
-    const diChip=pq.total<2?'<span style="color:var(--m);font-size:10px">n/a</span>':
-      pq.di>=0.4?`<span class="di-chip di-ex">D=${pq.di} Excellent</span>`:
-      pq.di>=0.2?`<span class="di-chip di-ok">D=${pq.di} Acceptable</span>`:
-      pq.di>=0.1?`<span class="di-chip di-wk">D=${pq.di} Weak</span>`:
-      pq.di>=0?`<span class="di-chip di-rv">D=${pq.di} Poor</span>`:
-      `<span class="di-chip di-rv">⚠️ D=${pq.di} Review</span>`;
-    // Distribution bar
-    const total=Object.values(pq.optDist).reduce((a,b)=>a+b,0)||1;
-    const COLS={'A':'#60a5fa','B':'#f472b6','C':'#fb923c','D':'#a78bfa',
-      'True':'#3ecf8e','False':'#f87171'};
-    const correctLabel=pq.type==='tf'?pq.answer:'ABCD'[pq.correctIndex];
-    const distBar=Object.entries(pq.optDist).sort((a,b)=>b[1]-a[1]).map(([lbl,cnt])=>{
-      const pct2=Math.round(cnt/total*100);
-      const isRight=lbl===correctLabel;
-      const col=isRight?'#3ecf8e':(COLS[lbl]||'#6b7280');
-      return`<div class="distbar-seg" style="flex:${pct2};background:${col};min-width:${pct2>5?0:2}px" title="${lbl}: ${cnt} (${pct2}%)">${pct2>12?lbl:''}${pct2>18?'·'+pct2+'%':''}</div>`;
-    }).join('');
-    const bloomChipTd=pq.bloomTag?`<span class="chip chip-bloom" style="font-size:10px">${BLOOM_ACR[pq.bloomTag]||''}</span>`:'<span style="color:var(--m);font-size:10px">—</span>';
-    html+=`<tr>
-      <td style="padding:8px 10px;border:1px solid var(--b);font-weight:700;color:var(--acc)">Q${i+1}</td>
-      <td style="padding:8px 10px;border:1px solid var(--b);max-width:220px;font-size:11px">${esc(pq.text.slice(0,80))}${pq.text.length>80?'…':''}</td>
-      <td style="padding:8px 10px;border:1px solid var(--b);text-align:center">${bloomChipTd}</td>
-      <td style="padding:8px 10px;border:1px solid var(--b);text-align:center;font-weight:700;color:${pq.pctCorrect>=70?'var(--grn)':pq.pctCorrect>=40?'var(--warn)':'var(--err)'}">${pq.pctCorrect}%</td>
-      <td style="padding:8px 10px;border:1px solid var(--b);min-width:120px">
-        <div class="distbar">${distBar}</div>
-        <div style="font-size:9px;color:var(--m)">${Object.entries(pq.optDist).map(([l,c])=>`${l}:${c}`).join(' ')}</div>
-      </td>
-      <td style="padding:8px 10px;border:1px solid var(--b);text-align:center">${diChip}</td>
-      ${hasTimings?`<td style="padding:8px 10px;border:1px solid var(--b);text-align:center;color:var(--m)">${pq.avgTimeWrong!==null?pq.avgTimeWrong+'s':'—'}</td>`:''}
-    </tr>`;
-  });
-  html+=`</tbody></table></div></div>`;
-
-  // ── Section 4: Bloom's breakdown ──
+  // Bloom breakdown
   if(hasBlooms){
     const BLOOM_ORDER=['recall','comprehension','application','analysis','synthesis','evaluation'];
-    html+=`<div class="card an-sect"><h4>🧠 Performance by Bloom's Level</h4>`;
+    html+=`<div class="card an-sect"><h4>🧠 Class Performance by Bloom's Level</h4>`;
     BLOOM_ORDER.filter(b=>blooms[b]).forEach(b=>{
       const bd=blooms[b];
       const pct=bd.total?Math.round(bd.correct/bd.total*100):0;
@@ -5689,53 +5701,109 @@ function renderAnalyticsHTML(an,nStudents,sid,results){
         <div class="bloom-lbl">${BLOOM_ACR[b]||b}</div>
         <div class="bloom-track"><div class="bloom-fill" style="width:${pct}%"></div></div>
         <div class="bloom-pct">${pct}%</div>
-        <div style="font-size:10px;color:var(--m);margin-left:6px">${bd.correct}/${bd.total}</div>
+        <div style="font-size:10px;color:var(--m);margin-left:6px">${bd.correct}/${bd.total} correct</div>
       </div>`;
     });
-    const weakBloom=BLOOM_ORDER.filter(b=>blooms[b]&&blooms[b].total>0)
-      .sort((a,b)=>blooms[a].correct/blooms[a].total-blooms[b].correct/blooms[b].total)[0];
-    const strongBloom=BLOOM_ORDER.filter(b=>blooms[b]&&blooms[b].total>0)
-      .sort((a,b)=>blooms[b].correct/blooms[b].total-blooms[a].correct/blooms[a].total)[0];
-    if(weakBloom&&strongBloom&&weakBloom!==strongBloom){
-      const wp=Math.round(blooms[weakBloom].correct/blooms[weakBloom].total*100);
-      const sp=Math.round(blooms[strongBloom].correct/blooms[strongBloom].total*100);
+    const allBlooms=BLOOM_ORDER.filter(b=>blooms[b]&&blooms[b].total>0);
+    const weakB=allBlooms.sort((a,b2)=>blooms[a].correct/blooms[a].total-blooms[b2].correct/blooms[b2].total)[0];
+    const strongB=allBlooms.sort((a,b2)=>blooms[b2].correct/blooms[b2].total-blooms[a].correct/blooms[a].total)[0];
+    if(weakB&&strongB&&weakB!==strongB){
+      const wp=Math.round(blooms[weakB].correct/blooms[weakB].total*100);
+      const sp=Math.round(blooms[strongB].correct/blooms[strongB].total*100);
       html+=`<div style="margin-top:10px;padding:8px 10px;background:rgba(108,99,255,.07);border-radius:8px;font-size:12px;color:var(--txt);line-height:1.6">
-        Strongest: <b>${strongBloom} (${sp}%)</b> · Weakest: <b>${weakBloom} (${wp}%)</b>.<br>
-        ${wp<50?`Consider revisiting ${weakBloom}-level practice before the next assessment.`:'Class shows balanced cognitive engagement.'}
+        Strongest: <b>${strongB} (${sp}%)</b> · Weakest: <b>${weakB} (${wp}%)</b>. ${wp<50?'Consider revisiting '+weakB+'-level topics.':'Balanced cognitive coverage.'}
       </div>`;
     }
     html+=`</div>`;
   }
 
-  // ── Section 5: Class Confidence vs Accuracy ──
+  // Class confidence matrix
   if(hasConf){
     html+=`<div class="card an-sect"><h4>🎯 Class Confidence vs Accuracy</h4>
     <table class="conf-matrix">
-      <thead><tr><th>Confidence</th><th>Correct</th><th>Wrong</th><th>Total</th><th>Accuracy</th><th>Interpretation</th></tr></thead>
-      <tbody>`;
+      <thead><tr><th>Confidence</th><th>Correct</th><th>Wrong</th><th>Total</th><th>Accuracy</th><th>Interpretation</th></tr></thead><tbody>`;
     [['sure','✅ Sure'],['unsure','🤔 Not So Sure'],['guessing','🎲 Wild Guess']].forEach(([k,lbl])=>{
       const d=confMatrix[k];
       const acc=d.t?Math.round(d.c/d.t*100):0;
       const col=acc>=75?'var(--grn)':acc>=50?'var(--warn)':'var(--err)';
-      const interp=k==='sure'?(acc>=80?'Well-calibrated confidence':acc>=60?'Slight overconfidence — review flagged topics':'Significant overconfidence — core concepts need revisiting'):
-                   k==='unsure'?(acc>=60?'Good recovery under uncertainty':acc>=40?'Some partial knowledge present':'Very low certainty — foundational gaps likely'):
-                   (acc<=35?'Expected random-chance accuracy':'Above-chance wild guessing — some implicit knowledge');
+      const interp=!d.t?'—':k==='sure'?(acc>=80?'Well-calibrated':acc>=60?'Slight overconfidence':'Significant overconfidence — revisit core concepts'):
+                   k==='unsure'?(acc>=60?'Good partial knowledge':acc>=40?'Some partial knowledge':'Foundational gaps likely'):
+                   (acc<=35?'Expected chance accuracy':'Above-chance — some implicit knowledge');
       html+=`<tr><td style="text-align:left;font-weight:600">${lbl}</td>
-        <td style="color:var(--grn)">${d.c}</td>
-        <td style="color:var(--err)">${d.t-d.c}</td>
-        <td>${d.t}</td>
+        <td style="color:var(--grn)">${d.c}</td><td style="color:var(--err)">${d.t-d.c}</td><td>${d.t}</td>
         <td style="font-weight:700;color:${col}">${d.t?acc+'%':'—'}</td>
-        <td style="font-size:11px;color:var(--m)">${d.t?interp:'—'}</td></tr>`;
+        <td style="font-size:11px;color:var(--m)">${interp}</td></tr>`;
     });
-    html+=`</tbody></table>
-    <div style="font-size:11px;color:var(--m);margin-top:8px">
-      ${confMatrix.sure.t+confMatrix.unsure.t+confMatrix.guessing.t
-        ?'Confidence data from this session.'
-        :'No confidence data yet — collected from sessions run after the confidence feature was enabled.'}
-    </div></div>`;
+    html+=`</tbody></table></div>`;
   }
 
-  // ── Section 6: Per-student Confidence Breakdown ──
+  // Teaching strategy summary
+  html+=renderTeachingStrategy(an,results,qs);
+  return html;
+}
+
+// ── BY QUESTION ──────────────────────────────────────────────
+function renderAnalyticsQuestion(an,nStudents,results,qs){
+  const {perQ}=an;
+  const hasTimings=perQ.some(pq=>pq.avgTime!==null);
+  let html=`<div class="card an-sect"><h4>📊 Answer Distribution &amp; Discrimination Index</h4>
+  <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+  <thead><tr style="background:var(--s2)">
+    <th style="padding:7px 10px;text-align:left;border:1px solid var(--b)">Q#</th>
+    <th style="padding:7px 10px;text-align:left;border:1px solid var(--b)">Question</th>
+    <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Bloom</th>
+    <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Diff</th>
+    <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">% Correct</th>
+    <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Answer Distribution</th>
+    <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">D-Index</th>
+    ${hasTimings?'<th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Avg Time / Wrong</th>':''}
+  </tr></thead><tbody>`;
+  perQ.forEach((pq,i)=>{
+    const diChip=pq.total<2?'<span style="color:var(--m);font-size:10px">n/a</span>':
+      pq.di>=0.4?`<span class="di-chip di-ex">D=${pq.di}</span>`:
+      pq.di>=0.2?`<span class="di-chip di-ok">D=${pq.di}</span>`:
+      pq.di>=0.1?`<span class="di-chip di-wk">D=${pq.di}</span>`:
+      pq.di>=0?`<span class="di-chip di-rv">D=${pq.di}</span>`:
+      `<span class="di-chip di-rv">⚠️D=${pq.di}</span>`;
+    const total=Object.values(pq.optDist).reduce((a,b)=>a+b,0)||1;
+    const COLS={A:'#60a5fa',B:'#f472b6',C:'#fb923c',D:'#a78bfa',True:'#3ecf8e',False:'#f87171'};
+    const correctLabel=pq.type==='tf'?pq.answer:'ABCD'[pq.correctIndex];
+    const distBar=Object.entries(pq.optDist).sort((a,b)=>b[1]-a[1]).map(([lbl,cnt])=>{
+      const p2=Math.round(cnt/total*100);
+      const col=(lbl===correctLabel)?'#3ecf8e':(COLS[lbl]||'#6b7280');
+      return`<div class="distbar-seg" style="flex:${p2};background:${col}" title="${lbl}: ${cnt} (${p2}%)">${p2>14?lbl:''}${p2>22?'·'+p2+'%':''}</div>`;
+    }).join('');
+    const bloomTd=pq.bloomTag&&BLOOM_ACR[pq.bloomTag]?`<span class="chip chip-bloom" style="font-size:10px">${BLOOM_ACR[pq.bloomTag]}</span>`:'<span style="color:var(--m)">—</span>';
+    const diffTd=pq.difficulty?`<span class="chip chip-${pq.difficulty}" style="font-size:10px">${pq.difficulty}</span>`:'<span style="color:var(--m)">—</span>';
+    html+=`<tr>
+      <td style="padding:7px 10px;border:1px solid var(--b);font-weight:700;color:var(--acc)">Q${i+1}</td>
+      <td style="padding:7px 10px;border:1px solid var(--b);max-width:200px;font-size:11px">${esc(pq.text.slice(0,80))}${pq.text.length>80?'…':''}</td>
+      <td style="padding:7px 10px;border:1px solid var(--b);text-align:center">${bloomTd}</td>
+      <td style="padding:7px 10px;border:1px solid var(--b);text-align:center">${diffTd}</td>
+      <td style="padding:7px 10px;border:1px solid var(--b);text-align:center;font-weight:700;color:${pq.pctCorrect>=70?'var(--grn)':pq.pctCorrect>=40?'var(--warn)':'var(--err)'}">${pq.pctCorrect}%</td>
+      <td style="padding:7px 10px;border:1px solid var(--b);min-width:120px">
+        <div class="distbar">${distBar}</div>
+        <div style="font-size:9px;color:var(--m)">${Object.entries(pq.optDist).map(([l,c])=>l+':'+c).join(' ')}</div>
+      </td>
+      <td style="padding:7px 10px;border:1px solid var(--b);text-align:center">${diChip}</td>
+      ${hasTimings?`<td style="padding:7px 10px;border:1px solid var(--b);text-align:center;color:var(--m);font-size:11px">${pq.avgTime!==null?pq.avgTime+'s':'—'} / ${pq.avgTimeWrong!==null?pq.avgTimeWrong+'s':'—'}</td>`:''}
+    </tr>`;
+  });
+  html+=`</tbody></table></div>
+  <div style="font-size:11px;color:var(--m);margin-top:8px">D-Index: <span class="di-chip di-ex">≥0.4 Excellent</span> <span class="di-chip di-ok">≥0.2 Acceptable</span> <span class="di-chip di-wk">≥0.1 Weak</span> <span class="di-chip di-rv">Poor/Review</span></div>
+  </div>`;
+  return html;
+}
+
+// ── BY STUDENT ──────────────────────────────────────────────
+function renderAnalyticsStudent(an,nStudents,results,qs){
+  const {perQ,confMatrix}=an;
+  const hasConf=confMatrix.sure.t+confMatrix.unsure.t+confMatrix.guessing.t>0;
+  const BLOOM_ORDER=['recall','comprehension','application','analysis','synthesis','evaluation'];
+  const presentBlooms=BLOOM_ORDER.filter(b=>perQ.some(pq=>pq.bloomTag===b));
+  let html='';
+
+  // Per-student confidence profile
   if(hasConf){
     html+=`<div class="card an-sect"><h4>👤 Per-Student Confidence Profile</h4>
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
@@ -5747,31 +5815,33 @@ function renderAnalyticsHTML(an,nStudents,sid,results){
       <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">🎲 Wild Guess</th>
       <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Calibration</th>
     </tr></thead><tbody>`;
-    results.sort((a,b)=>(b.pct||0)-(a.pct||0)).forEach(r=>{
+    [...results].sort((a,b)=>(b.pct||0)-(a.pct||0)).forEach(r=>{
       const cm2=safeParseJson(r.confidenceMap)||{};
       const am2=safeParseJson(r.answerMap)||{};
       const sh2=safeParseJson(r.optionShuffles)||{};
-      if(!Object.keys(cm2).length)return;
-      // Count sure/unsure/guessing correct vs total per student
+      if(!Object.keys(cm2).length){
+        html+=`<tr><td style="padding:7px 10px;border:1px solid var(--b)"><b>${esc(r.studentName||'')}</b><div style="font-size:10px;color:var(--m)">${esc(r.roll||'')}</div></td>
+          <td style="padding:7px 10px;border:1px solid var(--b);text-align:center;font-weight:700;color:${(r.pct||0)>=70?'var(--grn)':(r.pct||0)>=50?'var(--warn)':'var(--err)'}">${r.pct||0}%</td>
+          <td colspan="4" style="padding:7px 10px;border:1px solid var(--b);text-align:center;color:var(--m);font-size:11px">No confidence data (feature enabled for future sessions)</td></tr>`;
+        return;
+      }
       const sc={sure:{c:0,t:0},unsure:{c:0,t:0},guessing:{c:0,t:0}};
       Object.entries(cm2).forEach(([qi,conf])=>{
-        if(!sc[conf])return;
-        sc[conf].t++;
+        if(!sc[conf])return;sc[conf].t++;
         const q=qs[parseInt(qi)];if(!q)return;
         const ua=am2[qi];if(ua===undefined||ua==='')return;
         let ok=false;
-        if(q.type==='tf'){ok=(ua===q.answer);}
-        else{const sh=sh2[parseInt(qi)];const oi=sh?sh[parseInt(ua)]:parseInt(ua);ok=(oi===q.correctIndex);}
+        if(q.type==='tf'){ok=ua===q.answer;}
+        else{const sh=sh2[qi];const oi=sh?sh[parseInt(ua)]:parseInt(ua);ok=oi===q.correctIndex;}
         if(ok)sc[conf].c++;
       });
       const sureAcc=sc.sure.t?Math.round(sc.sure.c/sc.sure.t*100):null;
       const unsureAcc=sc.unsure.t?Math.round(sc.unsure.c/sc.unsure.t*100):null;
       const guessAcc=sc.guessing.t?Math.round(sc.guessing.c/sc.guessing.t*100):null;
-      // Calibration: if Sure accuracy is much lower than score, overconfident
-      const calib=sureAcc===null?'—':sureAcc>=(r.pct-10)?'Well-calibrated':sureAcc<(r.pct-25)?'Overconfident':'Slight overconfidence';
+      const calib=sureAcc===null?'—':sureAcc>=(r.pct-10)?'Well-calibrated':sureAcc<(r.pct-25)?'Overconfident':'Slight over-conf.';
       const calibCol=calib==='Well-calibrated'?'var(--grn)':calib==='—'?'var(--m)':'var(--warn)';
       html+=`<tr>
-        <td style="padding:7px 10px;border:1px solid var(--b)"><div style="font-weight:600;font-size:12px">${esc(r.studentName||'')}</div><div style="font-size:10px;color:var(--m)">${esc(r.roll||'')}</div></td>
+        <td style="padding:7px 10px;border:1px solid var(--b)"><b style="font-size:12px">${esc(r.studentName||'')}</b><div style="font-size:10px;color:var(--m)">${esc(r.roll||'')}</div></td>
         <td style="padding:7px 10px;border:1px solid var(--b);text-align:center;font-weight:700;color:${(r.pct||0)>=70?'var(--grn)':(r.pct||0)>=50?'var(--warn)':'var(--err)'}">${r.pct||0}%</td>
         <td style="padding:7px 10px;border:1px solid var(--b);text-align:center">${sc.sure.t?sc.sure.c+'/'+sc.sure.t+(sureAcc!==null?' ('+sureAcc+'%)':''):'—'}</td>
         <td style="padding:7px 10px;border:1px solid var(--b);text-align:center">${sc.unsure.t?sc.unsure.c+'/'+sc.unsure.t+(unsureAcc!==null?' ('+unsureAcc+'%)':''):'—'}</td>
@@ -5782,92 +5852,90 @@ function renderAnalyticsHTML(an,nStudents,sid,results){
     html+=`</tbody></table></div></div>`;
   }
 
-  // ── Section 7: Per-student Bloom's Performance ──
-  if(hasBlooms&&results.length){
-    const BLOOM_ORDER=['recall','comprehension','application','analysis','synthesis','evaluation'];
-    const presentBlooms=BLOOM_ORDER.filter(b=>blooms[b]);
-    if(presentBlooms.length){
-      html+=`<div class="card an-sect"><h4>🧠 Per-Student Bloom's Performance</h4>
-      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
-      <thead><tr style="background:var(--s2)">
-        <th style="padding:7px 10px;text-align:left;border:1px solid var(--b)">Student</th>
-        <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Overall</th>
-        ${presentBlooms.map(b=>`<th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">${BLOOM_ACR[b]||b}</th>`).join('')}
-        <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Weakest Level</th>
-      </tr></thead><tbody>`;
-      results.sort((a,b)=>(b.pct||0)-(a.pct||0)).forEach(r=>{
-        const am3=safeParseJson(r.answerMap)||{};
-        const sh3=safeParseJson(r.optionShuffles)||{};
-        // Per-student per-bloom score
-        const stuBloom={};
-        presentBlooms.forEach(b=>stuBloom[b]={c:0,t:0});
-        qs.forEach((q,qi)=>{
-          const bt=q.bloomTag;if(!bt||!stuBloom[bt])return;
-          const ua=am3[qi];if(ua===undefined||ua==='')return;
-          stuBloom[bt].t++;
-          let ok=false;
-          if(q.type==='tf'){ok=(ua===q.answer);}
-          else{const sh=sh3[qi];const oi=sh?sh[parseInt(ua)]:parseInt(ua);ok=(oi===q.correctIndex);}
-          if(ok)stuBloom[bt].c++;
-        });
-        const weakest=presentBlooms.filter(b=>stuBloom[b].t>0)
-          .sort((a,b2)=>(stuBloom[a].c/stuBloom[a].t)-(stuBloom[b2].c/stuBloom[b2].t))[0];
-        const weakestPct=weakest&&stuBloom[weakest].t?Math.round(stuBloom[weakest].c/stuBloom[weakest].t*100):null;
-        html+=`<tr>
-          <td style="padding:7px 10px;border:1px solid var(--b)"><div style="font-weight:600;font-size:12px">${esc(r.studentName||'')}</div><div style="font-size:10px;color:var(--m)">${esc(r.roll||'')}</div></td>
-          <td style="padding:7px 10px;border:1px solid var(--b);text-align:center;font-weight:700;color:${(r.pct||0)>=70?'var(--grn)':(r.pct||0)>=50?'var(--warn)':'var(--err)'}">${r.pct||0}%</td>
-          ${presentBlooms.map(b=>{
-            const bd=stuBloom[b];
-            if(!bd.t)return`<td style="padding:7px 10px;border:1px solid var(--b);text-align:center;color:var(--m)">—</td>`;
-            const pct2=Math.round(bd.c/bd.t*100);
-            const col=pct2>=70?'var(--grn)':pct2>=40?'var(--warn)':'var(--err)';
-            return`<td style="padding:7px 10px;border:1px solid var(--b);text-align:center;font-weight:600;color:${col}">${pct2}%<div style="font-size:9px;color:var(--m)">${bd.c}/${bd.t}</div></td>`;
-          }).join('')}
-          <td style="padding:7px 10px;border:1px solid var(--b);text-align:center;font-size:11px">
-            ${weakest?`<span class="chip chip-bloom">${BLOOM_ACR[weakest]||weakest}</span> <span style="color:var(--err)">${weakestPct}%</span>`:'—'}
-          </td>
-        </tr>`;
+  // Per-student Bloom breakdown
+  if(presentBlooms.length){
+    html+=`<div class="card an-sect"><h4>🧠 Per-Student Bloom's Performance</h4>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="background:var(--s2)">
+      <th style="padding:7px 10px;text-align:left;border:1px solid var(--b)">Student</th>
+      <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Overall</th>
+      ${presentBlooms.map(b=>`<th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">${BLOOM_ACR[b]||b}</th>`).join('')}
+      <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Weakest</th>
+    </tr></thead><tbody>`;
+    [...results].sort((a,b)=>(b.pct||0)-(a.pct||0)).forEach(r=>{
+      const am3=safeParseJson(r.answerMap)||{};
+      const sh3=safeParseJson(r.optionShuffles)||{};
+      const stuB={};
+      presentBlooms.forEach(b=>stuB[b]={c:0,t:0});
+      (qs||[]).forEach((q,qi)=>{
+        const bt=q.bloomTag;if(!bt||!stuB[bt])return;
+        const ua=am3[qi];if(ua===undefined||ua==='')return;
+        stuB[bt].t++;
+        let ok=false;
+        if(q.type==='tf'){ok=ua===q.answer;}
+        else{const sh=sh3[qi];const oi=sh?sh[parseInt(ua)]:parseInt(ua);ok=oi===q.correctIndex;}
+        if(ok)stuB[bt].c++;
       });
-      html+=`</tbody></table></div></div>`;
+      const weakest=presentBlooms.filter(b=>stuB[b].t>0).sort((a,b2)=>stuB[a].c/stuB[a].t-stuB[b2].c/stuB[b2].t)[0];
+      const weakPct=weakest&&stuB[weakest].t?Math.round(stuB[weakest].c/stuB[weakest].t*100):null;
+      html+=`<tr>
+        <td style="padding:7px 10px;border:1px solid var(--b)"><b style="font-size:12px">${esc(r.studentName||'')}</b><div style="font-size:10px;color:var(--m)">${esc(r.roll||'')}</div></td>
+        <td style="padding:7px 10px;border:1px solid var(--b);text-align:center;font-weight:700;color:${(r.pct||0)>=70?'var(--grn)':(r.pct||0)>=50?'var(--warn)':'var(--err)'}">${r.pct||0}%</td>
+        ${presentBlooms.map(b=>{
+          const bd=stuB[b];if(!bd.t)return`<td style="padding:7px 10px;border:1px solid var(--b);text-align:center;color:var(--m)">—</td>`;
+          const p2=Math.round(bd.c/bd.t*100);
+          return`<td style="padding:7px 10px;border:1px solid var(--b);text-align:center;font-weight:600;color:${p2>=70?'var(--grn)':p2>=40?'var(--warn)':'var(--err)'}">${p2}%<div style="font-size:9px;color:var(--m)">${bd.c}/${bd.t}</div></td>`;
+        }).join('')}
+        <td style="padding:7px 10px;border:1px solid var(--b);text-align:center">
+          ${weakest?`<span class="chip chip-bloom">${BLOOM_ACR[weakest]||weakest}</span> <span style="color:var(--err);font-weight:700">${weakPct}%</span>`:'—'}
+        </td>
+      </tr>`;
+    });
+    html+=`</tbody></table></div></div>`;
+  }
+
+  if(!hasConf&&!presentBlooms.length){
+    html='<div class="an-empty">No per-student breakdown available yet.<br><span style="font-size:12px;color:var(--m)">Confidence data is collected from sessions run with the confidence feature. Bloom\'s data requires questions to be tagged.</span></div>';
+  }
+  return html;
+}
+
+// ── TEACHING STRATEGY SUMMARY ────────────────────────────────
+function renderTeachingStrategy(an,results,qs){
+  const {perQ,blooms,confMatrix}=an;
+  const hasTimings=perQ.some(pq=>pq.avgTime!==null);
+  const hasBlooms=Object.keys(blooms).length>0;
+  const hasConf=confMatrix.sure.t+confMatrix.unsure.t+confMatrix.guessing.t>0;
+  const BLOOM_ORDER=['recall','comprehension','application','analysis','synthesis','evaluation'];
+  const insights=[];
+  const meanScore=results.length?Math.round(results.reduce((a,r)=>a+(r.pct||0),0)/results.length):0;
+  if(meanScore>=80) insights.push('Class mean <b>'+meanScore+'%</b> — excellent. Consider raising difficulty or introducing higher Bloom\'s levels next session.');
+  else if(meanScore>=60) insights.push('Class mean <b>'+meanScore+'%</b> — satisfactory. Targeted revision on weaker topics recommended before advancing.');
+  else insights.push('Class mean <b>'+meanScore+'%</b> — significant gaps present. Revisit foundational concepts and consider slower pacing.');
+  const weakDI=perQ.filter(pq=>pq.total>1&&pq.di<0.2);
+  if(weakDI.length) insights.push(`<b>${weakDI.length}</b> question${weakDI.length>1?'s':''} have low discrimination (D&lt;0.2) — may be ambiguous or testing trivial recall. Review wording.`);
+  if(hasBlooms){
+    const bloomGaps=BLOOM_ORDER.filter(b=>blooms[b]&&blooms[b].total>0&&Math.round(blooms[b].correct/blooms[b].total*100)<50);
+    if(bloomGaps.length) insights.push('Below 50% on <b>'+bloomGaps.map(b=>BLOOM_ACR[b]).join(', ')+'</b> — these cognitive levels need targeted teaching activities.');
+    const missing=BLOOM_ORDER.filter(b=>!blooms[b]);
+    if(missing.length) insights.push('No questions at <b>'+missing.map(b=>BLOOM_ACR[b]).join(', ')+'</b> levels — consider adding these for a balanced assessment next time.');
+  }
+  if(hasConf&&confMatrix.sure.t>0){
+    const sureAcc=Math.round(confMatrix.sure.c/confMatrix.sure.t*100);
+    if(sureAcc<65) insights.push(`Sure answers were correct only <b>${sureAcc}%</b> — class shows overconfidence. Metacognitive strategies (self-testing, think-alouds) recommended.`);
+    if(confMatrix.guessing.t){
+      const guessAcc=Math.round(confMatrix.guessing.c/confMatrix.guessing.t*100);
+      if(guessAcc>40) insights.push(`Wild Guess accuracy <b>${guessAcc}%</b> — above chance, suggesting implicit knowledge. Concept-mapping may surface this understanding.`);
     }
   }
-
-  // ── Section 8: Teaching Strategy Summary ──
-  html+=`<div class="card an-sect"><h4>📋 Teaching Strategy Summary</h4>`;
-  const insights=[];
-  // Overall difficulty
-  const meanScore=results.length?Math.round(results.reduce((a,r)=>a+(r.pct||0),0)/results.length):0;
-  if(meanScore>=80) insights.push('Class mean score is <b>'+meanScore+'%</b> — excellent overall performance. Consider introducing harder questions or higher Bloom\'s levels next session.');
-  else if(meanScore>=60) insights.push('Class mean score is <b>'+meanScore+'%</b> — satisfactory. Targeted revision on weaker topics recommended before advancing.');
-  else insights.push('Class mean score is <b>'+meanScore+'%</b> — significant learning gaps present. Reconsider pacing and revisit foundational concepts.');
-  // Weak discriminators
-  const weakDI=perQ.filter(pq=>pq.total>1&&pq.di<0.2);
-  if(weakDI.length) insights.push(`<b>${weakDI.length}</b> question${weakDI.length>1?'s':''} have a low discrimination index (D&lt;0.2) — these may be ambiguously worded or testing trivial recall. Review and revise for future sessions.`);
-  // Bloom gaps
-  if(hasBlooms){
-    const BLOOM_ORDER2=['recall','comprehension','application','analysis','synthesis','evaluation'];
-    const bloomGaps=BLOOM_ORDER2.filter(b=>blooms[b]&&blooms[b].total>0&&Math.round(blooms[b].correct/blooms[b].total*100)<50);
-    if(bloomGaps.length) insights.push('Students scored below 50% on <b>'+bloomGaps.map(b=>BLOOM_ACR[b]).join(', ')+'</b> level questions. These cognitive levels need targeted teaching activities.');
-    const missingBlooms=BLOOM_ORDER2.filter(b=>!blooms[b]);
-    if(missingBlooms.length) insights.push('No questions tagged at <b>'+missingBlooms.map(b=>BLOOM_ACR[b]).join(', ')+'</b> levels. Consider adding questions at these cognitive levels for a more balanced assessment.');
-  }
-  // Confidence overconfidence
-  if(hasConf&&confMatrix.sure.t>0){
-    const sureAcc2=Math.round(confMatrix.sure.c/confMatrix.sure.t*100);
-    if(sureAcc2<65) insights.push(`Students marked <b>Sure</b> but were correct only <b>${sureAcc2}%</b> of the time — class shows systematic overconfidence. Metacognitive strategies (think-alouds, self-testing) are recommended.`);
-    const guessAcc2=confMatrix.guessing.t?Math.round(confMatrix.guessing.c/confMatrix.guessing.t*100):0;
-    if(guessAcc2>40) insights.push(`Wild Guess accuracy is <b>${guessAcc2}%</b> (above chance) — students may have partial implicit knowledge they cannot consciously articulate. Concept-mapping exercises may help surface this.`);
-  }
-  // Time flags
   if(hasTimings){
     const fastWrong=perQ.filter(pq=>pq.avgTimeWrong!==null&&pq.avgTimeWrong<8&&pq.pctCorrect<50);
-    if(fastWrong.length) insights.push(`<b>${fastWrong.length}</b> question${fastWrong.length>1?'s':''} were answered quickly but incorrectly by most students — suggests impulsive answering. Encourage students to slow down and read carefully.`);
+    if(fastWrong.length) insights.push(`<b>${fastWrong.length}</b> question${fastWrong.length>1?'s':''} answered quickly but mostly incorrectly — encourage students to read questions carefully before selecting.`);
   }
-  if(!insights.length) insights.push('Not enough data to generate teaching strategy insights. Run more sessions with Bloom\'s tags and confidence ratings enabled for richer feedback.');
-  html+=insights.map(s=>`<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;padding:10px 12px;background:rgba(108,99,255,.06);border-radius:8px;line-height:1.6;font-size:13px"><span style="font-size:16px;flex-shrink:0">💡</span><div>${s}</div></div>`).join('');
-  html+=`</div>`;
-
-  return html;
+  if(!insights.length) insights.push('Not enough data for strategy insights. Add Bloom\'s tags and run more sessions with confidence rating for richer feedback.');
+  return `<div class="card an-sect"><h4>📋 Teaching Strategy Summary</h4>`
+    +insights.map(s=>`<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;padding:10px 12px;background:rgba(108,99,255,.06);border-radius:8px;line-height:1.6;font-size:13px"><span style="font-size:16px;flex-shrink:0">💡</span><div>${s}</div></div>`).join('')
+    +`</div>`;
 }
 
 /* ═══════════════════════════════════════════
