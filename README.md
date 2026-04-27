@@ -1,130 +1,138 @@
-# Agni Pariksha — Self Assessment Platform
+# ClassQuiz
 
-A browser-based quiz platform for classrooms. Single HTML file, hosted on GitHub Pages, powered by Firebase. No installation, no server, no app download required.
-
----
-
-## Quick Start
-
-1. Upload `index.html` to a GitHub repository
-2. Enable GitHub Pages (Settings → Pages → main branch)
-3. Open the URL → first-run setup screen appears → set app name and passwords
-4. Share the URL with teachers and students
+A browser-based quiz and assessment platform built for classroom use — no app installs required for students. Teachers manage everything from a single `index.html` file backed by Firebase Firestore. Students join via a shared link on any device.
 
 ---
 
-## How a Test Works
+## Purpose
 
-```
-Teacher creates questions  →  Curate & launch  →  Share QR code
-Students scan QR           →  Join lobby       →  Teacher clicks Go Live
-Students take quiz         →  Submit           →  Teacher views results
-```
+ClassQuiz is designed for educators who need a fast, no-friction way to conduct assessed quizzes with real psychometric feedback. The entire app is a self-contained HTML file. There is nothing to install, no server to maintain, and no per-student account setup.
 
 ---
 
-## For Teachers
+## How It Works
 
-### Creating a Question Paper
-1. **Create Question Paper** — enter Programme, Course ID, Subject, Unit/Topic
-2. Write questions (MCQ or True/False), set difficulty, save
-3. Add more from the **Master Question Bank** if needed
-4. **Curate Quiz** to review, edit, or remove questions
-5. Set time limit → **Launch Quiz** → share QR code or link
+The app operates in two modes determined by the URL:
 
-### During a Live Session
-- **Lobby** shows students joining in real time with their status
-- Click **Go Live** when all students are ready
-- **Answers tab** lets you unlock correct answers after submission
-- Auto-unlock triggers when all students submit
-- Green **🟢 Return to Session** button stays visible on all pages
+- **Teacher mode** — the plain URL (e.g. `https://yoursite/`). Requires a password login. All quiz management, analytics, and administration happens here.
+- **Student mode** — a URL with a session parameter (e.g. `?s=SESSION_ID`). Students open this link, enter their name, roll number, and email, and are placed in a lobby until the teacher starts the quiz.
 
-### Results
-- **Results Table** — all submissions, sortable by any column
-- **Leaderboard** — ranked by Performance Score
-- **Student Profiles** — aggregate average per student across all tests
-- Filter by Programme, Subject, Topic, Session ID, Teacher
-- Download CSV exports only what is currently filtered/visible
+All data — questions, sessions, results, lobby state — is stored in Firebase Firestore and synced in real time across devices.
 
 ---
 
-## For Students
+## Features
 
-1. Scan QR code or open the link on any browser
-2. Enter name, roll number, and email → Join
-3. Wait in lobby until teacher starts the session
-4. Read the instructions → tap **Start Exam**
-5. Answer questions — selected answers lock when you move on
-6. Submit when done — score appears immediately
-7. Correct answers shown when teacher unlocks them
+### For Teachers
 
-### Important Rules
-- Exam runs in **full screen** on mobile
-- Leaving the screen is detected as a **violation**
-- V1 = 10s warning · V2 = 7s warning · V3 = 4s then restart · V4+ = 2s restart
-- Violations reduce your **Performance Score** (not raw score)
-- If you lose connection, rejoin within **2 minutes** to resume from where you left off
+**Question Bank**
+- Add MCQ (multiple choice) and True/False questions
+- Tag difficulty (Easy / Medium / Hard), Programme, Course ID, Subject, Topic, and Test ID
+- Tag questions by Cognitive Level: Recall, Comprehension, Application, Analysis, Synthesis, Evaluation (Bloom's Taxonomy)
+- **AI Auto-Tag** — bulk-tag untagged questions using heuristic keyword analysis of question stems
+- **AI-assisted tagging** via the Anthropic Claude API for richer cognitive classification with rationale
+- Edit or delete individual questions; bulk-commit drafts in one action
+- Inline cognitive level editing directly from the question bank list
+
+**Curate Quiz**
+- Hand-pick questions from the Master Bank to assemble a paper
+- Save and reload papers as reusable templates
+- Set a per-student time limit and an optional open window — a countdown after which new students cannot join and the session auto-closes
+- Set a questions-per-student count — each student gets a different random selection from the pool
+- Download the question paper (with or without answer key) as a portable HTML file for offline use
+
+**Run Session**
+- Launch a live session and share the student join link or QR code
+- Monitor a real-time lobby showing who has joined (name, roll, status)
+- Kick individual students from the lobby
+- Lock or unlock answer review for students after the quiz ends
+- End the session manually or let it auto-close when the time window expires
+- **Session recovery** — if the page refreshes or the internet drops mid-session, the active session is automatically detected and restored on next login
+- A **Back to Active Session** button is always visible from any screen
+
+**Results & Analytics**
+- View all results filterable by Programme, Subject, Topic, Session ID, Teacher, and student name/roll
+- Sortable columns including score, performance score, violations, time taken
+- **Performance Score** — composite metric combining percentage correct, time efficiency, and integrity violations
+- **Leaderboard** ranked by performance score
+- **Student Profiles** — aggregated view per student across all sessions: average score, average performance, sessions count
+
+**Session Analytics — three views:**
+
+*Class Overview*
+- Mean score, well-answered questions count, weak discriminators count
+- Class performance by Cognitive Level with strongest/weakest level identification
+- Class confidence vs accuracy matrix (Sure / Not So Sure / Wild Guess vs correctness)
+
+*By Question*
+- Per-question difficulty (% correct) and discrimination index (D-index, top/bottom 27% method)
+- Distractor distribution — visual bar showing how students distributed across answer options
+- Average response time overall and for wrong answers only
+- Cognitive level and difficulty tags per question
+- D-index classification: Excellent (≥0.4) / Acceptable (≥0.2) / Weak / Review
+
+*By Student*
+- Per-student cognitive profile — score per cognitive level for every student in the session
+- Confidence calibration (Well-calibrated / Overconfident)
+- Cognitive snapshot descriptor per student (e.g. "Strong on Application · Weak on Analysis")
+- One-tap **Strategy** button with personalised revision guidance per student
+
+- **Cross-session cognitive speed chart** — timing norms per cognitive level across all sessions for a programme/subject
+- Clean Duplicates tool — keeps only the best result per student per session
+- Edit student details (name, roll, email) across all their results in one action
+
+**My Students**
+- Consolidated view of all students who have sat any quiz
+- Edit or delete individual students; bulk-delete selected students
+
+**Admin Office** *(admin account only)*
+- Manage registered teacher accounts — view, delete, reset passwords
+- View and manage all students across all teachers
+- Handle password reset requests
 
 ---
 
-## Performance Score
+### For Students
 
-```
-Performance = min(Score% + SpeedBonus, 100) × IntegrityMultiplier
-
-SpeedBonus = (min(allottedTime ÷ timeTaken, 2.0) − 1.0) × 10   →  max +10 pts
-
-IntegrityMultiplier:
-  0 violations = 1.00   1 = 0.95   2 = 0.90
-  3 = 0.80   4 = 0.75   5+ = 0.55
-```
-
-Speed gives a small bonus (max +10). Violations apply a multiplier penalty. Raw score is the foundation — speed and integrity only modify it.
+- Join via link — no account or app needed
+- Autocomplete suggestions on the login form (name, roll, email) sourced from existing lobby entries
+- Roll number automatically normalised to uppercase throughout
+- Quiz runs fullscreen; leaving the screen is detected and logged as a violation
+- **Confidence tagging** — mark each answer as Sure / Not So Sure / Wild Guess
+- Per-question countdown timer with a progress bar
+- Navigate between questions freely before submitting
+- Reconnect automatically if connection drops mid-quiz (within a 2-minute window)
+- Review correct answers after submission once the teacher unlocks them
+- **Download Answer Sheet** — portable HTML file with question, student's answer, correct answer, and score summary
 
 ---
 
-## Access Levels
+## Tech Stack
 
-| Role | Login |
+| Layer | Technology |
 |---|---|
-| **Admin** | Admin email + admin password |
-| **Teacher** | Any name + any email + shared teacher password |
-
-Admin can: add/edit/delete students, manage all results, configure settings.  
-Teachers can: create questions, run sessions, view results.
-
----
-
-## Firebase Setup
-
-1. Go to [firebase.google.com](https://firebase.google.com) → Create project
-2. Add a web app → copy `apiKey`, `projectId`, `appId`
-3. Firestore Database → Create → Start in test mode
-4. Paste credentials into `index.html` (search for `classquiz-bc2a2` to find the location)
+| Frontend | Single-file HTML/CSS/JS — no build step |
+| Database | Firebase Firestore (compat SDK v10) |
+| Auth | Firebase Anonymous Authentication |
+| AI tagging | Anthropic Claude API (optional) |
+| Hosting | GitHub Pages / Firebase Hosting |
+| Fonts | Google Fonts (Syne, DM Sans) |
 
 ---
 
-## Features at a Glance
+## First-Time Setup
 
-- MCQ and True/False questions
-- Question hierarchy: Programme → Course → Subject → Unit/Topic → Test ID
-- Master Question Bank shared across all teachers, filterable at all levels
-- Draft system — question papers save automatically, resume across sessions
-- QR code + shareable link for students
-- Fullscreen lock on mobile with escalating violation detection
-- Answer lock — selected answers cannot be changed after navigating away
-- Post-submission rejoin — students can return to view their results
-- Network disconnect rejoin — resume within 2 minutes from last question
-- Live lobby with student status (Waiting / Started / Submitted)
-- Auto-unlock answers when all students submit
-- Performance Score combining accuracy, speed, and integrity
-- Admin Office — manage teachers, students, and all data
-- Email typo detection on login (gmail.com, yahoo.com, curaj.ac.in, etc.)
-- Roll number normalised to uppercase — `2025msn05` = `2025MSN05`
+1. Create a Firebase project and enable Firestore and Anonymous Authentication
+2. Add your Firebase config (API key, Project ID, App ID) via the first-run wizard on first open
+3. Set Firestore security rules — `results` and `teachers` require `request.auth != null` for writes
+4. Deploy `index.html` to GitHub Pages or Firebase Hosting
+5. Open the URL — the app detects no existing setup and walks you through creating the master admin account
 
 ---
 
-## Browser Support
+## Security Notes
 
-Chrome, Safari, Firefox — desktop and mobile.  
-Fullscreen lock works on iPhone and Android.
+- All write operations require Firebase Anonymous Authentication (`request.auth != null`)
+- The `settings` and `teachers` collections are write-locked in Firestore rules
+- Quiz screens enforce fullscreen; exit events are recorded as integrity violations and factored into performance scores
+- Roll numbers are normalised to uppercase to prevent duplicate student records
