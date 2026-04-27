@@ -128,6 +128,8 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
   display:flex;align-items:center;gap:11px;transition:border-color .13s,background .13s}
 .opt.clickable{cursor:pointer}
 .opt.clickable:hover{border-color:var(--acc);background:rgba(108,99,255,.06)}
+.opt.clickable:focus{outline:none;border-color:var(--acc);background:rgba(108,99,255,.06)}
+.opt.clickable:active{transform:scale(.99);background:rgba(108,99,255,.12)}
 .opt.sel{border-color:var(--acc);background:rgba(108,99,255,.14)}
 .opt.correct{border-color:var(--grn)!important;background:rgba(62,207,142,.12)!important}
 .opt.incorrect{border-color:var(--err)!important;background:rgba(239,68,68,.10)!important}
@@ -4316,7 +4318,23 @@ function renderQ(){
       +'background:var(--s2);border-radius:8px">🔒 Review mode \u2014 answers cannot be changed</div>';
   }
 
-  // Next / Submit button embedded in question body \u2014 28px below last option
+  // Skipped-question submit nudge — shown when student is on an unattempted question
+  // and has already answered enough that submitting makes sense
+  const attempted=Object.keys(answers).filter(k=>answers[k]!=='').length;
+  if(!reviewMode && answers[curQ]===undefined && attempted>0){
+    html+=`<div style="margin-top:16px;padding:12px 16px;background:rgba(108,99,255,.08);
+      border:1px solid rgba(108,99,255,.25);border-radius:10px;text-align:center">
+      <div style="font-size:12px;color:var(--m);margin-bottom:8px">
+        You've answered <b>${attempted}</b> of <b>${quizQs.length}</b> questions.
+        This question is unattempted.
+      </div>
+      <button class="btn btn-grn" style="padding:8px 24px;font-size:13px" onclick="confSub()">
+        Submit Now ✓
+      </button>
+    </div>`;
+  }
+
+  // Next / Submit button embedded in question body — 28px below last option
   html+=`<div style="height:1px;background:var(--b);margin:28px 0 20px"></div>`;
   if(last){
     html+=`<button class="btn btn-grn w100" onclick="confSub()" style="padding:14px;font-size:14px">
@@ -4366,17 +4384,25 @@ window.jumpQ=function(i){
   if(!reviewMode&&questionStartTime) timingsMap[curQ]=Math.round((Date.now()-questionStartTime)/1000);
   if(answers[curQ]!==undefined) lockedAnswers[curQ]=true;
   curQ=i;renderQ();renderDots();
+  if(!reviewMode&&answers[curQ]!==undefined&&!lockedAnswers[curQ]&&confidenceMap[curQ]===undefined){
+    confReady=false;
+    setTimeout(()=>{confReady=true;},300);
+    el('ov-confidence').classList.add('on');
+  }
 };
 window.pickOpt=function(i){
   if(reviewMode)return;
   if(lockedAnswers[curQ])return;
   answers[curQ]=String(i);
-  // Show confidence overlay BEFORE re-rendering so touch events on overlay
-  // are not disrupted by a DOM rebuild beneath it
+  // Immediately highlight the clicked option visually on PC and mobile
+  // without a full re-render (which would disrupt touch events on the overlay)
+  document.querySelectorAll('.opt').forEach((btn,idx)=>{
+    btn.classList.toggle('sel', String(idx)===String(i));
+  });
+  // Show confidence overlay
   confReady=false;
   setTimeout(()=>{confReady=true;},260);
   el('ov-confidence').classList.add('on');
-  // Re-render dots only (lightweight) \u2014 full renderQ happens after overlay closes
   renderDots();
 };
 window.pickConfidence=function(level){
@@ -4406,6 +4432,13 @@ window.navQ=function(d){
   if(answers[curQ]!==undefined) lockedAnswers[curQ]=true;
   curQ=Math.max(0,Math.min(quizQs.length-1,curQ+d));
   renderQ();renderDots();
+  // If arriving at a question that has an answer but no confidence tag yet,
+  // re-show the overlay so the student can confirm before proceeding
+  if(!reviewMode&&answers[curQ]!==undefined&&!lockedAnswers[curQ]&&confidenceMap[curQ]===undefined){
+    confReady=false;
+    setTimeout(()=>{confReady=true;},300);
+    el('ov-confidence').classList.add('on');
+  }
 };
 
 /* ═══════════════════════════════════════════
@@ -4491,28 +4524,25 @@ window.finishQuiz=async function(){
     ts:Date.now()
   };
 
-  // STRICTLY IDEMPOTENT SAVING - Prevents duplicates
-  if(fbReady && stuRoll && stuRoll.trim()){
-    try{
-      const _safeRoll = stuRoll.replace(/[^a-zA-Z0-9]/g,'_');
-      const _safeSid  = (qParams?.sessionId || 'x').replace(/[^a-zA-Z0-9]/g,'_');
-      const docId = _safeRoll + '__' + _safeSid;
-
-      // Delete any previous result first
-      try {
-        await _fb.deleteDoc(_fb.doc(db, 'results', docId));
-      } catch(e) {}
-
-      await _fb.setDoc(_fb.doc(db, 'results', docId), rec);
-
-      if(qParams?.sessionId){
-        const _lobbyDocId=stuRoll.replace(/[^a-zA-Z0-9]/g,'_');
-        _fb.updateDoc(_fb.doc(db,'lobby_'+qParams.sessionId,_lobbyDocId),{status:'submitted'}).catch(()=>{});
-      }
-    }catch(e){console.warn('Save result:',e);}
-  }
-
+  // Show result IMMEDIATELY — do not wait for Firestore save
   showResult(rec);
+
+  // Save to Firestore in background
+  if(fbReady && stuRoll && stuRoll.trim()){
+    (async()=>{
+      try{
+        const _safeRoll = stuRoll.replace(/[^a-zA-Z0-9]/g,'_');
+        const _safeSid  = (qParams?.sessionId || 'x').replace(/[^a-zA-Z0-9]/g,'_');
+        const docId = _safeRoll + '__' + _safeSid;
+        try{ await _fb.deleteDoc(_fb.doc(db, 'results', docId)); }catch(e){}
+        await _fb.setDoc(_fb.doc(db, 'results', docId), rec);
+        if(qParams?.sessionId){
+          const _lobbyDocId=stuRoll.replace(/[^a-zA-Z0-9]/g,'_');
+          _fb.updateDoc(_fb.doc(db,'lobby_'+qParams.sessionId,_lobbyDocId),{status:'submitted'}).catch(()=>{});
+        }
+      }catch(e){ console.warn('Save result:', e); }
+    })();
+  }
 };
 
 /* ═══════════════════════════════════════════
@@ -5755,13 +5785,24 @@ function renderSessionAnalytics(){
     _analyticsQs=null;_analyticsResults=null;
     return;
   }
-  // Match results to the selected session ID \u2014 exact matches only.
-  // Fuzzy / base-name matching was removed because it incorrectly pulled results
-  // from other sessions that share the same course+topic prefix.
-  const sessionResults=allResults.filter(r=>{
-    if(r.sessionDisplayId===sid) return true;   // exact display ID match
-    if(r.sessionId===sid) return true;           // raw Firestore doc ID match
-    if(r.sessionFileId===sid) return true;       // file ID match
+  // Apply all active filters first, then narrow to session ID.
+  // This ensures teacher/prog/subj/year/month filters are respected.
+  const prog=gv('rf-prog'),subj=gv('rf-subj'),topic=gv('rf-topic');
+  const teacher=gv('rf-teacher'),year=gv('rf-year'),month=gv('rf-month');
+  const filteredPool=allResults.filter(r=>{
+    if(prog&&r.programmeName!==prog) return false;
+    if(subj&&r.courseId!==subj) return false;
+    if(topic&&r.topicName!==topic) return false;
+    if(teacher&&r.teacherName!==teacher) return false;
+    if(year&&new Date(r.ts||0).getFullYear()!==parseInt(year)) return false;
+    if(month&&new Date(r.ts||0).getMonth()+1!==parseInt(month)) return false;
+    return true;
+  });
+  // Match filtered pool to the selected session ID — exact matches only.
+  const sessionResults=filteredPool.filter(r=>{
+    if(r.sessionDisplayId===sid) return true;
+    if(r.sessionId===sid) return true;
+    if(r.sessionFileId===sid) return true;
     return false;
   });
   if(!sessionResults.length){
@@ -6216,7 +6257,8 @@ function renderAnalyticsStudent(an,nStudents,results,qs){
         const sc={sure:{c:0,t:0},unsure:{c:0,t:0},guessing:{c:0,t:0}};
         Object.entries(cm).forEach(([qi2,conf])=>{
           if(!sc[conf])return;sc[conf].t++;
-          const q=(qs||[])[parseInt(qi2)];if(!q)return;
+          // Use student's own quizQs to map index → question
+          const q=(rQs||qs||[])[parseInt(qi2)];if(!q)return;
           const ua2=am[qi2]!==undefined?am[qi2]:am[String(qi2)];if(ua2===undefined||ua2==='')return;
           let ok=false;
           if(q.type==='tf'){ok=ua2===q.answer;}
@@ -6323,9 +6365,10 @@ function renderAnalyticsStudent(an,nStudents,results,qs){
         return;
       }
       const sc={sure:{c:0,t:0},unsure:{c:0,t:0},guessing:{c:0,t:0}};
+      const rQs2=safeParseJson(r.quizQs)||qs;
       Object.entries(cm2).forEach(([qi,conf])=>{
         if(!sc[conf])return;sc[conf].t++;
-        const q=(qs||[])[parseInt(qi)];if(!q)return;
+        const q=(rQs2||[])[parseInt(qi)];if(!q)return;
         const ua=am2[qi]!==undefined?am2[qi]:am2[String(qi)];if(ua===undefined||ua==='')return;
         let ok=false;
         if(q.type==='tf'){ok=ua===q.answer;}
