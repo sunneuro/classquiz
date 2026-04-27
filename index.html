@@ -6289,7 +6289,7 @@ function renderAnalyticsStudent(an,nStudents,results,qs){
           const bd=stuBloom[b];
           if(!bd.t)return`<td style="padding:7px 10px;border:1px solid var(--b);text-align:center;color:var(--m)">—</td>`;
           const p2=Math.round(bd.c/bd.t*100);
-          return`<td style="padding:7px 10px;border:1px solid var(--b);text-align:center;font-weight:600;color:${p2>=70?'var(--grn)':p2>=40?'var(--warn)':'var(--err)}">
+          return`<td style="padding:7px 10px;border:1px solid var(--b);text-align:center;font-weight:600;color:${p2>=70?'var(--grn)':p2>=40?'var(--warn)':'var(--err)'}">
             ${p2}%<div style="font-size:9px;color:var(--m)">${bd.c}/${bd.t}</div></td>`;
         }).join('')}
         ${hasConf?`<td style="padding:7px 10px;border:1px solid var(--b);text-align:center">${confCell}</td>`:''}
