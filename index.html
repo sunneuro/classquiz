@@ -140,8 +140,12 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 .opt.incorrect .oltr{background:var(--err);border-color:var(--err);color:#fff}
 .opt.reveal .oltr{background:var(--grn);border-color:var(--grn);color:#fff}
 .qnav{display:flex;gap:9px;padding:8px 16px 20px;max-width:640px;margin:0 auto;width:100%}
-.q-dots{display:flex;flex-wrap:wrap;gap:5px;padding:8px 16px;max-width:640px;margin:0 auto;width:100%}
+.q-dots{display:flex;flex-wrap:nowrap;gap:5px;padding:6px 12px;width:100%;
+  overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;
+  scrollbar-width:none;box-sizing:border-box;align-items:center}
+.q-dots::-webkit-scrollbar{display:none}
 .qdot{width:28px;height:28px;border-radius:6px;border:1px solid var(--b);background:var(--s2);
+  flex-shrink:0;scroll-snap-align:center;
   display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;
   font-family:var(--fh);color:var(--m);cursor:pointer;transition:all .13s}
 .qdot.answered{background:rgba(108,99,255,.2);border-color:var(--acc);color:#a5a0ff}
@@ -1268,7 +1272,15 @@ tr:hover td{background:var(--s2)}
       <span class="hc hc-v" id="hvio" style="display:none"></span>
     </div>
   </div>
-  <div class="q-dots" id="q-dots"></div>
+  <div style="display:flex;align-items:center;gap:6px;padding:0 12px 0 4px;min-height:40px">
+    <div class="q-dots" id="q-dots" style="flex:1;min-width:0"></div>
+    <span id="q-counter" style="font-size:11px;font-weight:700;color:var(--m);white-space:nowrap;padding-left:4px;flex-shrink:0"></span>
+  </div>
+  <div id="q-unanswered-warn" style="display:none;margin:0 12px 6px;padding:7px 12px;
+    background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);
+    border-radius:8px;font-size:11px;color:#fbbf24;text-align:center;line-height:1.5">
+    ⚠️ Some questions are unanswered — scroll the question strip above to try them.
+  </div>
   <div class="qbody" id="qbody"></div>
   <!-- Hidden nav controls referenced by renderQ() -->
   <button id="btn-prv" style="display:none" onclick="navQ(-1)"></button>
@@ -4288,9 +4300,8 @@ function renderQ(){
         +_lockMsg
         +'</div>';
     } else if(answers[curQ]!==undefined){
-      html+='<div style="margin-top:8px;text-align:center;font-size:11px;color:var(--m2)">'
-        +'Tap another option to change · answer locks when you move to next question'
-        +'</div>';
+      // Answer selected but overlay not yet confirmed — no hint needed,
+      // confidence overlay will appear immediately after selection
     }
   }
 
@@ -4325,10 +4336,24 @@ function renderQ(){
 }
 
 function renderDots(){
-  el('q-dots').innerHTML=quizQs.map((_,i)=>{
+  const dotsEl=el('q-dots');
+  dotsEl.innerHTML=quizQs.map((_,i)=>{
     const cls=i===curQ?'qdot current':(answers[i]!==undefined)?'qdot answered':'qdot';
-    return`<div class="${cls}" onclick="jumpQ(${i})">${i+1}</div>`;
+    return`<div class="${cls}" onclick="jumpQ(${i})" id="qdot-${i}">${i+1}</div>`;
   }).join('');
+  // Update Q#/total counter
+  const ctr=el('q-counter');
+  if(ctr) ctr.textContent=`Q${curQ+1}/${quizQs.length}`;
+  // Scroll current dot into view
+  const curDot=el('qdot-'+curQ);
+  if(curDot) curDot.scrollIntoView({behavior:'smooth',block:'nearest',inline:'center'});
+  // Show unanswered warning only on last question
+  const warn=el('q-unanswered-warn');
+  if(warn){
+    const isLast=curQ===quizQs.length-1;
+    const hasUnanswered=quizQs.some((_,i)=>answers[i]===undefined);
+    warn.style.display=(isLast&&hasUnanswered&&!reviewMode)?'block':'none';
+  }
 }
 
 window.jumpQ=function(i){
@@ -4340,11 +4365,13 @@ window.pickOpt=function(i){
   if(reviewMode)return;
   if(lockedAnswers[curQ])return;
   answers[curQ]=String(i);
-  renderQ();renderDots();
-  // Show confidence overlay after 260ms gate (prevents accidental double-tap)
+  // Show confidence overlay BEFORE re-rendering so touch events on overlay
+  // are not disrupted by a DOM rebuild beneath it
   confReady=false;
   setTimeout(()=>{confReady=true;},260);
   el('ov-confidence').classList.add('on');
+  // Re-render dots only (lightweight) — full renderQ happens after overlay closes
+  renderDots();
 };
 window.pickConfidence=function(level){
   if(!confReady)return;
@@ -4355,10 +4382,9 @@ window.pickConfidence=function(level){
   if(questionStartTime) timingsMap[curQ]=Math.round((Date.now()-questionStartTime)/1000);
   // Auto-advance to next question, or stay on last (submit button visible)
   if(curQ<quizQs.length-1){
-    curQ++;renderQ();renderDots();
-  } else {
-    renderQ();renderDots();
+    curQ++;
   }
+  renderQ();renderDots();
 };
 window.redoAnswer=function(){
   // Close overlay without recording confidence, clear the answer so student can re-select
@@ -4791,7 +4817,8 @@ window.cascadeResultFilters=function(level){
   // Populate Test ID, Teacher, Session (filtered by prog+subj+topic)
   const testids=[...new Set(pool.map(r=>r.testLabel).filter(Boolean))].sort();
   const teachers=[...new Set(pool.map(r=>r.teacherName).filter(Boolean))].sort();
-  const sessions=[...new Set(pool.map(r=>r.sessionDisplayId||'').filter(Boolean))].sort().reverse();
+  // Collect unique session identifiers — prefer sessionDisplayId, fall back to sessionId
+  const sessions=[...new Set(pool.map(r=>r.sessionDisplayId||r.sessionId||'').filter(Boolean))].sort().reverse();
   const years=[...new Set(pool.map(r=>r.ts?new Date(r.ts).getFullYear():'').filter(Boolean))].sort().reverse();
   fillSelect('rf-testid',testids);
   fillSelect('rf-teacher',teachers);
@@ -5524,18 +5551,27 @@ function updateTagModeCount(){
 window.saveTagBatch=async function(){
   const ids=Object.keys(tagModeChanges);
   if(!ids.length){alert('No tags changed yet.');return;}
+  // Only save tags for questions that are currently selected in the bank view
+  const toSave = bankSel.size > 0
+    ? ids.filter(id => bankSel.has(id))
+    : ids; // if nothing selected, fall back to all changed (safety net)
+  if(!toSave.length){
+    alert('None of the changed questions are currently selected.\nSelect the questions you want to save tags for first, or use Select All.');
+    return;
+  }
   const btn=document.querySelector('.tag-mode-bar .btn[onclick="saveTagBatch()"]');
   if(btn){btn.textContent='Saving…';btn.disabled=true;}
   try{
     const batch=_fb.writeBatch(db);
-    ids.forEach(id=>{
+    toSave.forEach(id=>{
       const q=allQuestions.find(x=>x.id===id);
       if(q){q.bloomTag=tagModeChanges[id];}
       batch.update(_fb.doc(db,'questions',id),{bloomTag:tagModeChanges[id]});
     });
     await batch.commit();
-    tagModeChanges={};
-    alert(`✅ ${ids.length} question${ids.length>1?'s':''} tagged successfully.`);
+    // Only remove saved ids from tagModeChanges, leave unsaved ones pending
+    toSave.forEach(id=>delete tagModeChanges[id]);
+    alert(`✅ ${toSave.length} selected question${toSave.length>1?'s':''} tagged successfully.`);
     renderBank();updateTagModeCount();
   }catch(e){alert('Save failed: '+e.message);}
   if(btn){btn.textContent='💾 Save Tags';btn.disabled=false;}
@@ -5544,7 +5580,8 @@ window.saveTagBatch=async function(){
 window.aiAutoTag=function(){
   const visible=allQuestions.filter(q=>!q.draft&&bankFilterFn(q)&&!q.bloomTag);
   if(!visible.length){alert('All visible questions already have Bloom\'s tags.');return;}
-  // Heuristic classification based on question stem keywords
+  // Heuristic classification using full item context:
+  // stem + options + correct answer, not just question text
   const rules=[
     {tag:'evaluation', patterns:[/evaluat|critic|justify|assess|judge|argue|defend|recommend|prioriti/i]},
     {tag:'synthesis',  patterns:[/design|creat|formulat|construct|develop|plan|produc|combin|invent|hypothes/i]},
@@ -5553,22 +5590,39 @@ window.aiAutoTag=function(){
     {tag:'comprehension',patterns:[/explain|describ|summar|interpret|defin.*in.*own|what.*mean|paraphras|illustrat|classify/i]},
     {tag:'recall',     patterns:[/what is|which is|name|list|identif|state|when was|where is|who is|define|what are/i]},
   ];
+
+  // Build full item text: stem + all options + correct answer text
+  function buildItemText(q){
+    let text = (q.text||'').toLowerCase();
+    if(q.type==='mcq'&&q.options?.length){
+      // Append all options
+      text += ' ' + q.options.join(' ').toLowerCase();
+      // Weight the correct answer more heavily by appending it twice
+      const correct = q.options[q.correctIndex||0]||'';
+      text += ' ' + correct.toLowerCase() + ' ' + correct.toLowerCase();
+    } else if(q.type==='tf'){
+      text += ' ' + (q.answer||'').toLowerCase();
+    }
+    return text;
+  }
+
   let tagged=0;
   visible.forEach(q=>{
-    const text=(q.text||'').toLowerCase();
+    const itemText = buildItemText(q);
     for(const rule of rules){
-      if(rule.patterns.some(p=>p.test(text))){
+      if(rule.patterns.some(p=>p.test(itemText))){
         tagModeChanges[q.id]=rule.tag;
         tagged++;
-        break;
+        return;
       }
     }
     // Default unmatched to recall
-    if(!tagModeChanges[q.id]){ tagModeChanges[q.id]='recall'; tagged++; }
+    tagModeChanges[q.id]='recall';
+    tagged++;
   });
   renderBank();
   updateTagModeCount();
-  alert('✨ Suggested Bloom\'s tags for '+tagged+' questions based on question wording. Review and adjust before saving.');
+  alert('✨ Suggested Bloom\'s tags for '+tagged+' questions using full item analysis (stem + options + correct answer). Review and adjust before saving.');
 };
 
 /* ═══════════════════════════════════════════
@@ -5681,7 +5735,27 @@ function renderSessionAnalytics(){
     _analyticsQs=null;_analyticsResults=null;
     return;
   }
-  const sessionResults=allResults.filter(r=>r.sessionDisplayId===sid);
+  // Match results to the selected session ID.
+  // Strategy: exact match first, then sessionId match, then base-name fuzzy match
+  // (handles cases where question paper was curated from an older draft carrying a
+  //  different timestamp — e.g. "NS408_WB_25Apr" vs "NS408_WB_26Apr")
+  function stripTimestamp(s){
+    // Remove common date/time suffixes: _25Apr2026_05:46PM, _26April2026_11:00PM etc.
+    return (s||'').replace(/_\d{1,2}[A-Za-z]+\d{4}_\d{1,2}[:h]\d{2}[APM]*/g,'')
+                  .replace(/_\d{4}-\d{2}-\d{2}.*/,'')
+                  .replace(/_\d{8}.*/,'')
+                  .toLowerCase().trim();
+  }
+  const sidBase=stripTimestamp(sid);
+  const sessionResults=allResults.filter(r=>{
+    if(r.sessionDisplayId===sid) return true;        // exact display ID match
+    if(r.sessionId===sid) return true;               // raw Firestore doc ID match
+    if(r.sessionFileId===sid) return true;           // file ID match
+    // Fuzzy: strip timestamps and compare base names
+    const rBase=stripTimestamp(r.sessionDisplayId||r.sessionId||'');
+    if(sidBase&&rBase&&rBase===sidBase) return true;
+    return false;
+  });
   if(!sessionResults.length){
     body.innerHTML='<div class="an-empty">No student results found for this session yet.</div>';
     _analyticsQs=null;_analyticsResults=null;
@@ -5866,31 +5940,83 @@ function renderAnalyticsClass(an,nStudents,results,qs){
     html+=`<div style="font-size:10px;color:var(--m);margin-top:6px">■ Easy=green ■ Medium=amber ■ Hard=red · ticks=Q1/Q3</div></div>`;
   }
 
-  // Bloom breakdown
-  if(hasBlooms){
-    const BLOOM_ORDER=['recall','comprehension','application','analysis','synthesis','evaluation'];
-    html+=`<div class="card an-sect"><h4>🧠 Class Performance by Cognitive Parameters</h4>`;
-    BLOOM_ORDER.filter(b=>blooms[b]).forEach(b=>{
-      const bd=blooms[b];
-      const pct=bd.total?Math.round(bd.correct/bd.total*100):0;
-      html+=`<div class="bloom-row">
-        <div class="bloom-lbl">${BLOOM_ACR[b]||b}</div>
-        <div class="bloom-track"><div class="bloom-fill" style="width:${pct}%"></div></div>
-        <div class="bloom-pct">${pct}%</div>
-        <div style="font-size:10px;color:var(--m);margin-left:6px">${bd.correct}/${bd.total} correct</div>
-      </div>`;
-    });
-    const allBlooms=BLOOM_ORDER.filter(b=>blooms[b]&&blooms[b].total>0);
-    const weakB=allBlooms.sort((a,b2)=>blooms[a].correct/blooms[a].total-blooms[b2].correct/blooms[b2].total)[0];
-    const strongB=allBlooms.sort((a,b2)=>blooms[b2].correct/blooms[b2].total-blooms[a].correct/blooms[a].total)[0];
-    if(weakB&&strongB&&weakB!==strongB){
-      const wp=Math.round(blooms[weakB].correct/blooms[weakB].total*100);
-      const sp=Math.round(blooms[strongB].correct/blooms[strongB].total*100);
-      html+=`<div style="margin-top:10px;padding:8px 10px;background:rgba(108,99,255,.07);border-radius:8px;font-size:12px;color:var(--txt);line-height:1.6">
-        Strongest: <b>${strongB} (${sp}%)</b> · Weakest: <b>${weakB} (${wp}%)</b>. ${wp<50?'Consider revisiting '+weakB+'-level topics.':'Balanced cognitive coverage.'}
-      </div>`;
+  // ── Merged Cognitive Performance panel (accuracy + speed side by side) ──
+  const bloomTimingStats = computeBloomTimingStats(results);
+  const BLOOM_ORDER_FULL=['recall','comprehension','application','analysis','synthesis','evaluation'];
+  // Show a row for every level that has either accuracy data OR timing data
+  const activeBloomLevels = BLOOM_ORDER_FULL.filter(b=>
+    (blooms[b]&&blooms[b].total>0) || (bloomTimingStats[b]&&bloomTimingStats[b].n>0)
+  );
+
+  if(activeBloomLevels.length>0){
+    const maxMed = Math.max(...activeBloomLevels.map(b=>(bloomTimingStats[b]&&bloomTimingStats[b].med)||0),1);
+    // Insight line
+    const accuracyLevels = activeBloomLevels.filter(b=>blooms[b]&&blooms[b].total>0);
+    let insightHtml='';
+    if(accuracyLevels.length>=2){
+      const weakB=accuracyLevels.slice().sort((a,b2)=>blooms[a].correct/blooms[a].total-blooms[b2].correct/blooms[b2].total)[0];
+      const strongB=accuracyLevels.slice().sort((a,b2)=>blooms[b2].correct/blooms[b2].total-blooms[a].correct/blooms[a].total)[0];
+      if(weakB!==strongB){
+        const wp=Math.round(blooms[weakB].correct/blooms[weakB].total*100);
+        const sp=Math.round(blooms[strongB].correct/blooms[strongB].total*100);
+        insightHtml=`<div style="margin-top:10px;padding:8px 10px;background:rgba(108,99,255,.07);border-radius:8px;font-size:12px;color:var(--txt);line-height:1.6">
+          Strongest: <b>${BLOOM_ACR[strongB]||strongB} (${sp}%)</b> · Weakest: <b>${BLOOM_ACR[weakB]||weakB} (${wp}%)</b>.
+          ${wp<50?'Consider revisiting '+weakB+'-level topics.':'Balanced cognitive coverage.'}
+        </div>`;
+      }
     }
-    html+=`</div>`;
+    html+=`<div class="card an-sect">
+      <h4>🧠 Cognitive Performance of Class</h4>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid var(--b);border-radius:8px;overflow:hidden;margin-top:10px">
+        <!-- Column 1: Accuracy -->
+        <div style="border-right:1px solid var(--b)">
+          <div style="padding:8px 12px;background:var(--s2);font-size:11px;font-weight:700;color:var(--m);text-align:center;letter-spacing:.5px">✅ % CORRECT BY LEVEL</div>
+          ${activeBloomLevels.map(b=>{
+            const bd=blooms[b];
+            const pct=bd&&bd.total?Math.round(bd.correct/bd.total*100):null;
+            const col=pct===null?'var(--m)':pct>=70?'var(--grn)':pct>=40?'var(--warn)':'var(--err)';
+            const barW=pct!==null?pct:0;
+            return`<div style="padding:8px 12px;border-top:1px solid var(--b);display:flex;align-items:center;gap:8px">
+              <span class="chip chip-bloom" style="font-size:10px;min-width:48px;text-align:center">${BLOOM_ACR[b]||b}</span>
+              <div style="flex:1;height:10px;background:var(--s2);border-radius:4px;overflow:hidden">
+                <div style="width:${barW}%;height:100%;background:${col};border-radius:4px;transition:width .3s"></div>
+              </div>
+              <span style="font-size:12px;font-weight:700;color:${col};min-width:36px;text-align:right">
+                ${pct!==null?pct+'%':'—'}
+              </span>
+              ${bd&&bd.total?`<span style="font-size:10px;color:var(--m);min-width:40px">${bd.correct}/${bd.total}</span>`:'<span style="font-size:10px;color:var(--m);min-width:40px">—</span>'}
+            </div>`;
+          }).join('')}
+        </div>
+        <!-- Column 2: Speed -->
+        <div>
+          <div style="padding:8px 12px;background:var(--s2);font-size:11px;font-weight:700;color:var(--m);text-align:center;letter-spacing:.5px">⏱ MEDIAN TIME BY LEVEL</div>
+          ${activeBloomLevels.map(b=>{
+            const s=bloomTimingStats[b];
+            const formula=BLOOM_SECS[b]||60;
+            const med=s&&s.n>0?s.med:null;
+            const barW=med!==null?Math.round(med/maxMed*100):0;
+            const col=med===null?'var(--m)':med>formula*1.2?'#fbbf24':med<formula*0.8?'#3ecf8e':'#818cf8';
+            const cmp=med===null?'—':med>formula*1.2?'▲ slow':med<formula*0.8?'▼ fast':'≈ on target';
+            const cmpCol=med===null?'var(--m)':med>formula*1.2?'var(--warn)':med<formula*0.8?'var(--grn)':'var(--m)';
+            return`<div style="padding:8px 12px;border-top:1px solid var(--b);display:flex;align-items:center;gap:8px">
+              <span class="chip chip-bloom" style="font-size:10px;min-width:48px;text-align:center">${BLOOM_ACR[b]||b}</span>
+              <div style="flex:1;height:10px;background:var(--s2);border-radius:4px;overflow:hidden">
+                ${med!==null?`<div style="width:${barW}%;height:100%;background:${col};border-radius:4px;transition:width .3s"></div>`:''}
+              </div>
+              <span style="font-size:12px;font-weight:700;color:${col};min-width:36px;text-align:right">
+                ${med!==null?med+'s':'—'}
+              </span>
+              <span style="font-size:10px;color:${cmpCol};min-width:54px">${cmp}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--m);margin-top:6px;display:flex;gap:14px;flex-wrap:wrap">
+        <span>Speed: <span style="color:#3ecf8e">■</span> faster than norm &nbsp;<span style="color:#fbbf24">■</span> slower &nbsp;<span style="color:#818cf8">■</span> on target</span>
+      </div>
+      ${insightHtml}
+    </div>`; 
   }
 
   // Class confidence matrix
@@ -5913,8 +6039,7 @@ function renderAnalyticsClass(an,nStudents,results,qs){
     html+=`</tbody></table></div>`;
   }
 
-  // Teaching strategy summary + Bloom cognitive speed
-  html+=renderBloomSpeedChart(results,'This Session');
+  // Teaching strategy summary
   html+=renderTeachingStrategy(an,results,qs);
   return html;
 }
@@ -5923,19 +6048,51 @@ function renderAnalyticsClass(an,nStudents,results,qs){
 function renderAnalyticsQuestion(an,nStudents,results,qs){
   const {perQ}=an;
   const hasTimings=perQ.some(pq=>pq.avgTime!==null);
+
+  // Apply current sort
+  const sc=_qTableSort.col, sd=_qTableSort.dir;
+  let sortedPerQ=[...perQ.map((pq,i)=>({...pq,_origIdx:i}))];
+  if(sc){
+    sortedPerQ.sort((a,b)=>{
+      let va,vb;
+      if(sc==='bloom'){va=a.bloomTag||'';vb=b.bloomTag||'';}
+      else if(sc==='diff'){
+        const order={easy:0,medium:1,hard:2};
+        va=order[a.difficulty]??3;vb=order[b.difficulty]??3;
+      }
+      else if(sc==='pct'){va=a.pctCorrect;vb=b.pctCorrect;}
+      else if(sc==='correct'){va=a.correct;vb=b.correct;}
+      else if(sc==='di'){va=a.total<2?-99:a.di;vb=b.total<2?-99:b.di;}
+      else if(sc==='time'){va=a.avgTime??999;vb=b.avgTime??999;}
+      else{va=a._origIdx;vb=b._origIdx;}
+      if(typeof va==='string') return sd*va.localeCompare(vb);
+      return sd*(va-vb);
+    });
+  }
+
+  function thSort(col,label){
+    const active=sc===col;
+    const arrow=active?(sd===1?'↑':'↓'):'↕';
+    const style=active?'color:var(--acc);font-weight:700':'';
+    return`<th style="padding:7px 10px;text-align:center;border:1px solid var(--b);
+      cursor:pointer;user-select:none;white-space:nowrap;${style}"
+      onclick="sortQTable('${col}')">${label} <span style="font-size:10px">${arrow}</span></th>`;
+  }
+
   let html=`<div class="card an-sect"><h4>📊 Answer Distribution &amp; Discrimination Index</h4>
   <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
   <thead><tr style="background:var(--s2)">
     <th style="padding:7px 10px;text-align:left;border:1px solid var(--b)">Q#</th>
     <th style="padding:7px 10px;text-align:left;border:1px solid var(--b)">Question</th>
-    <th style="padding:7px 10px;text-align:center;border:1px solid var(--b);cursor:pointer" onclick="sortQTable('bloom')">Cognitive Level</th>
-    <th style="padding:7px 10px;text-align:center;border:1px solid var(--b);cursor:pointer" onclick="sortQTable('diff')">Difficulty Level</th>
-    <th style="padding:7px 10px;text-align:center;border:1px solid var(--b);cursor:pointer" onclick="sortQTable('pct')">% Correct</th>
+    ${thSort('bloom','Cognitive Level')}
+    ${thSort('diff','Difficulty')}
+    ${thSort('pct','% Correct')}
     <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Answer Distribution</th>
-    <th style="padding:7px 10px;text-align:center;border:1px solid var(--b);cursor:pointer" onclick="sortQTable('di')">Discrimination Index</th>
-    ${hasTimings?'<th style="padding:7px 10px;text-align:center;border:1px solid var(--b);cursor:pointer" onclick="sortQTable(\'time\')">Avg Time / Wrong</th>':''}
+    ${thSort('di','Discrimination Index')}
+    ${hasTimings?thSort('time','Avg Time / Wrong'):''}
   </tr></thead><tbody>`;
-  perQ.forEach((pq,i)=>{
+
+  sortedPerQ.forEach((pq,i)=>{
     const diChip=pq.total<2?'<span style="color:var(--m);font-size:10px">n/a</span>':
       pq.di>=0.4?`<span class="di-chip di-ex">D=${pq.di}</span>`:
       pq.di>=0.2?`<span class="di-chip di-ok">D=${pq.di}</span>`:
@@ -5953,7 +6110,7 @@ function renderAnalyticsQuestion(an,nStudents,results,qs){
     const bloomTd=pq.bloomTag&&BLOOM_ACR[pq.bloomTag]?`<span class="chip chip-bloom" style="font-size:10px">${BLOOM_ACR[pq.bloomTag]}</span>`:'<span style="color:var(--warn);font-size:10px">Untagged</span>';
     const diffTd=pq.difficulty?`<span class="chip chip-${pq.difficulty}" style="font-size:10px">${pq.difficulty}</span>`:'<span style="color:var(--warn);font-size:10px">Untagged</span>';
     html+=`<tr>
-      <td style="padding:7px 10px;border:1px solid var(--b);font-weight:700;color:var(--acc)">Q${i+1}</td>
+      <td style="padding:7px 10px;border:1px solid var(--b);font-weight:700;color:var(--acc)">Q${pq._origIdx+1}</td>
       <td style="padding:7px 10px;border:1px solid var(--b);max-width:200px;font-size:11px">${esc(pq.text.slice(0,80))}${pq.text.length>80?'…':''}</td>
       <td style="padding:7px 10px;border:1px solid var(--b);text-align:center">${bloomTd}</td>
       <td style="padding:7px 10px;border:1px solid var(--b);text-align:center">${diffTd}</td>
