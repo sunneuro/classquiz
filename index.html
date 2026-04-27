@@ -17,8 +17,9 @@
   --r:12px;--fh:'Syne',sans-serif;--fb:'DM Sans',sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--fb);background:var(--bg);color:var(--txt);min-height:100vh;overflow-x:hidden}
-.screen{display:none;min-height:100vh;flex-direction:column}
+body{font-family:var(--fb);background:var(--bg);color:var(--txt);min-height:100vh}
+/* overflow-x must NOT be on body — it breaks position:fixed overlays on mobile Safari */
+.screen{display:none;min-height:100vh;flex-direction:column;overflow-x:hidden}
 .screen.active{display:flex}
 .center{align-items:center;padding:24px 16px 60px}
 .mw{width:100%;max-width:540px}
@@ -4038,7 +4039,7 @@ function listenForSessionEnd(){
         el('ov-session-ended').classList.add('on');
       }
     }catch(e){}
-  },8000);
+  },8000); // 8 seconds — saves quota; session-end signal still arrives within ~8s
 }
 
 /* ═══════════════════════════════════════════
@@ -4318,22 +4319,6 @@ function renderQ(){
       +'background:var(--s2);border-radius:8px">🔒 Review mode \u2014 answers cannot be changed</div>';
   }
 
-  // Skipped-question submit nudge — shown when student is on an unattempted question
-  // and has already answered enough that submitting makes sense
-  const attempted=Object.keys(answers).filter(k=>answers[k]!=='').length;
-  if(!reviewMode && answers[curQ]===undefined && attempted>0){
-    html+=`<div style="margin-top:16px;padding:12px 16px;background:rgba(108,99,255,.08);
-      border:1px solid rgba(108,99,255,.25);border-radius:10px;text-align:center">
-      <div style="font-size:12px;color:var(--m);margin-bottom:8px">
-        You've answered <b>${attempted}</b> of <b>${quizQs.length}</b> questions.
-        This question is unattempted.
-      </div>
-      <button class="btn btn-grn" style="padding:8px 24px;font-size:13px" onclick="confSub()">
-        Submit Now ✓
-      </button>
-    </div>`;
-  }
-
   // Next / Submit button embedded in question body — 28px below last option
   html+=`<div style="height:1px;background:var(--b);margin:28px 0 20px"></div>`;
   if(last){
@@ -4344,6 +4329,18 @@ function renderQ(){
     html+=`<button class="btn btn-pri w100" onclick="navQ(1)" style="padding:14px;font-size:14px">
       Next Question →
     </button>`;
+  }
+
+  // Submit nudge — only shown on non-last unattempted questions when student has answered some
+  const attempted=Object.keys(answers).filter(k=>answers[k]!=='').length;
+  if(!reviewMode && !last && answers[curQ]===undefined && attempted>0){
+    html+=`<div style="margin-top:10px;padding:10px 14px;background:rgba(108,99,255,.06);
+      border:1px solid rgba(108,99,255,.2);border-radius:10px;text-align:center">
+      <div style="font-size:11px;color:var(--m);margin-bottom:6px">
+        ${attempted} of ${quizQs.length} answered — skip remaining and submit?
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="confSub()">Submit Now ✓</button>
+    </div>`;
   }
 
   // Show prev hint only if not on first question
@@ -7761,29 +7758,39 @@ window.editStudent = function(btn){
   el('ov-edit-student').classList.add('on');
 };
 
-// ── Pause all polling when the browser tab is hidden ──────────────────────
-// This is the single biggest quota saver: a hidden tab burns reads for nothing.
+// ── Pause polling when browser tab is hidden — quota saver ────────────────
 document.addEventListener('visibilitychange', function(){
   if(document.hidden){
+    // Teacher-side polls — always safe to pause
     clearInterval(lobbyPollInt);
     clearInterval(resultsRefreshInt);
-    // Student polls: pause but don't null them \u2014 finishQuiz checks quizActive
+    // Student waiting screen poll — safe to pause (not time-critical)
     if(sessionPollInt){ clearInterval(sessionPollInt); sessionPollInt=null; }
-    if(endPollInt){     clearInterval(endPollInt);     endPollInt=null; }
-    if(unlockPollInt){  clearInterval(unlockPollInt);  unlockPollInt=null; }
+    // IMPORTANT: never pause endPollInt during an active quiz.
+    // endPollInt is the only mechanism that tells the student the session ended.
+    // Pausing it means students never receive the "Session Ended" signal.
+    // unlockPollInt is also left running — it only fires post-quiz.
   } else {
-    // Tab is visible again \u2014 resume whichever loops are contextually appropriate.
-    // Teacher lobby: restart only if a session is actively open
+    // Tab visible again — resume teacher lobby if active
     if(activeSessionId && typeof startLobbyListener === 'function') startLobbyListener();
-    // Student waiting screen: restart session poller if still waiting
+    // Resume student waiting screen poller
     if(typeof qParams !== 'undefined' && qParams?.sessionId){
       const sc = document.getElementById('s-stu-wait');
-      if(sc && sc.classList.contains('active')) startSessionPoller();
-      const sq = document.getElementById('s-quiz');
-      if(sq && sq.classList.contains('active') && !endPollInt) listenForSessionEnd();
+      if(sc && sc.style.display!=='none' && getComputedStyle(sc).display!=='none') startSessionPoller();
+      // endPollInt self-recovers: if quiz is active and poll was running, restart it
+      if(quizActive && !endPollInt) listenForSessionEnd();
     }
   }
 });
+
+// Move all fixed overlays to direct <body> children so position:fixed always works.
+// Critical: overflow-x on ANY ancestor breaks position:fixed in mobile Safari/Chrome.
+(function(){
+  ['ov-confidence','ov-vio','ov-sub','ov-session-ended'].forEach(function(id){
+    const el=document.getElementById(id);
+    if(el&&el.parentElement!==document.body) document.body.appendChild(el);
+  });
+})();
 
 bootstrap();
 </script>
