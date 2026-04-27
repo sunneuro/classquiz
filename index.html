@@ -1436,6 +1436,12 @@ tr:hover td{background:var(--s2)}
       Select a <b>Session ID</b> from the filter above, then choose a view.
     </div>
   </div>
+  <!-- Strategy overlay lives OUTSIDE analytics-body so it persists across view switches -->
+  <div id="strat-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9950;align-items:center;justify-content:center;padding:20px">
+    <div id="strat-overlay-inner" style="background:var(--s1);border-radius:16px;padding:24px;max-width:480px;width:100%;position:relative;max-height:80vh;overflow-y:auto">
+      <button onclick="el('strat-overlay').style.display='none'" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--m);font-size:20px;cursor:pointer">&#x2715;</button>
+    </div>
+  </div>
 </div>
 
 <!-- CONFIDENCE OVERLAY (student quiz) -->
@@ -4477,6 +4483,10 @@ window.finishQuiz=async function(){
     optionShuffles: JSON.stringify(optionShuffles),
     timings: JSON.stringify(timingsMap),
     confidenceMap: JSON.stringify(confidenceMap),
+    // Store the exact question list and order this student received.
+    // Each student may get a different random subset — analytics needs this
+    // to correctly map answerMap indices back to the right questions.
+    quizQs: JSON.stringify(quizQs),
     sessionTotalTime: qParams?.time||15,
     ts:Date.now()
   };
@@ -5688,7 +5698,17 @@ window.sortQTable=function(col){
   if(_analyticsQs&&_analyticsResults){
     const an=computeAnalytics(_analyticsQs,_analyticsResults);
     const body=el('analytics-body');
-    if(body)body.innerHTML=renderAnalyticsHTML(an,_analyticsResults.length,'',_analyticsResults,_analyticsQs,'question');
+    if(body)body.innerHTML=renderAnalyticsHTML(an,_analyticsResults.length,'',_analyticsResults,_analyticsQs,_analyticsView);
+  }
+};
+
+let _stuTableSort={col:'score',dir:-1};
+window.sortStuTable=function(col){
+  if(_stuTableSort.col===col)_stuTableSort.dir*=-1;else{_stuTableSort.col=col;_stuTableSort.dir=-1;}
+  if(_analyticsQs&&_analyticsResults){
+    const an=computeAnalytics(_analyticsQs,_analyticsResults);
+    const body=el('analytics-body');
+    if(body)body.innerHTML=renderAnalyticsHTML(an,_analyticsResults.length,'',_analyticsResults,_analyticsQs,'student');
   }
 };
 let _analyticsView='class';
@@ -5735,25 +5755,13 @@ function renderSessionAnalytics(){
     _analyticsQs=null;_analyticsResults=null;
     return;
   }
-  // Match results to the selected session ID.
-  // Strategy: exact match first, then sessionId match, then base-name fuzzy match
-  // (handles cases where question paper was curated from an older draft carrying a
-  //  different timestamp — e.g. "NS408_WB_25Apr" vs "NS408_WB_26Apr")
-  function stripTimestamp(s){
-    // Remove common date/time suffixes: _25Apr2026_05:46PM, _26April2026_11:00PM etc.
-    return (s||'').replace(/_\d{1,2}[A-Za-z]+\d{4}_\d{1,2}[:h]\d{2}[APM]*/g,'')
-                  .replace(/_\d{4}-\d{2}-\d{2}.*/,'')
-                  .replace(/_\d{8}.*/,'')
-                  .toLowerCase().trim();
-  }
-  const sidBase=stripTimestamp(sid);
+  // Match results to the selected session ID — exact matches only.
+  // Fuzzy / base-name matching was removed because it incorrectly pulled results
+  // from other sessions that share the same course+topic prefix.
   const sessionResults=allResults.filter(r=>{
-    if(r.sessionDisplayId===sid) return true;        // exact display ID match
-    if(r.sessionId===sid) return true;               // raw Firestore doc ID match
-    if(r.sessionFileId===sid) return true;           // file ID match
-    // Fuzzy: strip timestamps and compare base names
-    const rBase=stripTimestamp(r.sessionDisplayId||r.sessionId||'');
-    if(sidBase&&rBase&&rBase===sidBase) return true;
+    if(r.sessionDisplayId===sid) return true;   // exact display ID match
+    if(r.sessionId===sid) return true;           // raw Firestore doc ID match
+    if(r.sessionFileId===sid) return true;       // file ID match
     return false;
   });
   if(!sessionResults.length){
@@ -5811,76 +5819,111 @@ function renderSessionAnalytics(){
 }
 
 function computeAnalytics(qs,results){
-  const nQ=qs.length;
-  const perQ=qs.map((q,qi)=>{
-    let correct=0,total=0;
-    const optDist={}; // option label → count
-    const timings=[]; const timingsWrong=[];
-    const confData={sure:{c:0,t:0},unsure:{c:0,t:0},guessing:{c:0,t:0}};
-    results.forEach(r=>{
-      const am=safeParseJson(r.answerMap)||{};
-      const sh=safeParseJson(r.optionShuffles)||{};
-      const tm=safeParseJson(r.timings)||{};
-      const cm=safeParseJson(r.confidenceMap)||{};
-      const ua=am[qi]!==undefined?am[qi]:am[String(qi)];
+  // Build a lookup: master question index by question text (primary) or id (secondary)
+  // This lets us map each student's per-subset answer back to the master question list.
+  const qIndexByText={};
+  const qIndexById={};
+  qs.forEach((q,qi)=>{
+    if(q.text) qIndexByText[q.text.slice(0,80)]=qi;
+    if(q.id)   qIndexById[q.id]=qi;
+  });
+
+  // Per-master-question accumulators
+  const perQAcc=qs.map((q,qi)=>({
+    q,qi,correct:0,total:0,optDist:{},timings:[],timingsWrong:[],
+    confData:{sure:{c:0,t:0},unsure:{c:0,t:0},guessing:{c:0,t:0}}
+  }));
+
+  results.forEach(r=>{
+    const am=safeParseJson(r.answerMap)||{};
+    const sh=safeParseJson(r.optionShuffles)||{};
+    const tm=safeParseJson(r.timings)||{};
+    const cm=safeParseJson(r.confidenceMap)||{};
+    // Resolve this student's question list
+    // New results store quizQs; old results fall back to master qs
+    const rQs=safeParseJson(r.quizQs)||null;
+    const studentQs=rQs&&rQs.length?rQs:qs;
+
+    studentQs.forEach((sq,si)=>{
+      // Find master index for this student's question
+      let masterIdx=-1;
+      if(sq.id&&qIndexById[sq.id]!==undefined) masterIdx=qIndexById[sq.id];
+      else if(sq.text&&qIndexByText[sq.text.slice(0,80)]!==undefined) masterIdx=qIndexByText[sq.text.slice(0,80)];
+      if(masterIdx===-1)return; // question not in master list — skip
+
+      const ua=am[si]!==undefined?am[si]:am[String(si)];
       if(ua===undefined||ua==='')return;
-      total++;
+
+      const acc=perQAcc[masterIdx];
+      const q=qs[masterIdx];
+      acc.total++;
       let isCorrect=false;
       if(q.type==='tf'){
         isCorrect=(ua===q.answer);
-        optDist[ua]=(optDist[ua]||0)+1;
+        acc.optDist[ua]=(acc.optDist[ua]||0)+1;
       } else {
-        // optionShuffles keys are strings in JSON — use String(qi)
-        const shuffle=sh[qi]||sh[String(qi)];
+        const shuffle=sh[si]||sh[String(si)];
         const origIdx=shuffle?shuffle[parseInt(ua)]:parseInt(ua);
         isCorrect=(origIdx===q.correctIndex);
-        // Display label: ua is always the position shown to student (0=A,1=B,2=C,3=D)
         const dispLabel='ABCD'[parseInt(ua)];
-        optDist[dispLabel!==undefined?dispLabel:String(ua)]=(optDist[dispLabel!==undefined?dispLabel:String(ua)]||0)+1;
+        const dk=dispLabel!==undefined?dispLabel:String(ua);
+        acc.optDist[dk]=(acc.optDist[dk]||0)+1;
       }
-      if(isCorrect)correct++;
-      // Timing
-      const t=tm[qi];
-      if(t!==undefined){timings.push(t);if(!isCorrect)timingsWrong.push(t);}
-      // Confidence
-      const c=cm[qi];
-      if(c&&confData[c]){confData[c].t++;if(isCorrect)confData[c].c++;}
+      if(isCorrect)acc.correct++;
+      const t=tm[si]!==undefined?tm[si]:tm[String(si)];
+      if(t!==undefined){acc.timings.push(t);if(!isCorrect)acc.timingsWrong.push(t);}
+      const c=cm[si]!==undefined?cm[si]:cm[String(si)];
+      if(c&&acc.confData[c]){acc.confData[c].t++;if(isCorrect)acc.confData[c].c++;}
     });
+  });
+
+  // Discrimination index — uses same per-student quizQs mapping
+  const sorted=[...results].sort((a,b)=>(b.pct||0)-(a.pct||0));
+  const n27=Math.max(1,Math.floor(sorted.length*.27));
+  const top27=sorted.slice(0,n27),bot27=sorted.slice(sorted.length-n27);
+  function isCorr(r,masterIdx){
+    const rQs=safeParseJson(r.quizQs)||null;
+    const studentQs=rQs&&rQs.length?rQs:qs;
+    const si=studentQs.findIndex((sq)=>{
+      const q=qs[masterIdx];
+      return (sq.id&&sq.id===q.id)||(sq.text&&q.text&&sq.text.slice(0,80)===q.text.slice(0,80));
+    });
+    if(si===-1)return false;
+    const am=safeParseJson(r.answerMap)||{};
+    const sh=safeParseJson(r.optionShuffles)||{};
+    const ua=am[si]!==undefined?am[si]:am[String(si)];
+    if(ua===undefined||ua==='')return false;
+    const q=qs[masterIdx];
+    if(q.type==='tf')return ua===q.answer;
+    const shuffle=sh[si]||sh[String(si)];
+    const origIdx=shuffle?shuffle[parseInt(ua)]:parseInt(ua);
+    return origIdx===q.correctIndex;
+  }
+
+  const perQ=perQAcc.map(({q,qi,correct,total,optDist,timings,timingsWrong,confData})=>{
     const pctCorrect=total?Math.round(correct/total*100):0;
     const avgTime=timings.length?Math.round(timings.reduce((a,b)=>a+b,0)/timings.length):null;
     const avgTimeWrong=timingsWrong.length?Math.round(timingsWrong.reduce((a,b)=>a+b,0)/timingsWrong.length):null;
     const sortedT=[...timings].sort((a,b)=>a-b);
     const q1t=sortedT[Math.floor(sortedT.length*.25)]??null;
     const q3t=sortedT[Math.floor(sortedT.length*.75)]??null;
-    // Discrimination index (top 27% vs bottom 27% by pct)
-    const sorted=[...results].sort((a,b)=>(b.pct||0)-(a.pct||0));
-    const n27=Math.max(1,Math.floor(sorted.length*.27));
-    const top=sorted.slice(0,n27),bot=sorted.slice(sorted.length-n27);
-    function isCorr(r){
-      const am2=safeParseJson(r.answerMap)||{};
-      const sh2=safeParseJson(r.optionShuffles)||{};
-      const ua2=am2[qi]!==undefined?am2[qi]:am2[String(qi)];if(ua2===undefined||ua2==='')return false;
-      if(q.type==='tf')return ua2===q.answer;
-      const sh=sh2[qi]||sh2[String(qi)];
-      const origIdx=sh?sh[parseInt(ua2)]:parseInt(ua2);
-      return origIdx===q.correctIndex;
-    }
-    const pHigh=top.filter(isCorr).length/n27;
-    const pLow=bot.filter(isCorr).length/n27;
+    const pHigh=top27.filter(r=>isCorr(r,qi)).length/n27;
+    const pLow=bot27.filter(r=>isCorr(r,qi)).length/n27;
     const di=Math.round((pHigh-pLow)*100)/100;
     return{qi,text:q.text,type:q.type,bloomTag:q.bloomTag||'',difficulty:q.difficulty||'',
       options:q.options||[],correctIndex:q.correctIndex,answer:q.answer,
       correct,total,pctCorrect,optDist,avgTime,avgTimeWrong,
       timingQ1:q1t,timingQ3:q3t,di,confData};
   });
-  // Bloom breakdown
+
+  // Bloom breakdown — only count questions actually attempted
   const blooms={};
   perQ.forEach(pq=>{
-    const bt=pq.bloomTag;if(!bt)return;
+    const bt=pq.bloomTag;if(!bt||!pq.total)return;
     if(!blooms[bt])blooms[bt]={correct:0,total:0};
     blooms[bt].correct+=pq.correct;blooms[bt].total+=pq.total;
   });
-  // Confidence matrix across all questions
+  // Confidence matrix
   const confMatrix={sure:{c:0,t:0},unsure:{c:0,t:0},guessing:{c:0,t:0}};
   perQ.forEach(pq=>{
     Object.keys(confMatrix).forEach(k=>{
@@ -6140,26 +6183,18 @@ function renderAnalyticsStudent(an,nStudents,results,qs){
 
   // Per-student Cognitive Performance table (Bloom + Confidence + Descriptor + Strategy)
   if(hasBlooms||hasConf){
-    html+=`<div class="card an-sect"><h4>👤 Per-Student Cognitive Profile</h4>
-    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
-    <thead><tr style="background:var(--s2)">
-      <th style="padding:7px 10px;text-align:left;border:1px solid var(--b)">Student</th>
-      <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Score</th>
-      ${presentBlooms.map(b=>`<th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">${BLOOM_ACR[b]||b}</th>`).join('')}
-      ${hasConf?'<th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Confidence</th>':''}
-      <th style="padding:7px 10px;text-align:left;border:1px solid var(--b)">Snapshot</th>
-      <th style="padding:7px 10px;text-align:center;border:1px solid var(--b)">Strategy</th>
-    </tr></thead><tbody>`;
-
-    const sortedResults=[...results].sort((a,b)=>(b.pct||0)-(a.pct||0));
-    sortedResults.forEach(r=>{
+    // ── PASS 1: compute per-student bloom data into rows array ──
+    const stuRows=results.map(r=>{
       const am=safeParseJson(r.answerMap)||{};
       const sh=safeParseJson(r.optionShuffles)||{};
       const cm=safeParseJson(r.confidenceMap)||{};
+      // Use student's own quizQs order to correctly map answerMap indices.
+      // answerMap keys are student quiz indices (0,1,2…), NOT master qs indices.
+      const rQs=safeParseJson(r.quizQs)||qs;
       // Per-bloom correctness for this student
       const stuBloom={};
       presentBlooms.forEach(b=>stuBloom[b]={c:0,t:0});
-      (qs||[]).forEach((q,qi)=>{
+      (rQs||[]).forEach((q,qi)=>{
         const bt=q.bloomTag;if(!bt||!stuBloom[bt])return;
         const ua=am[qi]!==undefined?am[qi]:am[String(qi)];
         if(ua===undefined||ua==='')return;
@@ -6205,10 +6240,43 @@ function renderAnalyticsStudent(an,nStudents,results,qs){
       } else {
         snapshot=(r.pct||0)>=70?'Good overall':(r.pct||0)>=50?'Satisfactory':'Needs attention';
       }
-      // Strategy button
+      // Strategy button — store args in data attributes to avoid single-quote crash on names like "D'Souza"
       const stratBtn=`<button class="btn btn-sm btn-ghost" style="font-size:10px;padding:3px 8px"
-        onclick="showStudentStrategy('${esc(r.studentName||'')}','${esc(r.roll||'')}',${r.pct||0},'${best||''}',${bestPct||0},'${worst||''}',${worstPct||0})">Strategy</button>`;
+        data-sname="${esc(r.studentName||'').replace(/"/g,'&quot;')}"
+        data-sroll="${esc(r.roll||'').replace(/"/g,'&quot;')}"
+        data-spct="${r.pct||0}" data-sbest="${best||''}" data-sbestp="${bestPct||0}"
+        data-sworst="${worst||''}" data-sworstp="${worstPct||0}"
+        onclick="const d=this.dataset;showStudentStrategy(d.sname,d.sroll,+d.spct,d.sbest,+d.sbestp,d.sworst,+d.sworstp)">Strategy</button>`;
+      return {r,stuBloom,best,bestPct,worst,worstPct,confCell,snapshot,stratBtn};
+    });
 
+    // ── PASS 2: sort by chosen column ──
+    const stuSortCol=_stuTableSort.col,stuSortDir=_stuTableSort.dir;
+    stuRows.sort((a,b)=>{
+      let av,bv;
+      if(stuSortCol==='score'){av=a.r.pct||0;bv=b.r.pct||0;}
+      else if(presentBlooms.includes(stuSortCol)){
+        av=a.stuBloom[stuSortCol]&&a.stuBloom[stuSortCol].t?Math.round(a.stuBloom[stuSortCol].c/a.stuBloom[stuSortCol].t*100):-1;
+        bv=b.stuBloom[stuSortCol]&&b.stuBloom[stuSortCol].t?Math.round(b.stuBloom[stuSortCol].c/b.stuBloom[stuSortCol].t*100):-1;
+      } else {av=a.r.pct||0;bv=b.r.pct||0;}
+      return stuSortDir*(bv-av);
+    });
+
+    // ── PASS 3: render sortable headers + rows ──
+    const thStu='padding:7px 10px;border:1px solid var(--b);cursor:pointer;user-select:none;white-space:nowrap';
+    const stuArr=col=>col===stuSortCol?(stuSortDir>0?'▼':'▲'):'⇅';
+    html+=`<div class="card an-sect"><h4>👤 Per-Student Cognitive Profile</h4>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
+    <thead><tr style="background:var(--s2)">
+      <th style="padding:7px 10px;border:1px solid var(--b);text-align:left">Student</th>
+      <th style="${thStu};text-align:center" onclick="sortStuTable('score')">Score ${stuArr('score')}</th>
+      ${presentBlooms.map(b=>`<th style="${thStu};text-align:center" onclick="sortStuTable('${b}')">${BLOOM_ACR[b]||b} ${stuArr(b)}</th>`).join('')}
+      ${hasConf?`<th style="padding:7px 10px;border:1px solid var(--b);text-align:center">Confidence</th>`:''}
+      <th style="padding:7px 10px;border:1px solid var(--b);text-align:left">Snapshot</th>
+      <th style="padding:7px 10px;border:1px solid var(--b);text-align:center">Strategy</th>
+    </tr></thead><tbody>`;
+
+    stuRows.forEach(({r,stuBloom,confCell,snapshot,stratBtn})=>{
       html+=`<tr>
         <td style="padding:7px 10px;border:1px solid var(--b)">
           <div style="font-weight:600;font-size:12px">${esc(r.studentName||'')}</div>
@@ -6221,7 +6289,7 @@ function renderAnalyticsStudent(an,nStudents,results,qs){
           const bd=stuBloom[b];
           if(!bd.t)return`<td style="padding:7px 10px;border:1px solid var(--b);text-align:center;color:var(--m)">—</td>`;
           const p2=Math.round(bd.c/bd.t*100);
-          return`<td style="padding:7px 10px;border:1px solid var(--b);text-align:center;font-weight:600;color:${p2>=70?'var(--grn)':p2>=40?'var(--warn)':'var(--err)'}">
+          return`<td style="padding:7px 10px;border:1px solid var(--b);text-align:center;font-weight:600;color:${p2>=70?'var(--grn)':p2>=40?'var(--warn)':'var(--err)}">
             ${p2}%<div style="font-size:9px;color:var(--m)">${bd.c}/${bd.t}</div></td>`;
         }).join('')}
         ${hasConf?`<td style="padding:7px 10px;border:1px solid var(--b);text-align:center">${confCell}</td>`:''}
@@ -6283,20 +6351,13 @@ function renderAnalyticsStudent(an,nStudents,results,qs){
     html='<div class="an-empty">No cognitive level data yet.<br><span style="font-size:12px;color:var(--m)">Tag questions with Cognitive Levels and run sessions with confidence rating enabled.</span></div>';
   }
 
-  // Strategy overlay div (hidden, populated on demand)
-  html+=`<div id="strat-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9950;align-items:center;justify-content:center;padding:20px">
-    <div style="background:var(--s1);border:1px solid var(--b2);border-radius:14px;padding:22px 24px;max-width:480px;width:100%;position:relative">
-      <button onclick="el('strat-overlay').style.display='none'" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--m);font-size:20px;cursor:pointer">x</button>
-      <div id="strat-title" style="font-family:var(--fh);font-size:15px;font-weight:700;margin-bottom:14px;color:var(--txt)"></div>
-      <div id="strat-body" style="font-size:13px;color:var(--txt);line-height:1.7"></div>
-    </div>
-  </div>`;
+  // strat-overlay is now a permanent DOM element outside analytics-body — do not inject here
   return html;
 }
 
 window.showStudentStrategy=function(name,roll,score,best,bestPct,worst,worstPct){
   const ov=el('strat-overlay');if(!ov)return;
-  el('strat-title').textContent='Teaching Strategy: '+name+' ('+roll+')';
+  const inner=el('strat-overlay-inner');if(!inner)return;
   const lines=[];
   lines.push('<b>Overall score: '+score+'%</b>');
   if(score>=70) lines.push('Strong overall performance. Encourage extension to higher-order questions (Analysis, Synthesis, Evaluation) if not already included.');
@@ -6311,7 +6372,9 @@ window.showStudentStrategy=function(name,roll,score,best,bestPct,worst,worstPct)
     worst==='synthesis'?'essay questions, design tasks, integrative case studies':
     'critical appraisal of evidence, debate exercises'
   )+'.');
-  el('strat-body').innerHTML=lines.map(l=>'<p style="margin:0 0 10px">'+l+'</p>').join('');
+  inner.innerHTML=`<button onclick="el('strat-overlay').style.display='none'" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--m);font-size:20px;cursor:pointer">&#x2715;</button>
+    <div style="font-family:var(--fh);font-size:15px;font-weight:700;margin-bottom:14px;color:var(--txt)">Teaching Strategy: ${esc(name)} (${esc(roll)})</div>
+    <div style="font-size:13px;color:var(--txt);line-height:1.7">${lines.map(l=>'<p style="margin:0 0 10px">'+l+'</p>').join('')}</div>`;
   ov.style.display='flex';
 };
 
@@ -6723,9 +6786,13 @@ window.removeFromPaper=function(qKey,isNew){
 
 
 window.renderActiveTab=function(){
-  // Check which panel is visible — avoids querySelector issues entirely
+  // Check which panel is visible
   const lb=el('panel-leaderboard');
-  if(lb && lb.style.display!=='none') renderLeaderboard();
+  const an=el('panel-analytics');
+  const pr=el('panel-profiles');
+  if(an && an.style.display!=='none') renderSessionAnalytics();
+  else if(lb && lb.style.display!=='none') renderLeaderboard();
+  else if(pr && pr.style.display!=='none') renderProfiles();
   else renderResults();
 };
 
