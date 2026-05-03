@@ -3025,10 +3025,12 @@ window.curDeselAll=function(){curSel=[];renderCurate();};
    TEMPLATES
 ═══════════════════════════════════════════ */
 window.showSaveTemplate=function(){
-  if(!curSel.length){alert('Select questions first.');return;}
+  const bankQs=allQuestions.filter(q=>curSel.includes(q.id));
+  const allPaper=[...curDraft,...bankQs];
+  if(!allPaper.length){alert('No questions in the paper yet.');return;}
   el('ov-tpl-title').textContent='Save Template';
   el('ov-tpl-body').innerHTML=`
-    <div class="ovb">${curSel.length} questions selected. Give this template a name.</div>
+    <div class="ovb">${allPaper.length} question${allPaper.length!==1?'s':''} in paper. Give this template a name.</div>
     <input type="text" id="tpl-name" placeholder="e.g. Chapter 3 MCQs" style="margin-bottom:12px"/>
     <div class="row" style="gap:9px">
       <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-template')">Cancel</button>
@@ -3042,8 +3044,9 @@ window.saveTemplate=async function(){
   const name=gv('tpl-name');
   if(!name){setSt('tpl-st','err','Enter a name.');return;}
   try{
+    const draftIds=curDraft.map(q=>q.id||q.tempId).filter(Boolean);
     await _fb.addDoc(_fb.collection(db,'templates'),{
-      name,questionIds:curSel,
+      name,questionIds:[...curSel,...draftIds],
       settings:{time:gv('cs-time'),count:gv('cs-count'),sessionName:gv('cs-name'),window:gv('cs-window')},
       createdBy:teacher.name,createdByEmail:teacher.email,ts:Date.now()
     });
