@@ -1467,6 +1467,12 @@ tr:hover td{background:var(--s2)}
         font-size:12px;cursor:pointer;padding:4px 12px;border-radius:8px;
         border:1px solid var(--b);font-family:var(--fh)">↩ Redo — change my answer</button>
     </div>
+    <!-- Shown only on the last question so a stuck student can still submit -->
+    <div id="conf-skip-wrap" style="display:none;text-align:center;margin-top:10px">
+      <button onclick="skipConfAndSubmit()" style="background:none;border:none;color:var(--warn);
+        font-size:11px;cursor:pointer;padding:4px 12px;border-radius:8px;
+        border:1px solid var(--warn);font-family:var(--fh)">Skip confidence &amp; Submit →</button>
+    </div>
   </div>
 </div>
 
@@ -2228,9 +2234,10 @@ async function loadAllQuestions(){
         const data=d.data();
         const qs=data.questions||[];
         qs.forEach(function(q){
-          // Avoid duplication \u2014 skip if already in committed (matched by tempId or text+courseId)
+          // Avoid duplication — skip if already committed (match by tempId on either side, or text+courseId)
           const alreadySaved=committed.some(function(c){
-            return (q.tempId && c.tempId===q.tempId) || (c.text===q.text && c.courseId===q.courseId);
+            return (q.tempId && (c.tempId===q.tempId || c.id===q.tempId)) ||
+                   (c.text&&q.text && c.text.trim()===q.text.trim() && c.courseId===q.courseId);
           });
           if(!alreadySaved){
             draftQs.push(Object.assign({},q,{
@@ -2292,7 +2299,9 @@ async function loadResults(force){
       }
     });
     populateResultFilters();
-    renderResults();
+    // Re-render whichever tab is currently visible — not just the results table.
+    // This ensures the Analytics panel updates during live sessions as students submit.
+    renderActiveTab();
     if(rb)rb.textContent='Updated: '+new Date().toLocaleTimeString();
   }catch(e){
     console.warn('Load results:',e);
@@ -3028,21 +3037,32 @@ window.showSaveTemplate=function(){
   const bankQs=allQuestions.filter(q=>curSel.includes(q.id));
   const allPaper=[...curDraft,...bankQs];
   if(!allPaper.length){alert('No questions in the paper yet.');return;}
+
+  // Build default name from paper metadata
+  const meta=curDraftMeta;
+  const defaultName=meta.testid||(meta.cid&&meta.topic?meta.cid+'_'+meta.topic:'')||(meta.cid||'Template')+'_'+new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}).replace(/ /g,'');
+
   el('ov-tpl-title').textContent='Save Template';
   el('ov-tpl-body').innerHTML=`
-    <div class="ovb">${allPaper.length} question${allPaper.length!==1?'s':''} in paper. Give this template a name.</div>
-    <input type="text" id="tpl-name" placeholder="e.g. Chapter 3 MCQs" style="margin-bottom:12px"/>
+    <div class="ovb">${allPaper.length} question${allPaper.length!==1?'s':''} in paper.</div>
+    <label style="font-size:12px;color:var(--m);margin-bottom:4px;display:block">Template name</label>
+    <input type="text" id="tpl-name" value="${defaultName.replace(/"/g,'&quot;')}" style="margin-bottom:12px"/>
     <div class="row" style="gap:9px">
       <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-template')">Cancel</button>
-      <button class="btn btn-grn" style="flex:1" onclick="saveTemplate()">Save</button>
+      <button class="btn btn-grn" style="flex:1" onclick="saveTemplate()">💾 Save</button>
     </div>`;
   el('tpl-st').className='st';
   el('ov-template').classList.add('on');
+
+  // Select all text in input so teacher can immediately type to rename
+  setTimeout(()=>{const inp=el('tpl-name');if(inp){inp.focus();inp.select();}},80);
 };
 
 window.saveTemplate=async function(){
-  const name=gv('tpl-name');
+  const name=(gv('tpl-name')||'').trim();
   if(!name){setSt('tpl-st','err','Enter a name.');return;}
+  const btn=el('ov-tpl-body')?.querySelector('.btn-grn');
+  if(btn){btn.disabled=true;btn.textContent='Saving…';}
   try{
     const draftIds=curDraft.map(q=>q.id||q.tempId).filter(Boolean);
     await _fb.addDoc(_fb.collection(db,'templates'),{
@@ -3050,9 +3070,13 @@ window.saveTemplate=async function(){
       settings:{time:gv('cs-time'),count:gv('cs-count'),sessionName:gv('cs-name'),window:gv('cs-window')},
       createdBy:teacher.name,createdByEmail:teacher.email,ts:Date.now()
     });
-    setSt('tpl-st','ok','✅ Template saved!');
-    setTimeout(()=>closeOv('ov-template'),1000);
-  }catch(e){setSt('tpl-st','err','Save failed: '+e.message);}
+    closeOv('ov-template');
+    setSt('cur-st','ok','✅ Template saved: "'+name+'"');
+    setTimeout(()=>{const s=el('cur-st');if(s)s.className='st';},3000);
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent='💾 Save';}
+    setSt('tpl-st','err','Save failed: '+e.message);
+  }
 };
 
 window.showLoadTemplate=async function(){
@@ -3331,13 +3355,14 @@ window.goLaunch=async function(){
   try{
     for(const q of curDraft){
       const qFinal={...q};
-      delete qFinal.tempId;
       delete qFinal.inDraft;
+      // Keep tempId in Firestore so loadAllQuestions dedup can match it
+      // and skip the draft copy after the draft doc is cleared
       qFinal.testLabel=finalTestId;
       const ref=await _fb.addDoc(_fb.collection(db,'questions'),qFinal);
       savedQIds.push(ref.id);
     }
-    // Also tag bank questions with this Test ID if not already
+    // Also include bank questions
     for(const q of bankQs){
       savedQIds.push(q.id);
     }
@@ -3347,16 +3372,12 @@ window.goLaunch=async function(){
     return;
   }
 
-  // Step 2: Reload questions so we have the saved IDs
+  // Step 2: Clear draft FIRST, then reload — so loadAllQuestions does not
+  // pull the now-committed draft questions back in as draftQs duplicates
+  await clearDraft();
   await loadAllQuestions();
-  // Use savedQIds only — it already contains both saved-draft IDs and bank IDs.
-  // The redundant "|| bankQs.some(...)" clause caused duplicates because bankQs
-  // was built before the reload and its IDs also appear in the refreshed allQuestions.
   const selectedQs=allQuestions.filter(q=>savedQIds.includes(q.id));
   const launchQs=selectedQs.length?selectedQs:allPaper;
-
-  // Step 3: Clear draft
-  await clearDraft();
 
   activeSessionId=uid16();
   answersLocked=true;
@@ -4406,29 +4427,44 @@ window.pickOpt=function(i){
   if(reviewMode)return;
   if(lockedAnswers[curQ])return;
   answers[curQ]=String(i);
-  // Immediately highlight the clicked option visually on PC and mobile
-  // without a full re-render (which would disrupt touch events on the overlay)
   document.querySelectorAll('.opt').forEach((btn,idx)=>{
     btn.classList.toggle('sel', String(idx)===String(i));
   });
-  // Show confidence overlay
   confReady=false;
   setTimeout(()=>{confReady=true;},260);
   el('ov-confidence').classList.add('on');
+  // On last question show the escape hatch so a fast-tapper can't get stuck
+  const skipWrap=el('conf-skip-wrap');
+  if(skipWrap) skipWrap.style.display=(curQ===quizQs.length-1)?'block':'none';
   renderDots();
 };
 window.pickConfidence=function(level){
-  if(!confReady)return;
+  // If confReady debounce hasn't cleared yet, retry once after it clears
+  // instead of silently dropping the tap (which can strand students on last Q)
+  if(!confReady){
+    setTimeout(()=>pickConfidence(level), 320);
+    return;
+  }
   confidenceMap[curQ]=level;
   el('ov-confidence').classList.remove('on');
-  // Lock answer and record timing
+  const skipWrap=el('conf-skip-wrap');
+  if(skipWrap) skipWrap.style.display='none';
   lockedAnswers[curQ]=true;
   if(questionStartTime) timingsMap[curQ]=Math.round((Date.now()-questionStartTime)/1000);
-  // Auto-advance to next question, or stay on last (submit button visible)
   if(curQ<quizQs.length-1){
     curQ++;
   }
   renderQ();renderDots();
+};
+
+// Escape hatch: student skips confidence tag and goes straight to submit confirmation
+window.skipConfAndSubmit=function(){
+  el('ov-confidence').classList.remove('on');
+  const skipWrap=el('conf-skip-wrap');
+  if(skipWrap) skipWrap.style.display='none';
+  lockedAnswers[curQ]=true;
+  if(questionStartTime) timingsMap[curQ]=Math.round((Date.now()-questionStartTime)/1000);
+  confSub();
 };
 window.redoAnswer=function(){
   // Close overlay without recording confidence, clear the answer so student can re-select
@@ -5916,8 +5952,10 @@ function computeAnalytics(qs,results){
       acc.total++;
       let isCorrect=false;
       if(q.type==='tf'){
-        isCorrect=(ua===q.answer);
-        acc.optDist[ua]=(acc.optDist[ua]||0)+1;
+        // ua is stored as "0" or "1" (display index), q.answer is "True"/"False"
+        const uaLabel=(['True','False'][parseInt(ua)]||'');
+        isCorrect=uaLabel.toLowerCase()===(q.answer||'').toLowerCase();
+        acc.optDist[uaLabel||ua]=(acc.optDist[uaLabel||ua]||0)+1;
       } else {
         const shuffle=sh[si]||sh[String(si)];
         const origIdx=shuffle?shuffle[parseInt(ua)]:parseInt(ua);
