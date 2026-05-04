@@ -3349,7 +3349,10 @@ window.goLaunch=async function(){
 
   // Step 2: Reload questions so we have the saved IDs
   await loadAllQuestions();
-  const selectedQs=allQuestions.filter(q=>savedQIds.includes(q.id)||bankQs.some(b=>b.id===q.id));
+  // Use savedQIds only — it already contains both saved-draft IDs and bank IDs.
+  // The redundant "|| bankQs.some(...)" clause caused duplicates because bankQs
+  // was built before the reload and its IDs also appear in the refreshed allQuestions.
+  const selectedQs=allQuestions.filter(q=>savedQIds.includes(q.id));
   const launchQs=selectedQs.length?selectedQs:allPaper;
 
   // Step 3: Clear draft
