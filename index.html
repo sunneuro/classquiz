@@ -1315,7 +1315,7 @@ tr:hover td{background:var(--s2)}
     border-radius:10px;padding:12px;font-size:12px;color:#fbbf24;width:100%;margin-bottom:12px;line-height:1.65"></div>
   <div id="ans-locked-msg" style="display:none;background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.2);
     border-radius:10px;padding:12px;font-size:12px;color:#a5a0ff;width:100%;margin-bottom:12px;text-align:center">
-    🔒 Correct answers will be shown when your teacher unlocks them
+    🔒 Correct answers will be shown after your teacher releases them once all sessions are complete
   </div>
   <div id="ans-review-wrap" style="display:none;width:100%;max-width:520px;margin-bottom:14px">
     <div style="font-family:var(--fh);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--m);margin-bottom:10px">Answer Review</div>
@@ -3564,6 +3564,7 @@ async function endSessionAuto(){
     await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{
       status:'ended',
       answersLocked:false,
+      answersReleased:true,
       autoEndedAt:Date.now()
     });
     answersLocked=false;
@@ -3599,6 +3600,7 @@ async function endSessionAuto(){
     await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{
       status:'ended',
       answersLocked:false,
+      answersReleased:true,
       autoEndedAt:Date.now()
     });
     answersLocked=false;
@@ -3621,16 +3623,16 @@ window.endSession=async function(){
   try{
     await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{
       status:'ended',
-      answersLocked:false
+      answersLocked:false,
+      answersReleased:true   // explicit end → safe to show answers to all students
     });
     answersLocked=false;
-    el('session-status-msg').textContent='⏹ Session ended \u2014 answers auto-unlocked.';
+    el('session-status-msg').textContent='⏹ Session ended \u2014 answers released to students.';
     el('btn-end-session').style.display='none';
     el('btn-end-2').style.display='none';
-    // Update unlock button visual
     const btn=el('btn-unlock');
-    if(btn){btn.textContent='🔓 Answers Unlocked (auto)';btn.className='btn btn-grn w100';}
-    setSt('unlock-st','ok','✅ Session ended \u2014 answers automatically unlocked for all students.');
+    if(btn){btn.textContent='🔓 Answers Released';btn.className='btn btn-grn w100';}
+    setSt('unlock-st','ok','✅ Session ended \u2014 answers released to all students.');
     activeSessionId=null;activeSessionDisplayId='';activeSessionFileId='';
     try{ localStorage.removeItem('cq5_active_session'); }catch(e){}
     syncActiveSessionBtn();
@@ -3641,12 +3643,19 @@ window.toggleUnlock=async function(){
   if(!fbReady||!activeSessionId){setSt('unlock-st','err','No active session.');return;}
   answersLocked=!answersLocked;
   const btn=el('btn-unlock');
-  btn.textContent=answersLocked?'🔒 Answers Locked':'🔓 Answers Unlocked';
+  btn.textContent=answersLocked?'🔒 Answers Locked':'🔓 Release Answers to Students';
   btn.className=answersLocked?'btn btn-warn w100':'btn btn-grn w100';
   try{
-    await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{answersLocked});
+    // answersReleased=true means students CAN see correct answers.
+    // answersLocked is kept in sync for teacher UI state.
+    // The auto-unlock on all-submitted does NOT touch answersReleased — only this
+    // explicit teacher action (or End Session) does, preventing mid-quiz leakage.
+    await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{
+      answersLocked,
+      answersReleased:!answersLocked
+    });
     setSt('unlock-st',answersLocked?'info':'ok',
-      answersLocked?'Answers are now locked.':'✅ Students can now see correct answers.');
+      answersLocked?'🔒 Answers re-locked. Students cannot see correct answers.':'✅ Answers released — students can now review and download their answer sheets.');
   }catch(e){setSt('unlock-st','err','Update failed: '+e.message);}
 };
 
@@ -4575,37 +4584,42 @@ async function showResult(r){
   vb.style.display=r.violations>0?'':'none';
   if(r.violations>0)vb.textContent=`⚠ ${r.violations} violation(s). Off-screen: ${r.offSecs}s.`;
 
-  // Check if answers unlocked
-  let locked=true;
+  // Check if teacher has EXPLICITLY released answers via answersReleased flag.
+  // answersReleased is only set true by teacher's manual "Release Answers" action
+  // or when they formally end the session — NOT by the auto-unlock that fires
+  // when all students submit. This prevents early finishers or cross-session
+  // students from seeing correct answers while the quiz is still in progress.
+  let released=false;
   if(fbReady&&qParams?.sessionId){
     try{
       const snap=await _fb.getDoc(_fb.doc(db,'sessions',qParams.sessionId));
-      if(snap.exists())locked=snap.data().answersLocked!==false;
+      if(snap.exists()) released=snap.data().answersReleased===true;
     }catch(e){}
   }
 
-  if(!locked){
+  if(released){
     showAnswerReview();
     el('ans-locked-msg').style.display='none';
     el('btn-check-unlock').style.display='none';
   }else{
     el('ans-review-wrap').style.display='none';
+    el('btn-download-answers').style.display='none';
     el('ans-locked-msg').style.display=qParams?.sessionId?'':'none';
     el('btn-check-unlock').style.display=qParams?.sessionId?'':'none';
-    // Auto-poll immediately \u2014 no need for student to tap "Check"
+    // Auto-poll every 10s for teacher release
     if(qParams?.sessionId&&fbReady){
       clearInterval(unlockPollInt);
       unlockPollInt=setInterval(async function(){
         try{
           const s=await _fb.getDoc(_fb.doc(db,'sessions',qParams.sessionId));
-          if(s.exists()&&s.data().answersLocked===false){
+          if(s.exists()&&s.data().answersReleased===true){
             clearInterval(unlockPollInt);
             showAnswerReview();
             el('ans-locked-msg').style.display='none';
             const b=el('btn-check-unlock');if(b)b.style.display='none';
           }
         }catch(e){}
-      },10000); // poll every 10 seconds \u2014 teacher unlock is not time-critical
+      },10000);
     }
   }
   show('s-result');
@@ -4619,7 +4633,7 @@ window.checkUnlock=async function(){
   btn.textContent='Checking…';btn.disabled=true;
   try{
     const snap=await _fb.getDoc(_fb.doc(db,'sessions',qParams.sessionId));
-    if(snap.exists()&&snap.data().answersLocked===false){
+    if(snap.exists()&&snap.data().answersReleased===true){
       clearInterval(unlockPollInt);
       showAnswerReview();
       el('ans-locked-msg').style.display='none';
@@ -4627,12 +4641,11 @@ window.checkUnlock=async function(){
       return;
     }else{
       btn.textContent='🔄 Check again';btn.disabled=false;
-      // Start auto-polling every 10 seconds \u2014 teacher unlock is not time-critical
       if(!unlockPollInt){
         unlockPollInt=setInterval(async()=>{
           try{
             const s=await _fb.getDoc(_fb.doc(db,'sessions',qParams.sessionId));
-            if(s.exists()&&s.data().answersLocked===false){
+            if(s.exists()&&s.data().answersReleased===true){
               clearInterval(unlockPollInt);
               showAnswerReview();
               el('ans-locked-msg').style.display='none';
@@ -4759,7 +4772,7 @@ window.downloadAnswerSheet=function(){
       const origIdx=shuffle&&!isNaN(dispIdx)?shuffle[dispIdx]:dispIdx;
       return n+(origIdx===(q.correctIndex||0)?1:0);
     }
-    return n+(['True','False'][parseInt(ua)]||'').toLowerCase()===(q.answer||'').toLowerCase()?1:0;
+    return n+((['True','False'][parseInt(ua)]||'').toLowerCase()===(q.answer||'').toLowerCase()?1:0);
   },0);
 
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
