@@ -1364,7 +1364,7 @@ tr:hover td{background:var(--s2)}
       <div><label style="margin-top:0">Date</label>
         <select id="rf-date" onchange="renderActiveTab()"><option value="">All Dates</option></select></div>
       <div><label style="margin-top:0">Session ID</label>
-        <select id="rf-session" onchange="renderActiveTab()"><option value="">All Sessions</option></select></div>
+        <select id="rf-session" onchange="window._lastSelectedSession=this.value;renderActiveTab()"><option value="">All Sessions</option></select></div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
       <input type="text" id="rf-search" placeholder="Search student name, roll, or email…" style="flex:1;min-width:180px;margin-top:0" oninput="renderActiveTab()"/>
@@ -2136,6 +2136,7 @@ window.goDash=function(){
         for(let i=0;i<sel.options.length;i++){
           if(sel.options[i].value===activeSessionDisplayId){
             sel.value=activeSessionDisplayId;
+            window._lastSelectedSession=activeSessionDisplayId;
             renderResults();
             break;
           }
@@ -2299,8 +2300,19 @@ async function loadResults(force){
       }
     });
     populateResultFilters();
-    // Re-render whichever tab is currently visible — not just the results table.
-    // This ensures the Analytics panel updates during live sessions as students submit.
+    // Restore the session dropdown selection that populateResultFilters() just reset.
+    // Without this, every 30s refresh wipes the selected session and analytics
+    // falls back to the cross-session Bloom speed chart.
+    const prevSession=el('rf-session');
+    if(prevSession&&window._lastSelectedSession){
+      // Re-apply if the option still exists in the rebuilt dropdown
+      for(let i=0;i<prevSession.options.length;i++){
+        if(prevSession.options[i].value===window._lastSelectedSession){
+          prevSession.value=window._lastSelectedSession;
+          break;
+        }
+      }
+    }
     renderActiveTab();
     if(rb)rb.textContent='Updated: '+new Date().toLocaleTimeString();
   }catch(e){
