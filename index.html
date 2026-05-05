@@ -17,9 +17,8 @@
   --r:12px;--fh:'Syne',sans-serif;--fb:'DM Sans',sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--fb);background:var(--bg);color:var(--txt);min-height:100vh}
-/* overflow-x must NOT be on body — it breaks position:fixed overlays on mobile Safari */
-.screen{display:none;min-height:100vh;flex-direction:column;overflow-x:hidden}
+body{font-family:var(--fb);background:var(--bg);color:var(--txt);min-height:100vh;overflow-x:hidden}
+.screen{display:none;min-height:100vh;flex-direction:column}
 .screen.active{display:flex}
 .center{align-items:center;padding:24px 16px 60px}
 .mw{width:100%;max-width:540px}
@@ -129,8 +128,6 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
   display:flex;align-items:center;gap:11px;transition:border-color .13s,background .13s}
 .opt.clickable{cursor:pointer}
 .opt.clickable:hover{border-color:var(--acc);background:rgba(108,99,255,.06)}
-.opt.clickable:focus{outline:none;border-color:var(--acc);background:rgba(108,99,255,.06)}
-.opt.clickable:active{transform:scale(.99);background:rgba(108,99,255,.12)}
 .opt.sel{border-color:var(--acc);background:rgba(108,99,255,.14)}
 .opt.correct{border-color:var(--grn)!important;background:rgba(62,207,142,.12)!important}
 .opt.incorrect{border-color:var(--err)!important;background:rgba(239,68,68,.10)!important}
@@ -1315,7 +1312,7 @@ tr:hover td{background:var(--s2)}
     border-radius:10px;padding:12px;font-size:12px;color:#fbbf24;width:100%;margin-bottom:12px;line-height:1.65"></div>
   <div id="ans-locked-msg" style="display:none;background:rgba(108,99,255,.08);border:1px solid rgba(108,99,255,.2);
     border-radius:10px;padding:12px;font-size:12px;color:#a5a0ff;width:100%;margin-bottom:12px;text-align:center">
-    🔒 Correct answers will be shown after your teacher releases them once all sessions are complete
+    🔒 Correct answers will be shown when your teacher unlocks them
   </div>
   <div id="ans-review-wrap" style="display:none;width:100%;max-width:520px;margin-bottom:14px">
     <div style="font-family:var(--fh);font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--m);margin-bottom:10px">Answer Review</div>
@@ -1364,7 +1361,7 @@ tr:hover td{background:var(--s2)}
       <div><label style="margin-top:0">Date</label>
         <select id="rf-date" onchange="renderActiveTab()"><option value="">All Dates</option></select></div>
       <div><label style="margin-top:0">Session ID</label>
-        <select id="rf-session" onchange="window._lastSelectedSession=this.value;renderActiveTab()"><option value="">All Sessions</option></select></div>
+        <select id="rf-session" onchange="renderActiveTab()"><option value="">All Sessions</option></select></div>
     </div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px">
       <input type="text" id="rf-search" placeholder="Search student name, roll, or email…" style="flex:1;min-width:180px;margin-top:0" oninput="renderActiveTab()"/>
@@ -1466,12 +1463,6 @@ tr:hover td{background:var(--s2)}
       <button onclick="redoAnswer()" style="background:none;border:none;color:var(--m);
         font-size:12px;cursor:pointer;padding:4px 12px;border-radius:8px;
         border:1px solid var(--b);font-family:var(--fh)">↩ Redo — change my answer</button>
-    </div>
-    <!-- Shown only on the last question so a stuck student can still submit -->
-    <div id="conf-skip-wrap" style="display:none;text-align:center;margin-top:10px">
-      <button onclick="skipConfAndSubmit()" style="background:none;border:none;color:var(--warn);
-        font-size:11px;cursor:pointer;padding:4px 12px;border-radius:8px;
-        border:1px solid var(--warn);font-family:var(--fh)">Skip confidence &amp; Submit →</button>
     </div>
   </div>
 </div>
@@ -2136,7 +2127,6 @@ window.goDash=function(){
         for(let i=0;i<sel.options.length;i++){
           if(sel.options[i].value===activeSessionDisplayId){
             sel.value=activeSessionDisplayId;
-            window._lastSelectedSession=activeSessionDisplayId;
             renderResults();
             break;
           }
@@ -2235,10 +2225,9 @@ async function loadAllQuestions(){
         const data=d.data();
         const qs=data.questions||[];
         qs.forEach(function(q){
-          // Avoid duplication — skip if already committed (match by tempId on either side, or text+courseId)
+          // Avoid duplication \u2014 skip if already in committed (matched by tempId or text+courseId)
           const alreadySaved=committed.some(function(c){
-            return (q.tempId && (c.tempId===q.tempId || c.id===q.tempId)) ||
-                   (c.text&&q.text && c.text.trim()===q.text.trim() && c.courseId===q.courseId);
+            return (q.tempId && c.tempId===q.tempId) || (c.text===q.text && c.courseId===q.courseId);
           });
           if(!alreadySaved){
             draftQs.push(Object.assign({},q,{
@@ -2300,20 +2289,7 @@ async function loadResults(force){
       }
     });
     populateResultFilters();
-    // Restore the session dropdown selection that populateResultFilters() just reset.
-    // Without this, every 30s refresh wipes the selected session and analytics
-    // falls back to the cross-session Bloom speed chart.
-    const prevSession=el('rf-session');
-    if(prevSession&&window._lastSelectedSession){
-      // Re-apply if the option still exists in the rebuilt dropdown
-      for(let i=0;i<prevSession.options.length;i++){
-        if(prevSession.options[i].value===window._lastSelectedSession){
-          prevSession.value=window._lastSelectedSession;
-          break;
-        }
-      }
-    }
-    renderActiveTab();
+    renderResults();
     if(rb)rb.textContent='Updated: '+new Date().toLocaleTimeString();
   }catch(e){
     console.warn('Load results:',e);
@@ -3046,49 +3022,31 @@ window.curDeselAll=function(){curSel=[];renderCurate();};
    TEMPLATES
 ═══════════════════════════════════════════ */
 window.showSaveTemplate=function(){
-  const bankQs=allQuestions.filter(q=>curSel.includes(q.id));
-  const allPaper=[...curDraft,...bankQs];
-  if(!allPaper.length){alert('No questions in the paper yet.');return;}
-
-  // Build default name from paper metadata
-  const meta=curDraftMeta;
-  const defaultName=meta.testid||(meta.cid&&meta.topic?meta.cid+'_'+meta.topic:'')||(meta.cid||'Template')+'_'+new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}).replace(/ /g,'');
-
+  if(!curSel.length){alert('Select questions first.');return;}
   el('ov-tpl-title').textContent='Save Template';
   el('ov-tpl-body').innerHTML=`
-    <div class="ovb">${allPaper.length} question${allPaper.length!==1?'s':''} in paper.</div>
-    <label style="font-size:12px;color:var(--m);margin-bottom:4px;display:block">Template name</label>
-    <input type="text" id="tpl-name" value="${defaultName.replace(/"/g,'&quot;')}" style="margin-bottom:12px"/>
+    <div class="ovb">${curSel.length} questions selected. Give this template a name.</div>
+    <input type="text" id="tpl-name" placeholder="e.g. Chapter 3 MCQs" style="margin-bottom:12px"/>
     <div class="row" style="gap:9px">
       <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-template')">Cancel</button>
-      <button class="btn btn-grn" style="flex:1" onclick="saveTemplate()">💾 Save</button>
+      <button class="btn btn-grn" style="flex:1" onclick="saveTemplate()">Save</button>
     </div>`;
   el('tpl-st').className='st';
   el('ov-template').classList.add('on');
-
-  // Select all text in input so teacher can immediately type to rename
-  setTimeout(()=>{const inp=el('tpl-name');if(inp){inp.focus();inp.select();}},80);
 };
 
 window.saveTemplate=async function(){
-  const name=(gv('tpl-name')||'').trim();
+  const name=gv('tpl-name');
   if(!name){setSt('tpl-st','err','Enter a name.');return;}
-  const btn=el('ov-tpl-body')?.querySelector('.btn-grn');
-  if(btn){btn.disabled=true;btn.textContent='Saving…';}
   try{
-    const draftIds=curDraft.map(q=>q.id||q.tempId).filter(Boolean);
     await _fb.addDoc(_fb.collection(db,'templates'),{
-      name,questionIds:[...curSel,...draftIds],
+      name,questionIds:curSel,
       settings:{time:gv('cs-time'),count:gv('cs-count'),sessionName:gv('cs-name'),window:gv('cs-window')},
       createdBy:teacher.name,createdByEmail:teacher.email,ts:Date.now()
     });
-    closeOv('ov-template');
-    setSt('cur-st','ok','✅ Template saved: "'+name+'"');
-    setTimeout(()=>{const s=el('cur-st');if(s)s.className='st';},3000);
-  }catch(e){
-    if(btn){btn.disabled=false;btn.textContent='💾 Save';}
-    setSt('tpl-st','err','Save failed: '+e.message);
-  }
+    setSt('tpl-st','ok','✅ Template saved!');
+    setTimeout(()=>closeOv('ov-template'),1000);
+  }catch(e){setSt('tpl-st','err','Save failed: '+e.message);}
 };
 
 window.showLoadTemplate=async function(){
@@ -3367,14 +3325,13 @@ window.goLaunch=async function(){
   try{
     for(const q of curDraft){
       const qFinal={...q};
+      delete qFinal.tempId;
       delete qFinal.inDraft;
-      // Keep tempId in Firestore so loadAllQuestions dedup can match it
-      // and skip the draft copy after the draft doc is cleared
       qFinal.testLabel=finalTestId;
       const ref=await _fb.addDoc(_fb.collection(db,'questions'),qFinal);
       savedQIds.push(ref.id);
     }
-    // Also include bank questions
+    // Also tag bank questions with this Test ID if not already
     for(const q of bankQs){
       savedQIds.push(q.id);
     }
@@ -3384,12 +3341,13 @@ window.goLaunch=async function(){
     return;
   }
 
-  // Step 2: Clear draft FIRST, then reload — so loadAllQuestions does not
-  // pull the now-committed draft questions back in as draftQs duplicates
-  await clearDraft();
+  // Step 2: Reload questions so we have the saved IDs
   await loadAllQuestions();
-  const selectedQs=allQuestions.filter(q=>savedQIds.includes(q.id));
+  const selectedQs=allQuestions.filter(q=>savedQIds.includes(q.id)||bankQs.some(b=>b.id===q.id));
   const launchQs=selectedQs.length?selectedQs:allPaper;
+
+  // Step 3: Clear draft
+  await clearDraft();
 
   activeSessionId=uid16();
   answersLocked=true;
@@ -3597,7 +3555,6 @@ async function endSessionAuto(){
     await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{
       status:'ended',
       answersLocked:false,
-      answersReleased:true,
       autoEndedAt:Date.now()
     });
     answersLocked=false;
@@ -3613,42 +3570,6 @@ async function endSessionAuto(){
   }catch(e){ console.warn('Auto-end failed:',e); }
 }
 
-function startWindowTimer(liveAt, windowSecs){
-  clearTimeout(_windowTimer);
-  if(!windowSecs||windowSecs<=0) return;
-  const elapsed=Math.floor((Date.now()-liveAt)/1000);
-  const remaining=windowSecs-elapsed;
-  if(remaining<=0){
-    // Already expired \u2014 end immediately
-    endSessionAuto();
-    return;
-  }
-  _windowTimer=setTimeout(()=>{ endSessionAuto(); }, remaining*1000);
-}
-
-async function endSessionAuto(){
-  clearTimeout(_windowTimer);
-  if(!fbReady||!activeSessionId) return;
-  try{
-    await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{
-      status:'ended',
-      answersLocked:false,
-      answersReleased:true,
-      autoEndedAt:Date.now()
-    });
-    answersLocked=false;
-    el('session-status-msg').textContent='⏹ Session auto-closed \u2014 open window elapsed.';
-    el('btn-end-session').style.display='none';
-    el('btn-end-2').style.display='none';
-    const btn=el('btn-unlock');
-    if(btn){btn.textContent='🔓 Answers Unlocked (auto)';btn.className='btn btn-grn w100';}
-    setSt('unlock-st','ok','✅ Session auto-ended \u2014 open window expired.');
-    activeSessionId=null;activeSessionDisplayId='';activeSessionFileId='';
-    try{ localStorage.removeItem('cq5_active_session'); }catch(e){}
-    syncActiveSessionBtn();
-  }catch(e){ console.warn('Auto-end failed:',e); }
-}
-  
 window.endSession=async function(){
   if(!confirm('End this session? All students still attempting will be auto-submitted.'))return;
   if(!fbReady||!activeSessionId)return;
@@ -3656,16 +3577,16 @@ window.endSession=async function(){
   try{
     await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{
       status:'ended',
-      answersLocked:false,
-      answersReleased:true   // explicit end → safe to show answers to all students
+      answersLocked:false
     });
     answersLocked=false;
-    el('session-status-msg').textContent='⏹ Session ended \u2014 answers released to students.';
+    el('session-status-msg').textContent='⏹ Session ended \u2014 answers auto-unlocked.';
     el('btn-end-session').style.display='none';
     el('btn-end-2').style.display='none';
+    // Update unlock button visual
     const btn=el('btn-unlock');
-    if(btn){btn.textContent='🔓 Answers Released';btn.className='btn btn-grn w100';}
-    setSt('unlock-st','ok','✅ Session ended \u2014 answers released to all students.');
+    if(btn){btn.textContent='🔓 Answers Unlocked (auto)';btn.className='btn btn-grn w100';}
+    setSt('unlock-st','ok','✅ Session ended \u2014 answers automatically unlocked for all students.');
     activeSessionId=null;activeSessionDisplayId='';activeSessionFileId='';
     try{ localStorage.removeItem('cq5_active_session'); }catch(e){}
     syncActiveSessionBtn();
@@ -3676,19 +3597,12 @@ window.toggleUnlock=async function(){
   if(!fbReady||!activeSessionId){setSt('unlock-st','err','No active session.');return;}
   answersLocked=!answersLocked;
   const btn=el('btn-unlock');
-  btn.textContent=answersLocked?'🔒 Answers Locked':'🔓 Release Answers to Students';
+  btn.textContent=answersLocked?'🔒 Answers Locked':'🔓 Answers Unlocked';
   btn.className=answersLocked?'btn btn-warn w100':'btn btn-grn w100';
   try{
-    // answersReleased=true means students CAN see correct answers.
-    // answersLocked is kept in sync for teacher UI state.
-    // The auto-unlock on all-submitted does NOT touch answersReleased — only this
-    // explicit teacher action (or End Session) does, preventing mid-quiz leakage.
-    await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{
-      answersLocked,
-      answersReleased:!answersLocked
-    });
+    await _fb.updateDoc(_fb.doc(db,'sessions',activeSessionId),{answersLocked});
     setSt('unlock-st',answersLocked?'info':'ok',
-      answersLocked?'🔒 Answers re-locked. Students cannot see correct answers.':'✅ Answers released — students can now review and download their answer sheets.');
+      answersLocked?'Answers are now locked.':'✅ Students can now see correct answers.');
   }catch(e){setSt('unlock-st','err','Update failed: '+e.message);}
 };
 
@@ -3893,13 +3807,26 @@ window.stuJoin=async function(){
       if(lobSnap.exists()){
         const lobData=lobSnap.data();
         const prog=lobData.progress;
-        const TWO_MIN=2*60*1000;
-        if(lobData.status==='started'&&prog&&prog.ts&&(Date.now()-prog.ts)<TWO_MIN){
+        // Allow reconnect for the full session window (time × 60 × 1000 ms)
+        // Any student with status=started and saved progress can resume without teacher intervention
+        const SESSION_MS=(qParams?.time||15)*60*1000;
+        const progAge=prog&&prog.ts?(Date.now()-prog.ts):Infinity;
+        if(lobData.status==='started'&&prog&&progAge<SESSION_MS){
           showReconnectOverlay(name,roll,email,lobSnap.ref,lobData,prog,(prog.curQ||0)+1);
           return;
         }
-        showStuError('Roll '+roll+' is already active in this session. If you lost connection more than 2 minutes ago, ask your teacher to remove you from the lobby so you can rejoin.');
-        return;
+        if(lobData.status==='submitted'){
+          showStuError('You have already submitted this quiz. Check your results with your teacher.');
+          return;
+        }
+        // Student is in lobby but no valid progress — allow them to re-enter by overwriting lobby doc
+        // (handles case where student joined but network dropped before starting)
+        if(lobData.status==='joined'){
+          // Fall through to normal registration below
+        } else {
+          showStuError('Your previous session data has expired. Please ask your teacher to remove you from the lobby and try again.');
+          return;
+        }
       }
       const allLobby=await _fb.getDocs(_fb.collection(db,'lobby_'+sid));
       for(const d of allLobby.docs){
@@ -3957,6 +3884,8 @@ function showReconnectOverlay(name,roll,email,lobRef,lobData,prog,resumeQ){
     try{lockedAnswers=JSON.parse(prog.lockedAnswers||'{}');}catch(e){lockedAnswers={};}
     try{optionShuffles=JSON.parse(prog.optionShuffles||'{}');}catch(e){optionShuffles={};}
     try{vioLockedQs=JSON.parse(prog.vioLockedQs||'{}');}catch(e){vioLockedQs={};}
+    try{confidenceMap=JSON.parse(prog.confidenceMap||'{}');}catch(e){confidenceMap={};}
+    try{timingsMap=JSON.parse(prog.timingsMap||'{}');}catch(e){timingsMap={};}
     curQ=prog.curQ||0;
     timeLeft=Math.max(0,((qParams?.time||15)*60)-(prog.timeTaken||0));
     vioCount=prog.vioCount||0;
@@ -3966,6 +3895,7 @@ function showReconnectOverlay(name,roll,email,lobRef,lobData,prog,resumeQ){
       sessionId:qParams?.sessionId,sessionName:qParams?.sessionName||'',time:qParams?.time||15}));}catch(e){}
     el('hstu').textContent='&#x1F464; '+stuName;
     show('s-quiz');renderQ();renderDots();startTmr();reqFS();
+    // startTmr() now calls startProgressSave() internally
     document.addEventListener('visibilitychange',onVis);
     document.addEventListener('fullscreenchange',onFS);
     document.addEventListener('webkitfullscreenchange',onFS);
@@ -4087,7 +4017,7 @@ function listenForSessionEnd(){
         el('ov-session-ended').classList.add('on');
       }
     }catch(e){}
-  },8000); // 8 seconds — saves quota; session-end signal still arrives within ~8s
+  },8000);
 }
 
 /* ═══════════════════════════════════════════
@@ -4245,16 +4175,44 @@ function restartVio(){
 /* ═══════════════════════════════════════════
    TIMER
 ═══════════════════════════════════════════ */
+let progressSaveInt=null;
+function startProgressSave(){
+  clearInterval(progressSaveInt);
+  if(!fbReady||!qParams?.sessionId||!stuRoll) return;
+  progressSaveInt=setInterval(()=>{
+    if(!quizActive) return;
+    const lobbyDocId=stuRoll.replace(/[^a-zA-Z0-9]/g,'_');
+    const elapsed=((qParams?.time||15)*60)-timeLeft;
+    _fb.updateDoc(_fb.doc(db,'lobby_'+qParams.sessionId,lobbyDocId),{
+      status:'started',
+      progress:{
+        answers:JSON.stringify(answers),
+        lockedAnswers:JSON.stringify(lockedAnswers),
+        optionShuffles:JSON.stringify(optionShuffles),
+        vioLockedQs:JSON.stringify(vioLockedQs),
+        confidenceMap:JSON.stringify(confidenceMap),
+        timingsMap:JSON.stringify(timingsMap),
+        curQ,
+        vioCount,
+        offSecs,
+        timeTaken:elapsed,
+        ts:Date.now()
+      }
+    }).catch(()=>{});
+  },30000); // save every 30 seconds
+}
+
 function startTmr(){
   clearInterval(timerInt);
   warnedAt5=false; warnedAt1=false;
   timerInt=setInterval(()=>{
     timeLeft--;updTmr();
-    if(timeLeft===300&&!warnedAt5){warnedAt5=true;fireTimerWarning('⏰  5 minutes remaining','tw');}
-    if(timeLeft===60 &&!warnedAt1){warnedAt1=true;fireTimerWarning('⚠️  1 minute remaining!','td');}
+    if(timeLeft===300&&!warnedAt5){warnedAt5=true;fireTimerWarning('\u23f0  5 minutes remaining','tw');}
+    if(timeLeft===60 &&!warnedAt1){warnedAt1=true;fireTimerWarning('\u26a0\ufe0f  1 minute remaining!','td');}
     if(timeLeft<=0){clearInterval(timerInt);finishQuiz();}
   },1000);
   updTmr();
+  startProgressSave();
 }
 function updTmr(){
   const m=String(Math.floor(timeLeft/60)).padStart(2,'0'),s=String(timeLeft%60).padStart(2,'0');
@@ -4379,18 +4337,6 @@ function renderQ(){
     </button>`;
   }
 
-  // Submit nudge — only shown on non-last unattempted questions when student has answered some
-  const attempted=Object.keys(answers).filter(k=>answers[k]!=='').length;
-  if(!reviewMode && !last && answers[curQ]===undefined && attempted>0){
-    html+=`<div style="margin-top:10px;padding:10px 14px;background:rgba(108,99,255,.06);
-      border:1px solid rgba(108,99,255,.2);border-radius:10px;text-align:center">
-      <div style="font-size:11px;color:var(--m);margin-bottom:6px">
-        ${attempted} of ${quizQs.length} answered — skip remaining and submit?
-      </div>
-      <button class="btn btn-ghost btn-sm" onclick="confSub()">Submit Now ✓</button>
-    </div>`;
-  }
-
   // Show prev hint only if not on first question
   if(curQ > 0){
     html+=`<div style="text-align:center;margin-top:12px">
@@ -4399,6 +4345,24 @@ function renderQ(){
         ← Go Back${reviewMode?' (review only)':''}
       </button>
     </div>`;
+  }
+
+  // Floating submit button: show on any non-last question when student has answered
+  // all attempted questions (i.e. they navigated back to a skipped one)
+  if(!last&&!reviewMode){
+    const totalAnswered=Object.keys(answers).filter(k=>answers[k]!=='').length;
+    if(totalAnswered>0){
+      html+=`<div style="margin-top:18px;padding:12px 14px;background:rgba(108,99,255,.07);
+        border:1px solid rgba(108,99,255,.2);border-radius:10px;text-align:center">
+        <div style="font-size:11px;color:var(--m);margin-bottom:8px">
+          ${totalAnswered} of ${quizQs.length} answered · ready to wrap up?
+        </div>
+        <button class="btn btn-grn" onclick="confSub()"
+          style="padding:8px 22px;font-size:13px">
+          Submit Quiz ✓
+        </button>
+      </div>`;
+    }
   }
 
   el('qbody').innerHTML=html;
@@ -4429,54 +4393,33 @@ window.jumpQ=function(i){
   if(!reviewMode&&questionStartTime) timingsMap[curQ]=Math.round((Date.now()-questionStartTime)/1000);
   if(answers[curQ]!==undefined) lockedAnswers[curQ]=true;
   curQ=i;renderQ();renderDots();
-  if(!reviewMode&&answers[curQ]!==undefined&&!lockedAnswers[curQ]&&confidenceMap[curQ]===undefined){
-    confReady=false;
-    setTimeout(()=>{confReady=true;},300);
-    el('ov-confidence').classList.add('on');
-  }
 };
 window.pickOpt=function(i){
   if(reviewMode)return;
   if(lockedAnswers[curQ])return;
   answers[curQ]=String(i);
-  document.querySelectorAll('.opt').forEach((btn,idx)=>{
-    btn.classList.toggle('sel', String(idx)===String(i));
-  });
+  // Re-render question immediately so the selected option highlights on PC browsers
+  // before the confidence overlay slides up (avoids "nothing happened" confusion)
+  renderQ();
+  renderDots();
+  // Show confidence overlay — delay confReady slightly so accidental double-tap
+  // on the overlay buttons (which appear at the same position) doesn't fire immediately
   confReady=false;
   setTimeout(()=>{confReady=true;},260);
   el('ov-confidence').classList.add('on');
-  // On last question show the escape hatch so a fast-tapper can't get stuck
-  const skipWrap=el('conf-skip-wrap');
-  if(skipWrap) skipWrap.style.display=(curQ===quizQs.length-1)?'block':'none';
-  renderDots();
 };
 window.pickConfidence=function(level){
-  // If confReady debounce hasn't cleared yet, retry once after it clears
-  // instead of silently dropping the tap (which can strand students on last Q)
-  if(!confReady){
-    setTimeout(()=>pickConfidence(level), 320);
-    return;
-  }
+  if(!confReady)return;
   confidenceMap[curQ]=level;
   el('ov-confidence').classList.remove('on');
-  const skipWrap=el('conf-skip-wrap');
-  if(skipWrap) skipWrap.style.display='none';
+  // Lock answer and record timing
   lockedAnswers[curQ]=true;
   if(questionStartTime) timingsMap[curQ]=Math.round((Date.now()-questionStartTime)/1000);
+  // Auto-advance to next question, or stay on last (submit button visible)
   if(curQ<quizQs.length-1){
     curQ++;
   }
   renderQ();renderDots();
-};
-
-// Escape hatch: student skips confidence tag and goes straight to submit confirmation
-window.skipConfAndSubmit=function(){
-  el('ov-confidence').classList.remove('on');
-  const skipWrap=el('conf-skip-wrap');
-  if(skipWrap) skipWrap.style.display='none';
-  lockedAnswers[curQ]=true;
-  if(questionStartTime) timingsMap[curQ]=Math.round((Date.now()-questionStartTime)/1000);
-  confSub();
 };
 window.redoAnswer=function(){
   // Close overlay without recording confidence, clear the answer so student can re-select
@@ -4492,13 +4435,6 @@ window.navQ=function(d){
   if(answers[curQ]!==undefined) lockedAnswers[curQ]=true;
   curQ=Math.max(0,Math.min(quizQs.length-1,curQ+d));
   renderQ();renderDots();
-  // If arriving at a question that has an answer but no confidence tag yet,
-  // re-show the overlay so the student can confirm before proceeding
-  if(!reviewMode&&answers[curQ]!==undefined&&!lockedAnswers[curQ]&&confidenceMap[curQ]===undefined){
-    confReady=false;
-    setTimeout(()=>{confReady=true;},300);
-    el('ov-confidence').classList.add('on');
-  }
 };
 
 /* ═══════════════════════════════════════════
@@ -4514,7 +4450,7 @@ window.confSub=function(){
 window.finishQuiz=async function(){
   closeOv('ov-sub');closeOv('ov-session-ended');
   quizActive=false;
-  clearInterval(timerInt);clearInterval(vioTimer);
+  clearInterval(timerInt);clearInterval(vioTimer);clearInterval(progressSaveInt);
   clearInterval(sessionPollInt);clearInterval(endPollInt);
   document.removeEventListener('visibilitychange',onVis);
   document.removeEventListener('fullscreenchange',onFS);
@@ -4584,23 +4520,23 @@ window.finishQuiz=async function(){
     ts:Date.now()
   };
 
-  // Show result IMMEDIATELY — do not wait for Firestore save
+  // Show result screen IMMEDIATELY with local data — don't wait for Firestore
   showResult(rec);
 
-  // Save to Firestore in background
+  // Save to Firestore in background (non-blocking)
   if(fbReady && stuRoll && stuRoll.trim()){
     (async()=>{
       try{
         const _safeRoll = stuRoll.replace(/[^a-zA-Z0-9]/g,'_');
         const _safeSid  = (qParams?.sessionId || 'x').replace(/[^a-zA-Z0-9]/g,'_');
         const docId = _safeRoll + '__' + _safeSid;
-        try{ await _fb.deleteDoc(_fb.doc(db, 'results', docId)); }catch(e){}
-        await _fb.setDoc(_fb.doc(db, 'results', docId), rec);
+        try{ await _fb.deleteDoc(_fb.doc(db,'results',docId)); }catch(e){}
+        await _fb.setDoc(_fb.doc(db,'results',docId), rec);
         if(qParams?.sessionId){
           const _lobbyDocId=stuRoll.replace(/[^a-zA-Z0-9]/g,'_');
           _fb.updateDoc(_fb.doc(db,'lobby_'+qParams.sessionId,_lobbyDocId),{status:'submitted'}).catch(()=>{});
         }
-      }catch(e){ console.warn('Save result:', e); }
+      }catch(e){console.warn('Save result:',e);}
     })();
   }
 };
@@ -4632,35 +4568,31 @@ async function showResult(r){
   vb.style.display=r.violations>0?'':'none';
   if(r.violations>0)vb.textContent=`⚠ ${r.violations} violation(s). Off-screen: ${r.offSecs}s.`;
 
-  // Check if teacher has EXPLICITLY released answers via answersReleased flag.
-  // answersReleased is only set true by teacher's manual "Release Answers" action
-  // or when they formally end the session — NOT by the auto-unlock that fires
-  // when all students submit. This prevents early finishers or cross-session
-  // students from seeing correct answers while the quiz is still in progress.
-  let released=false;
-  if(fbReady&&qParams?.sessionId){
-    try{
-      const snap=await _fb.getDoc(_fb.doc(db,'sessions',qParams.sessionId));
-      if(snap.exists()) released=snap.data().answersReleased===true;
-    }catch(e){}
-  }
+  // Show result screen immediately — don't block on Firestore
+  el('ans-review-wrap').style.display='none';
+  el('ans-locked-msg').style.display=qParams?.sessionId?'':'none';
+  el('btn-check-unlock').style.display=qParams?.sessionId?'':'none';
+  show('s-result');
 
-  if(released){
-    showAnswerReview();
-    el('ans-locked-msg').style.display='none';
-    el('btn-check-unlock').style.display='none';
-  }else{
-    el('ans-review-wrap').style.display='none';
-    el('btn-download-answers').style.display='none';
-    el('ans-locked-msg').style.display=qParams?.sessionId?'':'none';
-    el('btn-check-unlock').style.display=qParams?.sessionId?'':'none';
-    // Auto-poll every 10s for teacher release
-    if(qParams?.sessionId&&fbReady){
+  // Check unlock state in background
+  if(fbReady&&qParams?.sessionId){
+    (async()=>{
+      try{
+        const snap=await _fb.getDoc(_fb.doc(db,'sessions',qParams.sessionId));
+        const locked=!snap.exists()||snap.data().answersLocked!==false;
+        if(!locked){
+          showAnswerReview();
+          el('ans-locked-msg').style.display='none';
+          el('btn-check-unlock').style.display='none';
+          return;
+        }
+      }catch(e){}
+      // Still locked — start auto-poll
       clearInterval(unlockPollInt);
       unlockPollInt=setInterval(async function(){
         try{
           const s=await _fb.getDoc(_fb.doc(db,'sessions',qParams.sessionId));
-          if(s.exists()&&s.data().answersReleased===true){
+          if(s.exists()&&s.data().answersLocked===false){
             clearInterval(unlockPollInt);
             showAnswerReview();
             el('ans-locked-msg').style.display='none';
@@ -4668,9 +4600,8 @@ async function showResult(r){
           }
         }catch(e){}
       },10000);
-    }
+    })();
   }
-  show('s-result');
 }
 
 let unlockPollInt=null;
@@ -4681,7 +4612,7 @@ window.checkUnlock=async function(){
   btn.textContent='Checking…';btn.disabled=true;
   try{
     const snap=await _fb.getDoc(_fb.doc(db,'sessions',qParams.sessionId));
-    if(snap.exists()&&snap.data().answersReleased===true){
+    if(snap.exists()&&snap.data().answersLocked===false){
       clearInterval(unlockPollInt);
       showAnswerReview();
       el('ans-locked-msg').style.display='none';
@@ -4689,11 +4620,12 @@ window.checkUnlock=async function(){
       return;
     }else{
       btn.textContent='🔄 Check again';btn.disabled=false;
+      // Start auto-polling every 10 seconds \u2014 teacher unlock is not time-critical
       if(!unlockPollInt){
         unlockPollInt=setInterval(async()=>{
           try{
             const s=await _fb.getDoc(_fb.doc(db,'sessions',qParams.sessionId));
-            if(s.exists()&&s.data().answersReleased===true){
+            if(s.exists()&&s.data().answersLocked===false){
               clearInterval(unlockPollInt);
               showAnswerReview();
               el('ans-locked-msg').style.display='none';
@@ -4820,7 +4752,7 @@ window.downloadAnswerSheet=function(){
       const origIdx=shuffle&&!isNaN(dispIdx)?shuffle[dispIdx]:dispIdx;
       return n+(origIdx===(q.correctIndex||0)?1:0);
     }
-    return n+((['True','False'][parseInt(ua)]||'').toLowerCase()===(q.answer||'').toLowerCase()?1:0);
+    return n+(['True','False'][parseInt(ua)]||'').toLowerCase()===(q.answer||'').toLowerCase()?1:0;
   },0);
 
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -5787,6 +5719,7 @@ function renderStudentProfiles(){
 ═══════════════════════════════════════════ */
 // Current analytics view state
 let _qTableSort={col:'',dir:1};
+let _stuConfData={}; // keyed by roll — confidence stats for Strategy modal
 window.sortQTable=function(col){
   if(_qTableSort.col===col)_qTableSort.dir*=-1;else{_qTableSort.col=col;_qTableSort.dir=1;}
   if(_analyticsQs&&_analyticsResults){
@@ -5849,24 +5782,13 @@ function renderSessionAnalytics(){
     _analyticsQs=null;_analyticsResults=null;
     return;
   }
-  // Apply all active filters first, then narrow to session ID.
-  // This ensures teacher/prog/subj/year/month filters are respected.
-  const prog=gv('rf-prog'),subj=gv('rf-subj'),topic=gv('rf-topic');
-  const teacher=gv('rf-teacher'),year=gv('rf-year'),month=gv('rf-month');
-  const filteredPool=allResults.filter(r=>{
-    if(prog&&r.programmeName!==prog) return false;
-    if(subj&&r.courseId!==subj) return false;
-    if(topic&&r.topicName!==topic) return false;
-    if(teacher&&r.teacherName!==teacher) return false;
-    if(year&&new Date(r.ts||0).getFullYear()!==parseInt(year)) return false;
-    if(month&&new Date(r.ts||0).getMonth()+1!==parseInt(month)) return false;
-    return true;
-  });
-  // Match filtered pool to the selected session ID — exact matches only.
-  const sessionResults=filteredPool.filter(r=>{
-    if(r.sessionDisplayId===sid) return true;
-    if(r.sessionId===sid) return true;
-    if(r.sessionFileId===sid) return true;
+  // Match results to the selected session ID \u2014 exact matches only.
+  // Fuzzy / base-name matching was removed because it incorrectly pulled results
+  // from other sessions that share the same course+topic prefix.
+  const sessionResults=allResults.filter(r=>{
+    if(r.sessionDisplayId===sid) return true;   // exact display ID match
+    if(r.sessionId===sid) return true;           // raw Firestore doc ID match
+    if(r.sessionFileId===sid) return true;       // file ID match
     return false;
   });
   if(!sessionResults.length){
@@ -5964,10 +5886,8 @@ function computeAnalytics(qs,results){
       acc.total++;
       let isCorrect=false;
       if(q.type==='tf'){
-        // ua is stored as "0" or "1" (display index), q.answer is "True"/"False"
-        const uaLabel=(['True','False'][parseInt(ua)]||'');
-        isCorrect=uaLabel.toLowerCase()===(q.answer||'').toLowerCase();
-        acc.optDist[uaLabel||ua]=(acc.optDist[uaLabel||ua]||0)+1;
+        isCorrect=(ua===q.answer);
+        acc.optDist[ua]=(acc.optDist[ua]||0)+1;
       } else {
         const shuffle=sh[si]||sh[String(si)];
         const origIdx=shuffle?shuffle[parseInt(ua)]:parseInt(ua);
@@ -6319,12 +6239,12 @@ function renderAnalyticsStudent(an,nStudents,results,qs){
       const worstPct=worst&&stuBloom[worst].t?Math.round(stuBloom[worst].c/stuBloom[worst].t*100):null;
       // Confidence calibration
       let confCell='\u2014';
+      let confStats=null;
       if(hasConf&&Object.keys(cm).length){
         const sc={sure:{c:0,t:0},unsure:{c:0,t:0},guessing:{c:0,t:0}};
         Object.entries(cm).forEach(([qi2,conf])=>{
           if(!sc[conf])return;sc[conf].t++;
-          // Use student's own quizQs to map index → question
-          const q=(rQs||qs||[])[parseInt(qi2)];if(!q)return;
+          const q=(qs||[])[parseInt(qi2)];if(!q)return;
           const ua2=am[qi2]!==undefined?am[qi2]:am[String(qi2)];if(ua2===undefined||ua2==='')return;
           let ok=false;
           if(q.type==='tf'){ok=ua2===q.answer;}
@@ -6335,7 +6255,10 @@ function renderAnalyticsStudent(an,nStudents,results,qs){
         const calib=sA===null?'No data':sA>=(r.pct-10)?'Well-calibrated':sA<(r.pct-25)?'Overconfident':'Slight over';
         const calibCol=sA===null?'var(--m)':sA>=(r.pct-10)?'var(--grn)':'var(--warn)';
         confCell=`<span style="font-size:11px;color:${calibCol}">${calib}</span>`;
+        confStats={sc,sA,calib,calibCol};
       }
+      // Store for Strategy modal access
+      _stuConfData[r.roll||'']=confStats;
       // Snapshot descriptor
       let snapshot='';
       if(attempted.length){
@@ -6431,10 +6354,9 @@ function renderAnalyticsStudent(an,nStudents,results,qs){
         return;
       }
       const sc={sure:{c:0,t:0},unsure:{c:0,t:0},guessing:{c:0,t:0}};
-      const rQs2=safeParseJson(r.quizQs)||qs;
       Object.entries(cm2).forEach(([qi,conf])=>{
         if(!sc[conf])return;sc[conf].t++;
-        const q=(rQs2||[])[parseInt(qi)];if(!q)return;
+        const q=(qs||[])[parseInt(qi)];if(!q)return;
         const ua=am2[qi]!==undefined?am2[qi]:am2[String(qi)];if(ua===undefined||ua==='')return;
         let ok=false;
         if(q.type==='tf'){ok=ua===q.answer;}
@@ -6467,6 +6389,48 @@ function renderAnalyticsStudent(an,nStudents,results,qs){
 window.showStudentStrategy=function(name,roll,score,best,bestPct,worst,worstPct){
   const ov=el('strat-overlay');if(!ov)return;
   const inner=el('strat-overlay-inner');if(!inner)return;
+
+  // ── Confidence section ──
+  const conf=_stuConfData[roll]||null;
+  let confHtml='';
+  if(conf&&conf.sc){
+    const sc=conf.sc;
+    const sA=conf.sA;
+    const calibCol=conf.calibCol||'var(--m)';
+    const rows=[
+      ['✅ Sure',    sc.sure,    sA!==null?sA+'%':'—'],
+      ['🤔 Not So Sure', sc.unsure, sc.unsure.t?Math.round(sc.unsure.c/sc.unsure.t*100)+'%':'—'],
+      ['🎲 Wild Guess',  sc.guessing, sc.guessing.t?Math.round(sc.guessing.c/sc.guessing.t*100)+'%':'—'],
+    ];
+    confHtml=`<div style="margin:14px 0 10px;padding:12px 14px;background:rgba(108,99,255,.07);border:1px solid rgba(108,99,255,.18);border-radius:10px">
+      <div style="font-size:12px;font-weight:700;color:var(--txt);margin-bottom:10px;letter-spacing:.3px">CONFIDENCE METRICS</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="color:var(--m);font-size:11px">
+          <th style="text-align:left;padding:3px 6px">Level</th>
+          <th style="text-align:center;padding:3px 6px">Answered</th>
+          <th style="text-align:center;padding:3px 6px">Correct</th>
+          <th style="text-align:center;padding:3px 6px">Accuracy</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map(([lbl,d,acc])=>`<tr>
+            <td style="padding:4px 6px">${lbl}</td>
+            <td style="padding:4px 6px;text-align:center">${d.t||'—'}</td>
+            <td style="padding:4px 6px;text-align:center;color:var(--grn)">${d.t?d.c:'—'}</td>
+            <td style="padding:4px 6px;text-align:center;font-weight:600">${acc}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      <div style="margin-top:8px;font-size:11px;color:${calibCol}">
+        Calibration: <b>${conf.calib}</b>
+        ${sA!==null&&sA<(score-25)?'<br><span style="color:var(--warn)">Student marked answers as Sure but scored '+sA+'% on them — significant overconfidence detected.</span>':''}
+        ${sA!==null&&sA>=(score-10)?'<br><span style="color:var(--grn)">Sure-answers accuracy aligns with overall score — good self-awareness.</span>':''}
+      </div>
+    </div>`;
+  } else {
+    confHtml=`<div style="margin:10px 0;font-size:11px;color:var(--m);font-style:italic">No confidence data recorded for this student.</div>`;
+  }
+
+  // ── Teaching strategy lines ──
   const lines=[];
   lines.push('<b>Overall score: '+score+'%</b>');
   if(score>=70) lines.push('Strong overall performance. Encourage extension to higher-order questions (Analysis, Synthesis, Evaluation) if not already included.');
@@ -6481,8 +6445,19 @@ window.showStudentStrategy=function(name,roll,score,best,bestPct,worst,worstPct)
     worst==='synthesis'?'essay questions, design tasks, integrative case studies':
     'critical appraisal of evidence, debate exercises'
   )+'.');
+  // Confidence-informed strategy
+  if(conf&&conf.sc){
+    const sA=conf.sA;
+    if(sA!==null&&sA<(score-25)) lines.push('Metacognitive gap: student is over-confident in what they know. Use self-testing and Socratic questioning to build more accurate self-assessment.');
+    if(conf.sc.guessing.t>=3) lines.push('Student guessed on '+conf.sc.guessing.t+' question(s). Reinforce foundational coverage \u2014 guessing at this rate suggests gaps in breadth of knowledge.');
+    if(conf.sc.unsure.t>0&&Math.round(conf.sc.unsure.c/conf.sc.unsure.t*100)>=60) lines.push('Good implicit knowledge: student scored well even on questions they felt unsure about. Consider building their confidence through low-stakes practice quizzes.');
+  }
+
   inner.innerHTML=`<button onclick="el('strat-overlay').style.display='none'" style="position:absolute;top:12px;right:14px;background:none;border:none;color:var(--m);font-size:20px;cursor:pointer">&#x2715;</button>
-    <div style="font-family:var(--fh);font-size:15px;font-weight:700;margin-bottom:14px;color:var(--txt)">Teaching Strategy: ${esc(name)} (${esc(roll)})</div>
+    <div style="font-family:var(--fh);font-size:15px;font-weight:700;margin-bottom:4px;color:var(--txt)">Teaching Strategy</div>
+    <div style="font-size:12px;color:var(--m);margin-bottom:14px">${esc(name)} &nbsp;&middot;&nbsp; ${esc(roll)}</div>
+    ${confHtml}
+    <div style="margin-top:14px;font-size:12px;font-weight:700;color:var(--txt);letter-spacing:.3px;margin-bottom:8px">RECOMMENDATIONS</div>
     <div style="font-size:13px;color:var(--txt);line-height:1.7">${lines.map(l=>'<p style="margin:0 0 10px">'+l+'</p>').join('')}</div>`;
   ov.style.display='flex';
 };
@@ -7827,39 +7802,29 @@ window.editStudent = function(btn){
   el('ov-edit-student').classList.add('on');
 };
 
-// ── Pause polling when browser tab is hidden — quota saver ────────────────
+// ── Pause all polling when the browser tab is hidden ──────────────────────
+// This is the single biggest quota saver: a hidden tab burns reads for nothing.
 document.addEventListener('visibilitychange', function(){
   if(document.hidden){
-    // Teacher-side polls — always safe to pause
     clearInterval(lobbyPollInt);
     clearInterval(resultsRefreshInt);
-    // Student waiting screen poll — safe to pause (not time-critical)
+    // Student polls: pause but don't null them \u2014 finishQuiz checks quizActive
     if(sessionPollInt){ clearInterval(sessionPollInt); sessionPollInt=null; }
-    // IMPORTANT: never pause endPollInt during an active quiz.
-    // endPollInt is the only mechanism that tells the student the session ended.
-    // Pausing it means students never receive the "Session Ended" signal.
-    // unlockPollInt is also left running — it only fires post-quiz.
+    if(endPollInt){     clearInterval(endPollInt);     endPollInt=null; }
+    if(unlockPollInt){  clearInterval(unlockPollInt);  unlockPollInt=null; }
   } else {
-    // Tab visible again — resume teacher lobby if active
+    // Tab is visible again \u2014 resume whichever loops are contextually appropriate.
+    // Teacher lobby: restart only if a session is actively open
     if(activeSessionId && typeof startLobbyListener === 'function') startLobbyListener();
-    // Resume student waiting screen poller
+    // Student waiting screen: restart session poller if still waiting
     if(typeof qParams !== 'undefined' && qParams?.sessionId){
       const sc = document.getElementById('s-stu-wait');
-      if(sc && sc.style.display!=='none' && getComputedStyle(sc).display!=='none') startSessionPoller();
-      // endPollInt self-recovers: if quiz is active and poll was running, restart it
-      if(quizActive && !endPollInt) listenForSessionEnd();
+      if(sc && sc.classList.contains('active')) startSessionPoller();
+      const sq = document.getElementById('s-quiz');
+      if(sq && sq.classList.contains('active') && !endPollInt) listenForSessionEnd();
     }
   }
 });
-
-// Move all fixed overlays to direct <body> children so position:fixed always works.
-// Critical: overflow-x on ANY ancestor breaks position:fixed in mobile Safari/Chrome.
-(function(){
-  ['ov-confidence','ov-vio','ov-sub','ov-session-ended'].forEach(function(id){
-    const el=document.getElementById(id);
-    if(el&&el.parentElement!==document.body) document.body.appendChild(el);
-  });
-})();
 
 bootstrap();
 </script>
