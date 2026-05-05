@@ -130,6 +130,11 @@ textarea{resize:vertical;min-height:80px;line-height:1.6}
 .opt.clickable:hover{border-color:var(--acc);background:rgba(108,99,255,.06)}
 .opt.sel{border-color:var(--acc);background:rgba(108,99,255,.14)}
 .opt.correct{border-color:var(--grn)!important;background:rgba(62,207,142,.12)!important}
+/* Anti-cheat: block text selection and copy on active quiz screen */
+#s-quiz .qtxt,#s-quiz .opts,#s-quiz .opt{
+  -webkit-user-select:none;-moz-user-select:none;user-select:none;
+  -webkit-touch-callout:none}
+#s-quiz img{pointer-events:none}
 .opt.incorrect{border-color:var(--err)!important;background:rgba(239,68,68,.10)!important}
 .opt.reveal{border-color:var(--grn)!important;background:rgba(62,207,142,.08)!important}
 .oltr{width:25px;height:25px;min-width:25px;border-radius:50%;background:var(--s2);border:1px solid var(--b);
@@ -510,6 +515,8 @@ tr:hover td{background:var(--s2)}
       <span style="font-size:22px">👩‍🏫</span><span>Manage Teachers</span></button>
     <button id="home-adminoffice-btn" class="btn btn-err" onclick="goAdminOffice()" style="flex-direction:column;padding:16px 10px;gap:6px;border-radius:var(--r);display:none">
       <span style="font-size:22px">🔐</span><span>Admin Office</span></button>
+    <button class="btn btn-ghost" onclick="show('s-teacher-settings');loadGeminiKeyUI()" style="flex-direction:column;padding:16px 10px;gap:6px;border-radius:var(--r)">
+      <span style="font-size:22px">⚙️</span><span>Settings</span></button>
   </div>
   <!-- Admin home tabs (admin only) -->
   <div id="home-admin-tabs" style="display:none;margin-bottom:0">
@@ -536,6 +543,50 @@ tr:hover td{background:var(--s2)}
   <h2 id="home-sess-heading">Recent Sessions</h2>
   <div id="home-recent">
     <div style="font-size:13px;color:var(--m)">No sessions yet.</div>
+  </div>
+</div>
+</div>
+
+<!-- TEACHER SETTINGS -->
+<div id="s-teacher-settings" class="screen center">
+<div class="mw-lg">
+  <div class="row" style="margin-bottom:20px;flex-wrap:wrap;gap:10px">
+    <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
+    <h3 style="flex:1">⚙️ My Settings</h3>
+  </div>
+  <div class="card">
+    <h3 style="margin-top:0;margin-bottom:4px">🤖 AI Question Generation</h3>
+    <p style="font-size:13px;color:var(--m);margin-bottom:16px;line-height:1.6">
+      Uses Google Gemini (free tier) to generate questions from your notes, textbooks, or PDFs.
+      Your key is stored only on this device — never shared or uploaded.
+    </p>
+    <label>Gemini API Key</label>
+    <div class="row" style="gap:8px;align-items:center">
+      <input type="password" id="gemini-key-input" placeholder="Paste your Gemini API key here…"
+        style="flex:1;font-family:monospace;font-size:13px"/>
+      <button class="btn btn-ghost btn-sm" onclick="toggleGeminiKeyVis()" id="gemini-key-vis-btn">👁</button>
+    </div>
+    <div class="row" style="gap:8px;margin-top:10px">
+      <button class="btn btn-pri" style="flex:1" onclick="saveGeminiKey()">💾 Save Key</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="testGeminiKey()">🧪 Test Connection</button>
+      <button class="btn btn-err btn-sm" onclick="clearGeminiKey()">✕ Clear</button>
+    </div>
+    <div class="st" id="gemini-key-st" style="margin-top:10px"></div>
+    <!-- Setup guide -->
+    <details style="margin-top:18px">
+      <summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--acc)">
+        📋 How to get a free Gemini API key (3 steps)
+      </summary>
+      <div style="margin-top:12px;font-size:13px;color:var(--txt);line-height:1.8;padding:12px;background:var(--s2);border-radius:8px">
+        <div><b>1.</b> Go to <a href="https://aistudio.google.com" target="_blank" style="color:var(--acc)">aistudio.google.com</a> and sign in with your Google account.</div>
+        <div><b>2.</b> Click <b>"Get API Key"</b> → <b>"Create API key"</b> → copy the key shown.</div>
+        <div><b>3.</b> Paste it in the field above and click <b>Save Key</b>.</div>
+        <div style="margin-top:8px;font-size:12px;color:var(--m)">
+          Free tier: 15 requests/minute · 1 million tokens/day · no credit card needed.<br>
+          Your key stays on this device only (localStorage). Clear it anytime.
+        </div>
+      </div>
+    </details>
   </div>
 </div>
 </div>
@@ -850,6 +901,116 @@ tr:hover td{background:var(--s2)}
       </div>
     </div>
     <button class="btn btn-pri w100" onclick="wizNext(1)">Next: Write Your Own Question →</button>
+    <div style="display:flex;align-items:center;gap:10px;margin:14px 0 4px">
+      <div style="flex:1;height:1px;background:var(--b)"></div>
+      <span style="font-size:12px;color:var(--m);white-space:nowrap">or</span>
+      <div style="flex:1;height:1px;background:var(--b)"></div>
+    </div>
+    <button class="btn w100" onclick="toggleAiGenPanel()"
+      style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none;padding:14px;font-size:14px;font-weight:600;border-radius:var(--r);gap:8px">
+      ✨ Generate Questions from Your Source
+    </button>
+    <!-- AI Generation Panel -->
+    <div id="ai-gen-panel" style="display:none;margin-top:12px">
+      <div class="card" style="border:1px solid rgba(108,99,255,.3);background:rgba(108,99,255,.04)">
+        <div style="font-family:var(--fh);font-size:14px;font-weight:700;margin-bottom:4px;color:var(--acc)">
+          ✨ AI Question Generator <span style="font-size:11px;font-weight:400;color:var(--m)">powered by Gemini</span>
+        </div>
+        <p style="font-size:12px;color:var(--m);margin-bottom:14px;line-height:1.6">
+          Paste text from lecture notes, a textbook, or a paper. The AI will generate questions
+          pre-tagged with Cognitive Level and Difficulty, ready to review and save.
+        </p>
+        <!-- Source input tabs -->
+        <div style="display:flex;gap:6px;margin-bottom:12px">
+          <button class="btn btn-sm" id="ai-tab-text" onclick="aiSrcTab('text')"
+            style="background:var(--acc);color:#fff;border:none;flex:1">📝 Paste Text</button>
+          <button class="btn btn-ghost btn-sm" id="ai-tab-pdf" onclick="aiSrcTab('pdf')"
+            style="flex:1">📄 Upload PDF</button>
+        </div>
+        <!-- Text input -->
+        <div id="ai-src-text">
+          <textarea id="ai-source-text" rows="6" placeholder="Paste your source text here — lecture notes, textbook paragraphs, paper abstracts, clinical guidelines…"
+            style="font-size:13px;line-height:1.6;resize:vertical"></textarea>
+        </div>
+        <!-- PDF input -->
+        <div id="ai-src-pdf" style="display:none">
+          <div id="ai-pdf-drop" style="border:2px dashed var(--b2);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s"
+            onclick="el('ai-pdf-file').click()"
+            ondragover="event.preventDefault();this.style.borderColor='var(--acc)'"
+            ondragleave="this.style.borderColor='var(--b2)'"
+            ondrop="aiPdfDrop(event)">
+            <div style="font-size:28px;margin-bottom:8px">📄</div>
+            <div style="font-size:13px;color:var(--m)">Click or drag a PDF here</div>
+            <div style="font-size:11px;color:var(--m2);margin-top:4px">Processed entirely in your browser — never uploaded</div>
+          </div>
+          <input type="file" id="ai-pdf-file" accept=".pdf" style="display:none" onchange="aiPdfSelected(this)"/>
+          <div id="ai-pdf-status" style="font-size:12px;color:var(--m);margin-top:8px;text-align:center"></div>
+        </div>
+        <!-- Generation options -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+          <div>
+            <label style="margin-top:0;font-size:12px">Question Type</label>
+            <select id="ai-qtype" style="margin-top:4px">
+              <option value="mcq">Multiple Choice (MCQ)</option>
+              <option value="tf">True / False</option>
+              <option value="mixed">Mixed</option>
+            </select>
+          </div>
+          <div>
+            <label style="margin-top:0;font-size:12px">Max Questions</label>
+            <input type="number" id="ai-maxq" value="10" min="1" max="20"
+              style="margin-top:4px;font-size:14px;text-align:center"/>
+          </div>
+          <div>
+            <label style="margin-top:0;font-size:12px">Cognitive Level</label>
+            <select id="ai-bloom" style="margin-top:4px">
+              <option value="mixed">Let AI decide (mixed)</option>
+              <option value="recall">Recall</option>
+              <option value="comprehension">Comprehension</option>
+              <option value="application">Application</option>
+              <option value="analysis">Analysis</option>
+              <option value="synthesis">Synthesis</option>
+              <option value="evaluation">Evaluation</option>
+            </select>
+          </div>
+          <div>
+            <label style="margin-top:0;font-size:12px">Difficulty</label>
+            <select id="ai-diff" style="margin-top:4px">
+              <option value="mixed">Let AI decide (mixed)</option>
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+        </div>
+        <!-- No API key warning -->
+        <div id="ai-nokey-warn" style="display:none;margin-top:12px;padding:10px 12px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.4);border-radius:8px;font-size:12px;color:var(--warn)">
+          ⚠️ No Gemini API key found. <a href="#" onclick="show('s-teacher-settings');loadGeminiKeyUI();return false" style="color:var(--acc)">Set up your key in Settings →</a>
+        </div>
+        <button class="btn w100" id="ai-gen-btn" onclick="runAiGenerate()"
+          style="margin-top:14px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none;padding:13px;font-size:14px;font-weight:600">
+          ✨ Generate Questions
+        </button>
+        <div class="st" id="ai-gen-st" style="margin-top:10px"></div>
+      </div>
+      <!-- Generated questions review cards -->
+      <div id="ai-results-wrap" style="display:none;margin-top:16px">
+        <div style="font-family:var(--fh);font-size:14px;font-weight:700;margin-bottom:12px;color:var(--txt)">
+          Review Generated Questions
+          <span id="ai-results-count" style="font-size:12px;font-weight:400;color:var(--m)"></span>
+        </div>
+        <div id="ai-results-cards"></div>
+        <div class="row" style="gap:8px;margin-top:14px">
+          <button class="btn btn-grn" style="flex:2" onclick="saveAllAiQuestions()">
+            💾 Save All to Question Bank
+          </button>
+          <button class="btn btn-ghost" style="flex:1" onclick="discardAiResults()">
+            ✕ Discard
+          </button>
+        </div>
+        <div class="st" id="ai-save-st" style="margin-top:8px"></div>
+      </div>
+    </div>
     <div class="st" id="wiz0-st"></div>
   </div>
   <!-- STEP 2: Question + Difficulty + Save (all in one) -->
@@ -3570,6 +3731,338 @@ async function endSessionAuto(){
   }catch(e){ console.warn('Auto-end failed:',e); }
 }
 
+/* ═══════════════════════════════════════════
+   GEMINI AI QUESTION GENERATION
+═══════════════════════════════════════════ */
+const GEMINI_KEY_STORE='cq5_gemini_key';
+const GEMINI_ENDPOINT='https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=';
+
+// ── Key management ──────────────────────────────────────────
+function getGeminiKey(){try{return localStorage.getItem(GEMINI_KEY_STORE)||'';}catch(e){return '';}}
+
+window.loadGeminiKeyUI=function(){
+  const k=getGeminiKey();
+  const inp=el('gemini-key-input');
+  if(inp) inp.value=k;
+  setSt('gemini-key-st',k?'ok':'','');
+};
+
+window.saveGeminiKey=function(){
+  const k=(el('gemini-key-input')?.value||'').trim();
+  if(!k){setSt('gemini-key-st','err','Please paste your API key first.');return;}
+  try{localStorage.setItem(GEMINI_KEY_STORE,k);}catch(e){setSt('gemini-key-st','err','Could not save key.');return;}
+  setSt('gemini-key-st','ok','\u2705 Key saved to this device.');
+};
+
+window.clearGeminiKey=function(){
+  if(!confirm('Remove your saved Gemini API key from this device?'))return;
+  try{localStorage.removeItem(GEMINI_KEY_STORE);}catch(e){}
+  const inp=el('gemini-key-input');if(inp)inp.value='';
+  setSt('gemini-key-st','info','Key cleared.');
+};
+
+window.toggleGeminiKeyVis=function(){
+  const inp=el('gemini-key-input');if(!inp)return;
+  inp.type=inp.type==='password'?'text':'password';
+};
+
+window.testGeminiKey=async function(){
+  const k=getGeminiKey()||(el('gemini-key-input')?.value||'').trim();
+  if(!k){setSt('gemini-key-st','err','Enter a key first.');return;}
+  setSt('gemini-key-st','info','Testing\u2026');
+  try{
+    const res=await fetch(GEMINI_ENDPOINT+k,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:'Reply with exactly: OK'}]}],
+        generationConfig:{maxOutputTokens:10}})
+    });
+    if(res.ok){setSt('gemini-key-st','ok','\u2705 Connection successful! Key is valid.');}
+    else{const d=await res.json();setSt('gemini-key-st','err','\u274c API error: '+(d?.error?.message||res.status));}
+  }catch(e){setSt('gemini-key-st','err','\u274c Network error: '+e.message);}
+};
+
+// ── AI Gen panel UI ──────────────────────────────────────────
+window.toggleAiGenPanel=function(){
+  const p=el('ai-gen-panel');if(!p)return;
+  const open=p.style.display==='none';
+  p.style.display=open?'':'none';
+  if(open){
+    const noKey=el('ai-nokey-warn');
+    if(noKey) noKey.style.display=getGeminiKey()?'none':'';
+    // Pre-fill location from wiz-0 fields
+    aiGenLocation={
+      prog:(el('aq-prog')?.value||'').trim(),
+      cid:(el('aq-cid')?.value||'').trim(),
+      subj:(el('aq-subj')?.value||'').trim(),
+      topic:(el('aq-topic')?.value||'').trim(),
+      testid:(el('aq-testid')?.value||'').trim()
+    };
+  }
+};
+let aiGenLocation={};
+let _aiGeneratedQs=[];
+
+window.aiSrcTab=function(tab){
+  el('ai-src-text').style.display=tab==='text'?'':'none';
+  el('ai-src-pdf').style.display=tab==='pdf'?'':'none';
+  el('ai-tab-text').style.cssText=tab==='text'?'background:var(--acc);color:#fff;border:none;flex:1':'flex:1';
+  el('ai-tab-text').className=tab==='text'?'btn btn-sm':'btn btn-ghost btn-sm';
+  el('ai-tab-pdf').className=tab==='pdf'?'btn btn-sm':'btn btn-ghost btn-sm';
+  el('ai-tab-pdf').style.cssText=tab==='pdf'?'background:var(--acc);color:#fff;border:none;flex:1':'flex:1';
+};
+
+// ── PDF handling ─────────────────────────────────────────────
+window.aiPdfDrop=function(e){
+  e.preventDefault();
+  el('ai-pdf-drop').style.borderColor='var(--b2)';
+  const file=e.dataTransfer?.files?.[0];
+  if(file&&file.type==='application/pdf') aiLoadPdf(file);
+  else setSt('ai-gen-st','err','Please drop a PDF file.');
+};
+window.aiPdfSelected=function(input){
+  const file=input.files?.[0];
+  if(file) aiLoadPdf(file);
+};
+
+async function aiLoadPdf(file){
+  const status=el('ai-pdf-status');
+  if(status) status.textContent='Reading PDF\u2026';
+  try{
+    // Load PDF.js from CDN if not already loaded
+    if(!window.pdfjsLib){
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+        s.onload=res;s.onerror=rej;document.head.appendChild(s);
+      });
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc=
+        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+    const buf=await file.arrayBuffer();
+    const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
+    let text='';
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i);
+      const content=await page.getTextContent();
+      text+=content.items.map(it=>it.str).join(' ')+'\n';
+    }
+    text=text.trim().replace(/\s{3,}/g,' ');
+    if(status) status.textContent=`\u2705 Extracted ${pdf.numPages} page(s), ${text.length} characters.`;
+    // Put extracted text in hidden store for generation
+    el('ai-source-text').value=text;
+    el('ai-pdf-drop').innerHTML='<div style="font-size:22px">\u2705</div><div style="font-size:13px;color:var(--grn)">'+file.name+' loaded</div>';
+  }catch(e){
+    if(status) status.textContent='\u274c Failed to read PDF: '+e.message;
+  }
+}
+
+// ── Core generation ──────────────────────────────────────────
+window.runAiGenerate=async function(){
+  const key=getGeminiKey();
+  if(!key){setSt('ai-gen-st','err','\u274c No Gemini API key. Go to Settings to add one.');return;}
+  const src=(el('ai-source-text')?.value||'').trim();
+  if(src.length<80){setSt('ai-gen-st','err','Please provide more source text (at least a paragraph).');return;}
+  const qtype=el('ai-qtype')?.value||'mcq';
+  const maxq=Math.min(20,Math.max(1,parseInt(el('ai-maxq')?.value||'10')));
+  const bloom=el('ai-bloom')?.value||'mixed';
+  const diff=el('ai-diff')?.value||'mixed';
+
+  const bloomInstr=bloom==='mixed'?
+    'Choose the most appropriate Bloom\'s Taxonomy level for each question based on what the source supports.':
+    `All questions must be at Bloom\'s level: ${bloom}.`;
+  const diffInstr=diff==='mixed'?
+    'Vary difficulty appropriately across the question set.':
+    `All questions must be difficulty: ${diff}.`;
+  const typeInstr=qtype==='mixed'?
+    'Generate a mix of MCQ and True/False questions as appropriate.':
+    qtype==='tf'?'Generate only True/False questions.':'Generate only MCQ questions with 4 options each.';
+
+  const prompt=`You are an expert medical/science educator. Generate up to ${maxq} high-quality quiz questions from the source text below.
+
+RULES:
+- Only generate questions that are clearly and unambiguously supported by the source text. Do not invent or hallucinate facts.
+- ${typeInstr}
+- ${bloomInstr}
+- ${diffInstr}
+- For MCQ: provide exactly 4 options (A/B/C/D), only one correct. Distractors must be plausible but clearly wrong based on the source.
+- For True/False: the statement must be unambiguous.
+- Include a concise explanation (2-3 sentences) for why the answer is correct.
+- Bloom levels: recall, comprehension, application, analysis, synthesis, evaluation
+- Difficulty levels: easy, medium, hard
+
+Return ONLY a valid JSON array, no markdown, no preamble. Format:
+[
+  {
+    "question": "Question text here",
+    "type": "mcq",
+    "options": ["Option A","Option B","Option C","Option D"],
+    "correctIndex": 0,
+    "bloomTag": "recall",
+    "difficulty": "easy",
+    "explanation": "Brief explanation of why the answer is correct."
+  },
+  {
+    "question": "True/False statement here",
+    "type": "tf",
+    "answer": "True",
+    "bloomTag": "comprehension",
+    "difficulty": "medium",
+    "explanation": "Brief explanation."
+  }
+]
+
+SOURCE TEXT:
+${src.substring(0,12000)}`;
+
+  const btn=el('ai-gen-btn');
+  if(btn){btn.disabled=true;btn.textContent='\u23f3 Generating\u2026';}
+  setSt('ai-gen-st','info','Sending to Gemini\u2026');
+
+  try{
+    const res=await fetch(GEMINI_ENDPOINT+key,{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        contents:[{parts:[{text:prompt}]}],
+        generationConfig:{maxOutputTokens:8192,temperature:0.3}
+      })
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data?.error?.message||'API error '+res.status);
+    let raw=data?.candidates?.[0]?.content?.parts?.[0]?.text||'';
+    // Strip markdown fences if present
+    raw=raw.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```$/,'').trim();
+    let qs;
+    try{qs=JSON.parse(raw);}catch(e){throw new Error('AI returned invalid JSON. Try again or reduce source length.');}
+    if(!Array.isArray(qs)||!qs.length) throw new Error('No questions returned. Source may be too short or ambiguous.');
+    // Validate and clean each question
+    _aiGeneratedQs=qs.filter(q=>q.question&&q.type).map((q,i)=>({
+      ...q,
+      _idx:i,
+      _keep:true,
+      prog:aiGenLocation.prog||wizData.prog||'',
+      cid:aiGenLocation.cid||wizData.cid||'',
+      subj:aiGenLocation.subj||wizData.subj||'',
+      topic:aiGenLocation.topic||wizData.topic||'',
+      testid:aiGenLocation.testid||wizData.testid||''
+    }));
+    setSt('ai-gen-st','ok','\u2705 '+_aiGeneratedQs.length+' question(s) generated. Review below.');
+    renderAiCards();
+  }catch(e){
+    setSt('ai-gen-st','err','\u274c '+e.message);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='\u2728 Generate Questions';}
+  }
+};
+
+// ── Review cards ─────────────────────────────────────────────
+function renderAiCards(){
+  const wrap=el('ai-results-wrap');const cards=el('ai-results-cards');
+  const cnt=el('ai-results-count');
+  if(!wrap||!cards)return;
+  if(!_aiGeneratedQs.length){wrap.style.display='none';return;}
+  cnt.textContent=' \u2014 '+_aiGeneratedQs.length+' question(s)';
+  const BLOOM_COL={recall:'#818cf8',comprehension:'#34d399',application:'#fb923c',
+    analysis:'#f472b6',synthesis:'#facc15',evaluation:'#60a5fa'};
+  const DIFF_COL={easy:'var(--grn)',medium:'var(--warn)',hard:'var(--err)'};
+  cards.innerHTML=_aiGeneratedQs.map((q,i)=>{
+    const bCol=BLOOM_COL[q.bloomTag]||'var(--m)';
+    const dCol=DIFF_COL[q.difficulty]||'var(--m)';
+    const optHtml=q.type==='mcq'?(q.options||[]).map((o,oi)=>
+      `<div style="font-size:12px;padding:4px 8px;border-radius:6px;margin:3px 0;
+        background:${oi===q.correctIndex?'rgba(62,207,142,.15)':'var(--s2)'};
+        border:1px solid ${oi===q.correctIndex?'var(--grn)':'var(--b)'}">
+        <b>${'ABCD'[oi]}.</b> ${esc(o)}${oi===q.correctIndex?' <span style="color:var(--grn)">✓</span>':''}
+      </div>`).join(''):
+      `<div style="font-size:12px;padding:4px 8px;background:rgba(62,207,142,.1);border:1px solid var(--grn);border-radius:6px">
+        Answer: <b>${q.answer||'True'}</b>
+      </div>`;
+    return`<div id="ai-card-${i}" style="background:var(--s1);border:1px solid var(--b);border-radius:12px;padding:14px;margin-bottom:12px;${q._keep?'':'opacity:.4'}">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap">
+        <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;background:${bCol};color:#fff">${q.bloomTag||'untagged'}</span>
+        <span style="font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;color:${dCol};border:1px solid ${dCol}">${q.difficulty||'medium'}</span>
+        <span style="font-size:10px;color:var(--m);margin-left:auto">${q.type==='tf'?'True/False':'MCQ'}</span>
+        <label style="display:flex;align-items:center;gap:4px;font-size:12px;cursor:pointer;margin:0">
+          <input type="checkbox" ${q._keep?'checked':''} onchange="aiCardToggle(${i},this.checked)" style="width:14px;height:14px"> Keep
+        </label>
+      </div>
+      <div style="font-size:13px;font-weight:600;margin-bottom:8px;line-height:1.5">${esc(q.question)}</div>
+      ${optHtml}
+      ${q.explanation?`<div style="margin-top:8px;font-size:11px;color:var(--m);font-style:italic;line-height:1.5;padding:6px 8px;background:var(--s2);border-radius:6px">💡 ${esc(q.explanation)}</div>`:''}
+    </div>`;
+  }).join('');
+  wrap.style.display='';
+}
+
+window.aiCardToggle=function(i,checked){
+  if(_aiGeneratedQs[i]) _aiGeneratedQs[i]._keep=checked;
+  const card=el('ai-card-'+i);
+  if(card) card.style.opacity=checked?'1':'0.4';
+};
+
+window.discardAiResults=function(){
+  _aiGeneratedQs=[];
+  const wrap=el('ai-results-wrap');if(wrap)wrap.style.display='none';
+  setSt('ai-gen-st','','');
+};
+
+// ── Save to Firestore ─────────────────────────────────────────
+window.saveAllAiQuestions=async function(){
+  const toSave=_aiGeneratedQs.filter(q=>q._keep);
+  if(!toSave.length){setSt('ai-save-st','err','No questions selected.');return;}
+  if(!fbReady){setSt('ai-save-st','err','Not connected to database.');return;}
+  setSt('ai-save-st','info','Saving '+toSave.length+' question(s)\u2026');
+  let saved=0,failed=0;
+  for(const q of toSave){
+    try{
+      const doc={
+        question:q.question,type:q.type,
+        bloomTag:q.bloomTag||'',difficulty:q.difficulty||'medium',
+        explanation:q.explanation||'',
+        prog:q.prog,cid:q.cid,subj:q.subj,topic:q.topic,testid:q.testid,
+        teacher:teacher?.name||'',teacherEmail:teacher?.email||'',
+        ts:Date.now(),source:'ai-gemini'
+      };
+      if(q.type==='mcq'){
+        doc.options=q.options;doc.correctIndex=q.correctIndex;
+      } else {
+        doc.answer=q.answer||'True';
+      }
+      await _fb.addDoc(_fb.collection(db,'questions'),doc);
+      saved++;
+    }catch(e){failed++;console.warn('Save AI Q failed:',e);}
+  }
+  if(failed){setSt('ai-save-st','err',saved+' saved, '+failed+' failed.');}
+  else{
+    setSt('ai-save-st','ok','\u2705 '+saved+' question(s) saved to Question Bank!');
+    _aiGeneratedQs=[];
+    setTimeout(()=>{
+      const wrap=el('ai-results-wrap');if(wrap)wrap.style.display='none';
+      setSt('ai-save-st','','');setSt('ai-gen-st','','');
+    },2500);
+  }
+};
+
+// ── Copy-paste blocking on quiz screen ───────────────────────
+(function setupCopyBlock(){
+  const quizScreen=()=>el('s-quiz');
+  function blockEvent(e){
+    if(!quizActive)return;
+    const qs=quizScreen();
+    if(qs&&qs.contains(e.target)){e.preventDefault();e.stopPropagation();}
+  }
+  ['copy','cut','paste'].forEach(ev=>document.addEventListener(ev,blockEvent,true));
+  // Block Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X on quiz screen
+  document.addEventListener('keydown',function(e){
+    if(!quizActive)return;
+    if((e.ctrlKey||e.metaKey)&&['a','c','v','x','u','s'].includes(e.key.toLowerCase())){
+      const qs=quizScreen();
+      if(qs&&qs.contains(document.activeElement)){e.preventDefault();}
+      // Also block regardless of focus if in quiz screen
+      if(document.getElementById('s-quiz')?.style.display!=='none') e.preventDefault();
+    }
+  },true);
+})();
+
 window.endSession=async function(){
   if(!confirm('End this session? All students still attempting will be auto-submitted.'))return;
   if(!fbReady||!activeSessionId)return;
@@ -3819,7 +4312,7 @@ window.stuJoin=async function(){
           showStuError('You have already submitted this quiz. Check your results with your teacher.');
           return;
         }
-        // Student is in lobby but no valid progress — allow them to re-enter by overwriting lobby doc
+        // Student is in lobby but no valid progress \u2014 allow them to re-enter by overwriting lobby doc
         // (handles case where student joined but network dropped before starting)
         if(lobData.status==='joined'){
           // Fall through to normal registration below
@@ -4325,7 +4818,7 @@ function renderQ(){
       +'background:var(--s2);border-radius:8px">🔒 Review mode \u2014 answers cannot be changed</div>';
   }
 
-  // Next / Submit button embedded in question body — 28px below last option
+  // Next / Submit button embedded in question body \u2014 28px below last option
   html+=`<div style="height:1px;background:var(--b);margin:28px 0 20px"></div>`;
   if(last){
     html+=`<button class="btn btn-grn w100" onclick="confSub()" style="padding:14px;font-size:14px">
@@ -4402,7 +4895,7 @@ window.pickOpt=function(i){
   // before the confidence overlay slides up (avoids "nothing happened" confusion)
   renderQ();
   renderDots();
-  // Show confidence overlay — delay confReady slightly so accidental double-tap
+  // Show confidence overlay \u2014 delay confReady slightly so accidental double-tap
   // on the overlay buttons (which appear at the same position) doesn't fire immediately
   confReady=false;
   setTimeout(()=>{confReady=true;},260);
@@ -4520,7 +5013,7 @@ window.finishQuiz=async function(){
     ts:Date.now()
   };
 
-  // Show result screen IMMEDIATELY with local data — don't wait for Firestore
+  // Show result screen IMMEDIATELY with local data \u2014 don't wait for Firestore
   showResult(rec);
 
   // Save to Firestore in background (non-blocking)
@@ -4568,7 +5061,7 @@ async function showResult(r){
   vb.style.display=r.violations>0?'':'none';
   if(r.violations>0)vb.textContent=`⚠ ${r.violations} violation(s). Off-screen: ${r.offSecs}s.`;
 
-  // Show result screen immediately — don't block on Firestore
+  // Show result screen immediately \u2014 don't block on Firestore
   el('ans-review-wrap').style.display='none';
   el('ans-locked-msg').style.display=qParams?.sessionId?'':'none';
   el('btn-check-unlock').style.display=qParams?.sessionId?'':'none';
@@ -4587,7 +5080,7 @@ async function showResult(r){
           return;
         }
       }catch(e){}
-      // Still locked — start auto-poll
+      // Still locked \u2014 start auto-poll
       clearInterval(unlockPollInt);
       unlockPollInt=setInterval(async function(){
         try{
@@ -5719,7 +6212,7 @@ function renderStudentProfiles(){
 ═══════════════════════════════════════════ */
 // Current analytics view state
 let _qTableSort={col:'',dir:1};
-let _stuConfData={}; // keyed by roll — confidence stats for Strategy modal
+let _stuConfData={}; // keyed by roll \u2014 confidence stats for Strategy modal
 window.sortQTable=function(col){
   if(_qTableSort.col===col)_qTableSort.dir*=-1;else{_qTableSort.col=col;_qTableSort.dir=1;}
   if(_analyticsQs&&_analyticsResults){
@@ -6398,9 +6891,9 @@ window.showStudentStrategy=function(name,roll,score,best,bestPct,worst,worstPct)
     const sA=conf.sA;
     const calibCol=conf.calibCol||'var(--m)';
     const rows=[
-      ['✅ Sure',    sc.sure,    sA!==null?sA+'%':'—'],
-      ['🤔 Not So Sure', sc.unsure, sc.unsure.t?Math.round(sc.unsure.c/sc.unsure.t*100)+'%':'—'],
-      ['🎲 Wild Guess',  sc.guessing, sc.guessing.t?Math.round(sc.guessing.c/sc.guessing.t*100)+'%':'—'],
+      ['✅ Sure',    sc.sure,    sA!==null?sA+'%':'\u2014'],
+      ['🤔 Not So Sure', sc.unsure, sc.unsure.t?Math.round(sc.unsure.c/sc.unsure.t*100)+'%':'\u2014'],
+      ['🎲 Wild Guess',  sc.guessing, sc.guessing.t?Math.round(sc.guessing.c/sc.guessing.t*100)+'%':'\u2014'],
     ];
     confHtml=`<div style="margin:14px 0 10px;padding:12px 14px;background:rgba(108,99,255,.07);border:1px solid rgba(108,99,255,.18);border-radius:10px">
       <div style="font-size:12px;font-weight:700;color:var(--txt);margin-bottom:10px;letter-spacing:.3px">CONFIDENCE METRICS</div>
@@ -6414,16 +6907,16 @@ window.showStudentStrategy=function(name,roll,score,best,bestPct,worst,worstPct)
         <tbody>
           ${rows.map(([lbl,d,acc])=>`<tr>
             <td style="padding:4px 6px">${lbl}</td>
-            <td style="padding:4px 6px;text-align:center">${d.t||'—'}</td>
-            <td style="padding:4px 6px;text-align:center;color:var(--grn)">${d.t?d.c:'—'}</td>
+            <td style="padding:4px 6px;text-align:center">${d.t||'\u2014'}</td>
+            <td style="padding:4px 6px;text-align:center;color:var(--grn)">${d.t?d.c:'\u2014'}</td>
             <td style="padding:4px 6px;text-align:center;font-weight:600">${acc}</td>
           </tr>`).join('')}
         </tbody>
       </table>
       <div style="margin-top:8px;font-size:11px;color:${calibCol}">
         Calibration: <b>${conf.calib}</b>
-        ${sA!==null&&sA<(score-25)?'<br><span style="color:var(--warn)">Student marked answers as Sure but scored '+sA+'% on them — significant overconfidence detected.</span>':''}
-        ${sA!==null&&sA>=(score-10)?'<br><span style="color:var(--grn)">Sure-answers accuracy aligns with overall score — good self-awareness.</span>':''}
+        ${sA!==null&&sA<(score-25)?'<br><span style="color:var(--warn)">Student marked answers as Sure but scored '+sA+'% on them \u2014 significant overconfidence detected.</span>':''}
+        ${sA!==null&&sA>=(score-10)?'<br><span style="color:var(--grn)">Sure-answers accuracy aligns with overall score \u2014 good self-awareness.</span>':''}
       </div>
     </div>`;
   } else {
