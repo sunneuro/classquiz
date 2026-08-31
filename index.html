@@ -1163,6 +1163,7 @@ tr:hover td{background:var(--s2)}
         <button class="btn btn-ghost btn-sm" onclick="bankSelAll()">Select All</button>
         <button class="btn btn-ghost btn-sm" onclick="bankDeselAll()">Deselect All</button>
         <button class="btn btn-pri btn-sm" onclick="bankAddSelected()">➕ Add Selected to Quiz</button>
+        <button class="btn btn-ghost btn-sm" onclick="showLoadTemplate()">📂 Load Template</button>
       </div>
     </div>
   </div>
@@ -3249,6 +3250,7 @@ window.loadTemplate=async function(id){
       if(t.settings.window)el('cs-window').value=t.settings.window;     
     }
     closeOv('ov-template');
+    show('s-curate');
     renderCurate();
   }catch(e){alert('Load failed: '+e.message);}
 };
