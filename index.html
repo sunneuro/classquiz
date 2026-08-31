@@ -3809,17 +3809,17 @@ window.toggleGeminiKeyVis=function(){
 window.testGeminiKey=async function(){
   const k=getGeminiKey()||(el('gemini-key-input')?.value||'').trim();
   if(!k){setSt('gemini-key-st','err','Enter a key first.');return;}
-  setSt('gemini-key-st','info','Testing\u2026');
+  setSt('gemini-key-st','info','Testing…');
   try{
     const res=await fetch(GEMINI_ENDPOINT,{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-goog-api-k':key},
-          body:JSON.stringify({contents:[{parts:[{text:'Reply with exactly: OK'}]}],
+      headers:{'Content-Type':'application/json','x-goog-api-key':key},
+      body:JSON.stringify({contents:[{parts:[{text:'Reply with exactly: OK'}]}],
         generationConfig:{maxOutputTokens:10}})
     });
-    if(res.ok){setSt('gemini-key-st','ok','\u2705 Connection successful! Key is valid.');}
-    else{const d=await res.json();setSt('gemini-key-st','err','\u274c API error: '+(d?.error?.message||res.status));}
-  }catch(e){setSt('gemini-key-st','err','\u274c Network error: '+e.message);}
+    if(res.ok){setSt('gemini-key-st','ok','✅ Connection successful! Key is valid.');}
+    else{const d=await res.json();setSt('gemini-key-st','err','❌ API error: '+(d?.error?.message||res.status));}
+  }catch(e){setSt('gemini-key-st','err','❌ Network error: '+e.message);}
 };
 
 // ── AI Gen panel UI ──────────────────────────────────────────
