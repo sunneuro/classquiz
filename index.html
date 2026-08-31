@@ -3276,8 +3276,10 @@ function buildPaperHTML(questions, meta, answerKeyAtEnd){
       if(q.type==='tf'){
         keyLines.push(`${i+1}. ${q.answer||'?'}`);
       } else {
-        const ai=(q.options||[]).indexOf(q.answer);
-        keyLines.push(`${i+1}. ${ai>=0?optLabels[ai]:'?'}. ${esc(q.answer||'')}`);
+        const ci=q.correctIndex;
+        const letter=(ci!=null&&ci>=0)?optLabels[ci]:'?';
+        const optText=(ci!=null&&q.options&&q.options[ci])?q.options[ci]:'';
+        keyLines.push(`${i+1}. ${letter}. ${esc(optText)}`);
       }
       qHtml+=`<div style="margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid #e5e7eb">
         <div style="margin-bottom:6px"><b>${i+1}.</b> ${esc(q.text||'')}${diff}</div>
@@ -3287,7 +3289,7 @@ function buildPaperHTML(questions, meta, answerKeyAtEnd){
       // Green inline answer (original format \u2014 used for Results)
       const ans=q.type==='tf'
         ? `<b>Answer:</b> ${q.answer||'?'}`
-        : `<b>Answer:</b> ${optLabels[(q.options||[]).indexOf(q.answer)]||'?'}. ${esc(q.answer||'')}`;
+        : `<b>Answer:</b> ${optLabels[q.correctIndex]||'?'}. ${esc((q.options||[])[q.correctIndex]||'')}`;
       qHtml+=`<div style="margin-bottom:18px;padding-bottom:14px;border-bottom:1px solid #e5e7eb">
         <div style="margin-bottom:6px"><b>${i+1}.</b> ${esc(q.text||'')}${diff}</div>
         ${body}
