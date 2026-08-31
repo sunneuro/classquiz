@@ -3735,7 +3735,7 @@ async function endSessionAuto(){
    GEMINI AI QUESTION GENERATION
 ═══════════════════════════════════════════ */
 const GEMINI_KEY_STORE='cq5_gemini_key';
-const GEMINI_ENDPOINT='https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=';
+const GEMINI_ENDPOINT='https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=';
 
 // ── Key management ──────────────────────────────────────────
 function getGeminiKey(){try{return localStorage.getItem(GEMINI_KEY_STORE)||'';}catch(e){return '';}}
