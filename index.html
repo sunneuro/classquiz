@@ -1326,6 +1326,7 @@ tr:hover td{background:var(--s2)}
     <div class="card card-grn" style="text-align:center">
       <p style="font-size:13px;color:var(--m);margin-bottom:12px" id="session-status-msg">Waiting for students to join…</p>
       <button class="btn btn-grn w100" id="btn-go-live" onclick="goLive()">🚀 Start Test for All</button>
+      <button class="btn btn-ghost w100" id="btn-cancel-session" onclick="cancelSession()" style="margin-top:8px;color:var(--err)">✕ Cancel Session</button>
       <button class="btn btn-err w100" id="btn-end-session" onclick="endSession()" style="display:none;margin-top:8px">⏹ End Session</button>
     </div>
   </div>
@@ -1345,6 +1346,7 @@ tr:hover td{background:var(--s2)}
     </div>
     <div class="col">
       <button class="btn btn-grn w100" id="btn-go-live-2" onclick="goLive()">🚀 Start Test for All</button>
+      <button class="btn btn-ghost w100" id="btn-cancel-session-2" onclick="cancelSession()" style="margin-top:8px;color:var(--err)">✕ Cancel Session</button>
       <button class="btn btn-err w100" id="btn-end-2" onclick="endSession()" style="display:none">⏹ End Session</button>
     </div>
   </div>
@@ -1790,6 +1792,7 @@ let warnedAt5=false, warnedAt1=false, confReady=false;
 let tagModeActive=false, tagModeChanges={};
 let activeSessionDisplayId='';
 let activeSessionFileId='';  // teacher: current session ID
+let activeSessionQIds=[];   // question IDs in the currently launched/live session  
 let answersLocked=true;
 let sessionUnsubscribe=null; // Firebase listener unsubscribe
 let lobbyUnsubscribe=null;
@@ -2165,6 +2168,8 @@ async function restoreActiveSession(){
       el('btn-end-session').style.display='none';
       el('btn-go-live-2').style.display='';
       el('btn-end-2').style.display='none';
+      el('btn-cancel-session').style.display='none';      // ← added cancel session button
+      el('btn-cancel-session-2').style.display='none';    // ← added cancel session button
     }
 
     // Answers lock button
@@ -3203,8 +3208,8 @@ window.saveTemplate=async function(){
       settings:{time:gv('cs-time'),count:gv('cs-count'),sessionName:gv('cs-name'),window:gv('cs-window')},
       createdBy:teacher.name,createdByEmail:teacher.email,ts:Date.now()
     });
-    setSt('tpl-st','ok','✅ Template saved!');
-    setTimeout(()=>closeOv('ov-template'),1000);
+    setSt('tpl-st','ok','✅ Template "'+name+'" saved!');
+    setTimeout(()=>closeOv('ov-template'),2000);
   }catch(e){setSt('tpl-st','err','Save failed: '+e.message);}
 };
 
@@ -3453,6 +3458,22 @@ window.updateCountHint=function(){
   }
 };
 
+async function isCurrentSetSavedAsTemplate(currentIds){
+  if(!fbReady||!currentIds||!currentIds.length) return false;
+  try{
+    const snap=await _fb.getDocs(_fb.collection(db,'templates'));
+    const curKey=[...currentIds].sort().join(',');
+    return snap.docs.some(d=>{
+      const ids=d.data().questionIds||[];
+      return [...ids].sort().join(',')===curKey;
+    });
+  }catch(e){ return false; }
+}
+
+window.goLaunch=async function(){
+  // Combine draft + selected bank questions
+  ...
+  
 window.goLaunch=async function(){
   // Combine draft + selected bank questions
   const bankQs=allQuestions.filter(q=>curSel.includes(q.id));
@@ -3507,10 +3528,26 @@ window.goLaunch=async function(){
   await loadAllQuestions();
   const selectedQs=allQuestions.filter(q=>savedQIds.includes(q.id)||bankQs.some(b=>b.id===q.id));
   const launchQs=selectedQs.length?selectedQs:allPaper;
+  activeSessionQIds=launchQs.map(q=>q.id).filter(Boolean);
+
+  // Auto-save this question set as a Template if it isn't one already
+  try{
+    const already=await isCurrentSetSavedAsTemplate(activeSessionQIds);
+    if(!already && activeSessionQIds.length){
+      await _fb.addDoc(_fb.collection(db,'templates'),{
+        name:finalTestId,
+        questionIds:activeSessionQIds,
+        settings:{time:gv('cs-time'),count:gv('cs-count'),sessionName:gv('cs-name'),window:gv('cs-window')},
+        createdBy:teacher.name,createdByEmail:teacher.email,
+        autoSaved:true,
+        ts:Date.now()
+      });
+    }
+  }catch(e){ console.warn('Auto-save template failed:',e); }
 
   // Step 3: Clear draft
   await clearDraft();
-
+  
   activeSessionId=uid16();
   answersLocked=true;
   // Persist so teacher can recover session after refresh or internet drop
@@ -4091,6 +4128,48 @@ window.endSession=async function(){
   }catch(e){alert('End session failed: '+e.message);}
 };
 
+##Function line to cancel the session....deletes the session document, cleans up any lobby entries from students who joined the waiting room, 
+##clears your local "active session" state, and drops you back at Curate — as if the launch never happened
+
+window.cancelSession=async function(){
+  if(!fbReady||!activeSessionId)return;
+
+  let lobbyEntries=[];
+  try{
+    const lSnap=await _fb.getDocs(_fb.collection(db,'lobby_'+activeSessionId));
+    lobbyEntries=lSnap.docs.map(d=>({id:d.id,...d.data()}));
+  }catch(e){}
+  const engaged=lobbyEntries.filter(e=>e.status==='started'||e.status==='submitted');
+
+  let msg='Cancel this session? The question paper is already saved as a template, so nothing is lost.';
+  if(engaged.length>0){
+    msg='⚠ '+engaged.length+' student(s) have already started or submitted.\n\n'
+      +'Canceling deletes the session entirely — their individual results stay in Results, '
+      +'but you lose the ability to manage or unlock this session afterward.\n\n'
+      +'If you want to close the test properly for everyone, use "End Session" instead.\n\n'
+      +'Cancel anyway?';
+  } else if(lobbyEntries.length>0){
+    msg='Cancel this session? '+lobbyEntries.length+' student(s) are waiting in the lobby '
+      +'but haven\'t started — they\'ll be disconnected. The question paper is already saved as a template.';
+  }
+  if(!confirm(msg))return;
+
+  clearInterval(lobbyPollInt);
+  clearTimeout(_windowTimer);
+  try{
+    for(const en of lobbyEntries){
+      await _fb.deleteDoc(_fb.doc(db,'lobby_'+activeSessionId,en.id));
+    }
+  }catch(e){}
+  try{ await _fb.deleteDoc(_fb.doc(db,'sessions',activeSessionId)); }catch(e){}
+  activeSessionId=null;activeSessionDisplayId='';activeSessionFileId='';activeSessionQIds=[];
+  try{ localStorage.removeItem('cq5_active_session'); }catch(e){}
+  syncActiveSessionBtn();
+  show('s-curate');
+  renderCurate();
+};
+
+  
 window.toggleUnlock=async function(){
   if(!fbReady||!activeSessionId){setSt('unlock-st','err','No active session.');return;}
   answersLocked=!answersLocked;
