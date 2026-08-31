@@ -4011,22 +4011,25 @@ window.saveAllAiQuestions=async function(){
   const toSave=_aiGeneratedQs.filter(q=>q._keep);
   if(!toSave.length){setSt('ai-save-st','err','No questions selected.');return;}
   if(!fbReady){setSt('ai-save-st','err','Not connected to database.');return;}
-  setSt('ai-save-st','info','Saving '+toSave.length+' question(s)\u2026');
+  setSt('ai-save-st','info','Saving '+toSave.length+' question(s)…');
   let saved=0,failed=0;
   for(const q of toSave){
     try{
       const doc={
-        question:q.question,type:q.type,
+        text:q.question,type:q.type,
         bloomTag:q.bloomTag||'',difficulty:q.difficulty||'medium',
-        explanation:q.explanation||'',
-        prog:q.prog,cid:q.cid,subj:q.subj,topic:q.topic,testid:q.testid,
-        teacher:teacher?.name||'',teacherEmail:teacher?.email||'',
+        rationale:q.explanation||'',
+        programmeName:q.prog,courseId:q.cid,subjectName:q.subj,
+        topicName:q.topic,testLabel:q.testid,
+        addedBy:teacher?.name||'',addedByEmail:teacher?.email||'',
         ts:Date.now(),source:'ai-gemini'
       };
       if(q.type==='mcq'){
         doc.options=q.options;doc.correctIndex=q.correctIndex;
+        doc.answer='ABCD'[q.correctIndex]||'';
       } else {
         doc.answer=q.answer||'True';
+        doc.options=['True','False'];
       }
       await _fb.addDoc(_fb.collection(db,'questions'),doc);
       saved++;
@@ -4034,7 +4037,7 @@ window.saveAllAiQuestions=async function(){
   }
   if(failed){setSt('ai-save-st','err',saved+' saved, '+failed+' failed.');}
   else{
-    setSt('ai-save-st','ok','\u2705 '+saved+' question(s) saved to Question Bank!');
+    setSt('ai-save-st','ok','✅ '+saved+' question(s) saved to Question Bank!');
     _aiGeneratedQs=[];
     setTimeout(()=>{
       const wrap=el('ai-results-wrap');if(wrap)wrap.style.display='none';
