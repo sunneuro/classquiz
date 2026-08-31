@@ -3771,8 +3771,9 @@ window.testGeminiKey=async function(){
   if(!k){setSt('gemini-key-st','err','Enter a key first.');return;}
   setSt('gemini-key-st','info','Testing\u2026');
   try{
-    const res=await fetch(GEMINI_ENDPOINT+k,{
-      method:'POST',headers:{'Content-Type':'application/json'},
+    const res=await fetch(GEMINI_ENDPOINT,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-goog-api-key':key},
       body:JSON.stringify({contents:[{parts:[{text:'Reply with exactly: OK'}]}],
         generationConfig:{maxOutputTokens:10}})
     });
