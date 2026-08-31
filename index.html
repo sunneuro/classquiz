@@ -2934,7 +2934,9 @@ window.renderBank=function(){
         +'</div>'
         +'<div style="display:flex;flex-direction:column;gap:5px;margin-left:8px;flex-shrink:0">'
           +(isDraft?'<button class="btn-icon" title="Commit to Bank" onclick="commitDraftQ(this)" data-id="'+q.id+'" style="color:var(--warn);font-size:14px">💾</button>':'')
-          +'<button class="btn-icon" title="Add to Quiz" onclick="bankAction(this,1)" style="color:var(--grn);font-size:14px">➕</button>'
+          +(curSel.includes(q.id)
+            ?'<span class="btn-icon" title="Already in quiz" style="color:var(--grn);font-size:14px;opacity:.6">✅</span>'
+            :'<button class="btn-icon" title="Add to Quiz" onclick="bankAction(this,1)" style="color:var(--grn);font-size:14px">➕</button>')
           +(!isDraft?'<button class="btn-icon" title="Edit" onclick="bankAction(this,2)">✏️</button>':'')
           +'<button class="btn-icon" title="Delete" onclick="bankAction(this,3)" style="color:var(--err)">🗑</button>'
         +'</div>'
@@ -3013,16 +3015,11 @@ window.commitAllDrafts = async function(){
 };
 
 window.bankAddOne=function(id){
-  // Add single question to current quiz (curSel)
   if(!curSel.includes(id)) curSel.push(id);
   bankSel.add(id);
-  const bq=el('bq-'+id);
-  if(bq) bq.classList.add('sel');
-  const chk=el('bchk-'+id);
-  if(chk) chk.classList.add('on');
-  updateBankSelCount();
   setSt('bank-add-st','ok','✅ Added to quiz! Go to Curate Quiz to review.');
   setTimeout(()=>{const s=el('bank-add-st');if(s)s.className='st';},2500);
+  renderBank();
 };
 
 window.bankAddSelected=function(){
@@ -3031,8 +3028,9 @@ window.bankAddSelected=function(){
   bankSel.forEach(function(id){
     if(!curSel.includes(id)){curSel.push(id);added++;}
   });
-  setSt('bank-add-st','ok','✅ '+added+' question(s) added to quiz.');
-  setTimeout(()=>{const s=el('bank-add-st');if(s)s.className='st';},2500);
+  setSt('bank-add-st','ok','✅ '+added+' added — '+curSel.length+' total in quiz now.');
+  setTimeout(()=>{const s=el('bank-add-st');if(s)s.className='st';},4000);
+  renderBank();
 };
 
 window.editQ=function(id){
@@ -3411,8 +3409,9 @@ window.downloadPaperFromSession=function(){
 
 // Download filtered questions from Master Question Bank
 window.downloadBankPaper=function(){
-  // Reuse bankFilterFn so all active filters apply (prog/subj/topic/testid/session/year/month/date/type/diff/search)
-  const filtered=allQuestions.filter(q=>!q.draft&&bankFilterFn(q));
+  const filtered = bankSel.size
+    ? allQuestions.filter(q=>bankSel.has(q.id))
+    : allQuestions.filter(q=>!q.draft&&bankFilterFn(q));
   if(!filtered.length){alert('No questions match the current filters.');return;}
   const first=filtered[0]||{};
   const testid=gv('bf-testid'),topic=gv('bf-topic'),subj=gv('bf-subj');
