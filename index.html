@@ -2159,6 +2159,8 @@ async function restoreActiveSession(){
       el('btn-end-session').style.display='';
       el('btn-go-live-2').style.display='none';
       el('btn-end-2').style.display='';
+      el('btn-cancel-session').style.display='';      // ← ADD THIS
+      el('btn-cancel-session-2').style.display='';    // ← ADD THIS
       // Restart the window timer if one was set
       if(data.windowSecs>0 && data.liveAt) startWindowTimer(data.liveAt, data.windowSecs);
     } else {
@@ -2168,8 +2170,8 @@ async function restoreActiveSession(){
       el('btn-end-session').style.display='none';
       el('btn-go-live-2').style.display='';
       el('btn-end-2').style.display='none';
-      el('btn-cancel-session').style.display='none';      // ← added cancel session button
-      el('btn-cancel-session-2').style.display='none';    // ← added cancel session button
+      el('btn-cancel-session').style.display='';      // ← added cancel session button
+      el('btn-cancel-session-2').style.display='';    // ← added cancel session button
     }
 
     // Answers lock button
@@ -3470,9 +3472,6 @@ async function isCurrentSetSavedAsTemplate(currentIds){
   }catch(e){ return false; }
 }
 
-window.goLaunch=async function(){
-  // Combine draft + selected bank questions
-  ...
   
 window.goLaunch=async function(){
   // Combine draft + selected bank questions
@@ -4127,9 +4126,6 @@ window.endSession=async function(){
     syncActiveSessionBtn();
   }catch(e){alert('End session failed: '+e.message);}
 };
-
-##Function line to cancel the session....deletes the session document, cleans up any lobby entries from students who joined the waiting room, 
-##clears your local "active session" state, and drops you back at Curate — as if the launch never happened
 
 window.cancelSession=async function(){
   if(!fbReady||!activeSessionId)return;
