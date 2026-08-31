@@ -3189,12 +3189,9 @@ window.curDeselAll=function(){curSel=[];renderCurate();};
    TEMPLATES
 ═══════════════════════════════════════════ */
 window.showSaveTemplate=function(){
-  alert('1: function started');
   try{
     if(!curSel.length){alert('Select questions first.');return;}
-    alert('2: curSel check passed, curSel.length='+curSel.length);
     el('ov-tpl-title').textContent='Save Template';
-    alert('3: title set OK');
     el('ov-tpl-body').innerHTML=`
       <div class="ovb">${curSel.length} questions selected. Give this template a name.</div>
       <input type="text" id="tpl-name" placeholder="e.g. Chapter 3 MCQs" style="margin-bottom:12px"/>
@@ -3202,12 +3199,12 @@ window.showSaveTemplate=function(){
         <button class="btn btn-ghost" style="flex:1" onclick="closeOv('ov-template')">Cancel</button>
         <button class="btn btn-grn" style="flex:1" onclick="saveTemplate()">Save</button>
       </div>`;
-    alert('4: body HTML set OK');
     el('tpl-st').className='st';
     el('ov-template').classList.add('on');
-    alert('5: overlay class added — should be visible now. Classes on element: '+el('ov-template').className);
+    const cs=getComputedStyle(el('ov-template'));
+    console.log('DIAGNOSTIC — display:'+cs.display, '| opacity:'+cs.opacity, '| visibility:'+cs.visibility, '| zIndex:'+cs.zIndex, '| width:'+cs.width, '| height:'+cs.height, '| position:'+cs.position);
   }catch(e){
-    alert('ERROR CAUGHT: '+e.message);
+    console.log('ERROR:', e.message);
   }
 };
 
