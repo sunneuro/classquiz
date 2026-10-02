@@ -572,10 +572,10 @@ tr:hover td{background:var(--s2)}
       <div id="gemini-model-wrap">
         <label>Gemini Model</label>
         <select id="gemini-model-select" style="margin-top:4px;font-size:13px">
-          <option value="gemini-2.0-flash" selected>✅ Gemini 2.0 Flash (Recommended - Free Tier, Fast)</option>
-          <option value="gemini-2.5-flash-preview-05-20">⚡ Gemini 2.5 Flash Preview (Latest Fast)</option>
-          <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite (Lightweight Free Tier)</option>
-          <option value="gemini-2.5-pro-preview-06-05">Gemini 2.5 Pro Preview (Requires Billing)</option>
+          <option value="gemini-3.8-flash" selected>✅ Gemini 3.8 Flash (Recommended – Free Tier)</option>
+          <option value="gemini-3.5-flash">⚡ Gemini 3.5 Flash (Fast – Free Tier)</option>
+          <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite (Lightweight – Free Tier)</option>
+          <option value="gemini-3.8-pro">Gemini 3.8 Pro (Requires Billing)</option>
         </select>
       </div>
     </div>
@@ -1004,10 +1004,10 @@ tr:hover td{background:var(--s2)}
           <div>
             <label style="margin-top:0;font-size:12px">Model</label>
             <select id="ai-model-in-panel" onchange="onAiPanelModelChange()" style="margin-top:4px;font-size:12px">
-              <option value="gemini-2.0-flash" selected>✅ Gemini 2.0 Flash (Free - Recommended)</option>
-              <option value="gemini-2.5-flash-preview-05-20">⚡ Gemini 2.5 Flash Preview</option>
-              <option value="gemini-2.0-flash-lite">Gemini 2.0 Flash Lite</option>
-              <option value="gemini-2.5-pro-preview-06-05">Gemini 2.5 Pro Preview (Billing)</option>
+              <option value="gemini-3.8-flash" selected>✅ Gemini 3.8 Flash (Free – Recommended)</option>
+              <option value="gemini-3.5-flash">⚡ Gemini 3.5 Flash</option>
+              <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash Lite</option>
+              <option value="gemini-3.8-pro">Gemini 3.8 Pro (Billing – Paid Plan)</option>
             </select>
           </div>
           <div>
@@ -3849,7 +3849,7 @@ const AI_PROVIDER_STORE='cq5_ai_provider';
 function getAiProvider(){try{return localStorage.getItem(AI_PROVIDER_STORE)||"gemini";}catch(e){return "gemini";}}
 function getGeminiKey(){try{return localStorage.getItem(GEMINI_KEY_STORE)||"";}catch(e){return "";}}
 function getClaudeKey(){try{return localStorage.getItem(CLAUDE_KEY_STORE)||"";}catch(e){return "";}}
-function getGeminiModel(){try{return localStorage.getItem(GEMINI_MODEL_STORE)||"gemini-2.0-flash";}catch(e){return "gemini-2.0-flash";}}
+function getGeminiModel(){try{return localStorage.getItem(GEMINI_MODEL_STORE)||"gemini-3.8-flash";}catch(e){return "gemini-3.8-flash";}}
 
 function getGeminiEndpoint(model){
   const m=model||getGeminiModel();
@@ -3887,7 +3887,7 @@ window.saveGeminiKey=function(){
   const prov=el('ai-provider-select')?.value||'gemini';
   const k=(el('gemini-key-input')?.value||'').trim();
   const ck=(el('claude-key-input')?.value||'').trim();
-  const m=el('gemini-model-select')?.value||'gemini-2.0-flash';
+  const m=el('gemini-model-select')?.value||'gemini-3.8-flash';
 
   try{
     localStorage.setItem(AI_PROVIDER_STORE,prov);
@@ -3901,7 +3901,7 @@ window.saveGeminiKey=function(){
 };
 
 window.onAiPanelModelChange=function(){
-  const m=el('ai-model-in-panel')?.value||'gemini-2.0-flash';
+  const m=el('ai-model-in-panel')?.value||'gemini-3.8-flash';
   try{localStorage.setItem(GEMINI_MODEL_STORE,m);}catch(e){}
   if(el('gemini-model-select')) el('gemini-model-select').value=m;
   syncAiModelBadge();
