@@ -557,33 +557,70 @@ tr:hover td{background:var(--s2)}
   <div class="card">
     <h3 style="margin-top:0;margin-bottom:4px">🤖 AI Question Generation</h3>
     <p style="font-size:13px;color:var(--m);margin-bottom:16px;line-height:1.6">
-      Uses Google Gemini (free tier) to generate questions from your notes, textbooks, or PDFs.
-      Your key is stored only on this device — never shared or uploaded.
+      Configure your Google Gemini API key and select your preferred model (supports Gemini 2.5 Flash, 2.5 Pro, 2.0 Flash, 1.5 Pro).
+      Your key is stored strictly on this device in localStorage — never shared or uploaded.
     </p>
-    <label>Gemini API Key</label>
-    <div class="row" style="gap:8px;align-items:center">
-      <input type="password" id="gemini-key-input" placeholder="Paste your Gemini API key here…"
-        style="flex:1;font-family:monospace;font-size:13px"/>
-      <button class="btn btn-ghost btn-sm" onclick="toggleGeminiKeyVis()" id="gemini-key-vis-btn">👁</button>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+      <div>
+        <label>AI Provider</label>
+        <select id="ai-provider-select" onchange="onAiProviderChange()" style="margin-top:4px;font-size:13px">
+          <option value="gemini" selected>Google Gemini (Recommended - Free & Pro)</option>
+          <option value="claude">Anthropic Claude (Claude 3.5 / Haiku)</option>
+        </select>
+      </div>
+      <div id="gemini-model-wrap">
+        <label>Gemini Model</label>
+        <select id="gemini-model-select" style="margin-top:4px;font-size:13px">
+          <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash (Recommended - Fast & Accurate)</option>
+          <option value="gemini-2.5-pro">Gemini 2.5 Pro (Best for Complex PDFs & Reasoning)</option>
+          <option value="gemini-2.0-flash">Gemini 2.0 Flash (High Speed)</option>
+          <option value="gemini-1.5-pro">Gemini 1.5 Pro (Pro Standard)</option>
+          <option value="gemini-1.5-flash">Gemini 1.5 Flash (Flash Standard)</option>
+        </select>
+      </div>
     </div>
-    <div class="row" style="gap:8px;margin-top:10px">
-      <button class="btn btn-pri" style="flex:1" onclick="saveGeminiKey()">💾 Save Key</button>
+
+    <!-- Gemini Key input -->
+    <div id="gemini-key-sec">
+      <label>Google Gemini API Key</label>
+      <div class="row" style="gap:8px;align-items:center">
+        <input type="password" id="gemini-key-input" placeholder="Paste your Gemini API key here (AI Studio)…"
+          style="flex:1;font-family:monospace;font-size:13px"/>
+        <button class="btn btn-ghost btn-sm" onclick="toggleGeminiKeyVis()" id="gemini-key-vis-btn">👁</button>
+      </div>
+    </div>
+
+    <!-- Claude Key input -->
+    <div id="claude-key-sec" style="display:none">
+      <label>Anthropic Claude API Key</label>
+      <div class="row" style="gap:8px;align-items:center">
+        <input type="password" id="claude-key-input" placeholder="Paste your Anthropic API key here (sk-ant-…)…"
+          style="flex:1;font-family:monospace;font-size:13px"/>
+        <button class="btn btn-ghost btn-sm" onclick="toggleClaudeKeyVis()" id="claude-key-vis-btn">👁</button>
+      </div>
+    </div>
+
+    <div class="row" style="gap:8px;margin-top:14px">
+      <button class="btn btn-pri" style="flex:1" onclick="saveGeminiKey()">💾 Save Key & Model</button>
       <button class="btn btn-ghost" style="flex:1" onclick="testGeminiKey()">🧪 Test Connection</button>
       <button class="btn btn-err btn-sm" onclick="clearGeminiKey()">✕ Clear</button>
     </div>
     <div class="st" id="gemini-key-st" style="margin-top:10px"></div>
+
     <!-- Setup guide -->
     <details style="margin-top:18px">
       <summary style="cursor:pointer;font-size:13px;font-weight:600;color:var(--acc)">
-        📋 How to get a free Gemini API key (3 steps)
+        📋 How to get an API key (Gemini Pro / Free Tier)
       </summary>
       <div style="margin-top:12px;font-size:13px;color:var(--txt);line-height:1.8;padding:12px;background:var(--s2);border-radius:8px">
         <div><b>1.</b> Go to <a href="https://aistudio.google.com" target="_blank" style="color:var(--acc)">aistudio.google.com</a> and sign in with your Google account.</div>
-        <div><b>2.</b> Click <b>"Get API Key"</b> → <b>"Create API key"</b> → copy the key shown.</div>
-        <div><b>3.</b> Paste it in the field above and click <b>Save Key</b>.</div>
+        <div><b>2.</b> Click <b>"Get API Key"</b> → <b>"Create API key"</b> → copy the key.</div>
+        <div><b>3.</b> Select your model (e.g., <b>Gemini 2.5 Pro</b> for long PDFs or <b>Gemini 2.5 Flash</b> for high speed), paste your key above, and click <b>Save Key & Model</b>.</div>
         <div style="margin-top:8px;font-size:12px;color:var(--m)">
-          Free tier: 15 requests/minute · 1 million tokens/day · no credit card needed.<br>
-          Your key stays on this device only (localStorage). Clear it anytime.
+          • Free Tier: 15 requests/min · 1M+ tokens context.<br/>
+          • Gemini Pro Tier: Higher rate limits and full 2M token context for huge textbooks/PDFs.<br/>
+          • Stored locally on this browser only.
         </div>
       </div>
     </details>
@@ -913,13 +950,16 @@ tr:hover td{background:var(--s2)}
     <!-- AI Generation Panel -->
     <div id="ai-gen-panel" style="display:none;margin-top:12px">
       <div class="card" style="border:1px solid rgba(108,99,255,.3);background:rgba(108,99,255,.04)">
-        <div style="font-family:var(--fh);font-size:14px;font-weight:700;margin-bottom:4px;color:var(--acc)">
-          ✨ AI Question Generator <span style="font-size:11px;font-weight:400;color:var(--m)">powered by Gemini</span>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="font-family:var(--fh);font-size:14px;font-weight:700;color:var(--acc)">
+            ✨ AI Question Generator <span id="ai-model-badge" style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:12px;background:rgba(79,70,229,.15);color:var(--acc)">Gemini Pro / Flash</span>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="show('s-teacher-settings');loadGeminiKeyUI()" style="font-size:11px;padding:2px 8px">⚙️ Settings</button>
         </div>
         <p style="font-size:12px;color:var(--m);margin-bottom:14px;line-height:1.6">
-          Paste text from lecture notes, a textbook, or a paper. The AI will generate questions
-          pre-tagged with Cognitive Level and Difficulty, ready to review and save.
+          Paste notes/text or upload a PDF. The AI will extract content, formulate high-quality questions, and auto-tag Bloom's Taxonomy & Difficulty levels.
         </p>
+
         <!-- Source input tabs -->
         <div style="display:flex;gap:6px;margin-bottom:12px">
           <button class="btn btn-sm" id="ai-tab-text" onclick="aiSrcTab('text')"
@@ -927,11 +967,15 @@ tr:hover td{background:var(--s2)}
           <button class="btn btn-ghost btn-sm" id="ai-tab-pdf" onclick="aiSrcTab('pdf')"
             style="flex:1">📄 Upload PDF</button>
         </div>
+
         <!-- Text input -->
         <div id="ai-src-text">
           <textarea id="ai-source-text" rows="6" placeholder="Paste your source text here — lecture notes, textbook paragraphs, paper abstracts, clinical guidelines…"
+            oninput="updateAiTextStats()"
             style="font-size:13px;line-height:1.6;resize:vertical"></textarea>
+          <div id="ai-text-stats" style="font-size:11px;color:var(--m2);margin-top:4px;text-align:right">0 characters</div>
         </div>
+
         <!-- PDF input -->
         <div id="ai-src-pdf" style="display:none">
           <div id="ai-pdf-drop" style="border:2px dashed var(--b2);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s"
@@ -941,13 +985,33 @@ tr:hover td{background:var(--s2)}
             ondrop="aiPdfDrop(event)">
             <div style="font-size:28px;margin-bottom:8px">📄</div>
             <div style="font-size:13px;color:var(--m)">Click or drag a PDF here</div>
-            <div style="font-size:11px;color:var(--m2);margin-top:4px">Processed entirely in your browser — never uploaded</div>
+            <div style="font-size:11px;color:var(--m2);margin-top:4px">Processed locally in your browser with PDF.js</div>
           </div>
           <input type="file" id="ai-pdf-file" accept=".pdf" style="display:none" onchange="aiPdfSelected(this)"/>
           <div id="ai-pdf-status" style="font-size:12px;color:var(--m);margin-top:8px;text-align:center"></div>
+          
+          <!-- Extracted PDF preview toggle -->
+          <div id="ai-pdf-preview-box" style="display:none;margin-top:10px;padding:10px;background:var(--s2);border-radius:8px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <span style="font-size:11px;font-weight:600;color:var(--txt)">📄 Extracted PDF Content Preview</span>
+              <button class="btn btn-ghost btn-sm" onclick="togglePdfPreviewText()" style="font-size:11px;padding:2px 6px">✏️ Edit Extracted Text</button>
+            </div>
+            <div id="ai-pdf-preview-text" style="font-size:12px;color:var(--m);max-height:100px;overflow-y:auto;white-space:pre-wrap;font-family:monospace;background:var(--bg);padding:8px;border-radius:4px"></div>
+          </div>
         </div>
+
         <!-- Generation options -->
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px">
+          <div>
+            <label style="margin-top:0;font-size:12px">Model</label>
+            <select id="ai-model-in-panel" onchange="onAiPanelModelChange()" style="margin-top:4px;font-size:12px">
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash (Fast)</option>
+              <option value="gemini-2.5-pro">Gemini 2.5 Pro (Best for PDFs)</option>
+              <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
+              <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+              <option value="gemini-1.5-flash">Gemini 1.5 Flash</option>
+            </select>
+          </div>
           <div>
             <label style="margin-top:0;font-size:12px">Question Type</label>
             <select id="ai-qtype" style="margin-top:4px">
@@ -958,8 +1022,8 @@ tr:hover td{background:var(--s2)}
           </div>
           <div>
             <label style="margin-top:0;font-size:12px">Max Questions</label>
-            <input type="number" id="ai-maxq" value="10" min="1" max="20"
-              style="margin-top:4px;font-size:14px;text-align:center"/>
+            <input type="number" id="ai-maxq" value="10" min="1" max="25"
+              style="margin-top:4px;font-size:13px;text-align:center"/>
           </div>
           <div>
             <label style="margin-top:0;font-size:12px">Cognitive Level</label>
@@ -973,23 +1037,25 @@ tr:hover td{background:var(--s2)}
               <option value="evaluation">Evaluation</option>
             </select>
           </div>
-          <div>
-            <label style="margin-top:0;font-size:12px">Difficulty</label>
-            <select id="ai-diff" style="margin-top:4px">
-              <option value="mixed">Let AI decide (mixed)</option>
-              <option value="easy">Easy</option>
-              <option value="medium">Medium</option>
-              <option value="hard">Hard</option>
-            </select>
-          </div>
         </div>
+
+        <div style="margin-top:10px">
+          <label style="margin-top:0;font-size:12px">Difficulty</label>
+          <select id="ai-diff" style="margin-top:4px">
+            <option value="mixed">Let AI decide (mixed)</option>
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
+
         <!-- No API key warning -->
         <div id="ai-nokey-warn" style="display:none;margin-top:12px;padding:10px 12px;background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.4);border-radius:8px;font-size:12px;color:var(--warn)">
-          ⚠️ No Gemini API key found. <a href="#" onclick="show('s-teacher-settings');loadGeminiKeyUI();return false" style="color:var(--acc)">Set up your key in Settings →</a>
+          ⚠️ No API key found. <a href="#" onclick="show('s-teacher-settings');loadGeminiKeyUI();return false" style="color:var(--acc)">Set up your Gemini Pro/Flash key in Settings →</a>
         </div>
         <button class="btn w100" id="ai-gen-btn" onclick="runAiGenerate()"
           style="margin-top:14px;background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none;padding:13px;font-size:14px;font-weight:600">
-          ✨ Generate Questions
+          ✨ Generate & Tag Questions
         </button>
         <div class="st" id="ai-gen-st" style="margin-top:10px"></div>
       </div>
@@ -1826,7 +1892,10 @@ function showSplash(msg){const s=el('s-splash');if(s)s.style.display='flex';cons
 
 window.show=function(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  el(id).classList.add('active');window.scrollTo(0,0);
+  const target=el(id);
+  if(target) target.classList.add('active');
+  window.scrollTo(0,0);
+  if(id==='s-teacher-settings') loadGeminiKeyUI();
   syncActiveSessionBtn();
 };
 
@@ -3772,52 +3841,142 @@ async function endSessionAuto(){
 }
 
 /* ═══════════════════════════════════════════
-   GEMINI AI QUESTION GENERATION
+   GEMINI AI QUESTION GENERATION & MODEL CONFIG
 ═══════════════════════════════════════════ */
 const GEMINI_KEY_STORE='cq5_gemini_key';
-const GEMINI_ENDPOINT='https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent';  
+const GEMINI_MODEL_STORE='cq5_gemini_model';
+const CLAUDE_KEY_STORE='cq5_claude_key';
+const AI_PROVIDER_STORE='cq5_ai_provider';
 
-// ── Key management ──────────────────────────────────────────
-function getGeminiKey(){try{return localStorage.getItem(GEMINI_KEY_STORE)||'';}catch(e){return '';}}
+function getAiProvider(){try{return localStorage.getItem(AI_PROVIDER_STORE)||"gemini";}catch(e){return "gemini";}}
+function getGeminiKey(){try{return localStorage.getItem(GEMINI_KEY_STORE)||"";}catch(e){return "";}}
+function getClaudeKey(){try{return localStorage.getItem(CLAUDE_KEY_STORE)||"";}catch(e){return "";}}
+function getGeminiModel(){try{return localStorage.getItem(GEMINI_MODEL_STORE)||"gemini-2.5-flash";}catch(e){return "gemini-2.5-flash";}}
+
+function getGeminiEndpoint(model){
+  const m=model||getGeminiModel();
+  return `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
+}
+
+window.onAiProviderChange=function(){
+  const prov=el('ai-provider-select')?.value||'gemini';
+  const gSec=el('gemini-key-sec');
+  const cSec=el('claude-key-sec');
+  const gModel=el('gemini-model-wrap');
+  if(gSec) gSec.style.display=prov==='gemini'?'':'none';
+  if(cSec) cSec.style.display=prov==='claude'?'':'none';
+  if(gModel) gModel.style.display=prov==='gemini'?'':'none';
+};
 
 window.loadGeminiKeyUI=function(){
+  const prov=getAiProvider();
   const k=getGeminiKey();
-  const inp=el('gemini-key-input');
-  if(inp) inp.value=k;
-  setSt('gemini-key-st',k?'ok':'','');
+  const ck=getClaudeKey();
+  const m=getGeminiModel();
+  
+  if(el('ai-provider-select')) el('ai-provider-select').value=prov;
+  if(el('gemini-key-input')) el('gemini-key-input').value=k;
+  if(el('claude-key-input')) el('claude-key-input').value=ck;
+  if(el('gemini-model-select')) el('gemini-model-select').value=m;
+  if(el('ai-model-in-panel')) el('ai-model-in-panel').value=m;
+  
+  onAiProviderChange();
+  syncAiModelBadge();
+  setSt('gemini-key-st', (prov==='gemini'?k:ck)?'ok':'','');
 };
 
 window.saveGeminiKey=function(){
+  const prov=el('ai-provider-select')?.value||'gemini';
   const k=(el('gemini-key-input')?.value||'').trim();
-  if(!k){setSt('gemini-key-st','err','Please paste your API key first.');return;}
-  try{localStorage.setItem(GEMINI_KEY_STORE,k);}catch(e){setSt('gemini-key-st','err','Could not save key.');return;}
-  setSt('gemini-key-st','ok','\u2705 Key saved to this device.');
+  const ck=(el('claude-key-input')?.value||'').trim();
+  const m=el('gemini-model-select')?.value||'gemini-2.5-flash';
+
+  try{
+    localStorage.setItem(AI_PROVIDER_STORE,prov);
+    localStorage.setItem(GEMINI_MODEL_STORE,m);
+    if(k) localStorage.setItem(GEMINI_KEY_STORE,k);
+    if(ck) localStorage.setItem(CLAUDE_KEY_STORE,ck);
+  }catch(e){setSt('gemini-key-st','err','Could not save settings.');return;}
+
+  syncAiModelBadge();
+  setSt('gemini-key-st','ok',`✅ ${prov==='gemini'?'Gemini':'Claude'} settings saved! Selected model: ${m}.`);
 };
 
+window.onAiPanelModelChange=function(){
+  const m=el('ai-model-in-panel')?.value||'gemini-2.5-flash';
+  try{localStorage.setItem(GEMINI_MODEL_STORE,m);}catch(e){}
+  if(el('gemini-model-select')) el('gemini-model-select').value=m;
+  syncAiModelBadge();
+};
+
+function syncAiModelBadge(){
+  const b=el('ai-model-badge');
+  const m=getGeminiModel();
+  if(b) b.textContent=m;
+}
+
 window.clearGeminiKey=function(){
-  if(!confirm('Remove your saved Gemini API key from this device?'))return;
-  try{localStorage.removeItem(GEMINI_KEY_STORE);}catch(e){}
-  const inp=el('gemini-key-input');if(inp)inp.value='';
-  setSt('gemini-key-st','info','Key cleared.');
+  if(!confirm('Remove saved AI API keys and preferences from this device?'))return;
+  try{
+    localStorage.removeItem(GEMINI_KEY_STORE);
+    localStorage.removeItem(CLAUDE_KEY_STORE);
+  }catch(e){}
+  if(el('gemini-key-input')) el('gemini-key-input').value='';
+  if(el('claude-key-input')) el('claude-key-input').value='';
+  setSt('gemini-key-st','info','Keys cleared.');
 };
 
 window.toggleGeminiKeyVis=function(){
   const inp=el('gemini-key-input');if(!inp)return;
   inp.type=inp.type==='password'?'text':'password';
 };
+window.toggleClaudeKeyVis=function(){
+  const inp=el('claude-key-input');if(!inp)return;
+  inp.type=inp.type==='password'?'text':'password';
+};
 
 window.testGeminiKey=async function(){
+  const prov=el('ai-provider-select')?.value||getAiProvider();
+  if(prov==='claude'){
+    const ck=getClaudeKey()||(el('claude-key-input')?.value||'').trim();
+    if(!ck){setSt('gemini-key-st','err','Enter Claude API key first.');return;}
+    setSt('gemini-key-st','info','Testing Claude connection…');
+    try{
+      const res=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'x-api-key':ck,
+          'anthropic-version':'2023-06-01',
+          'anthropic-dangerous-direct-browser-access':'true'
+        },
+        body:JSON.stringify({
+          model:'claude-3-5-haiku-20241022',
+          max_tokens:10,
+          messages:[{role:'user',content:'Reply OK'}]
+        })
+      });
+      if(res.ok){setSt('gemini-key-st','ok','✅ Connection successful! Claude key is valid.');}
+      else{const d=await res.json();setSt('gemini-key-st','err','❌ Claude API error: '+(d?.error?.message||res.status));}
+    }catch(e){setSt('gemini-key-st','err','❌ Network error: '+e.message);}
+    return;
+  }
+
+  // Gemini test
   const k=getGeminiKey()||(el('gemini-key-input')?.value||'').trim();
-  if(!k){setSt('gemini-key-st','err','Enter a key first.');return;}
-  setSt('gemini-key-st','info','Testing…');
+  const m=el('gemini-model-select')?.value||getGeminiModel();
+  if(!k){setSt('gemini-key-st','err','Enter Gemini API key first.');return;}
+  setSt('gemini-key-st','info',`Testing connection with ${m}…`);
   try{
-    const res=await fetch(GEMINI_ENDPOINT,{
+    const res=await fetch(getGeminiEndpoint(m),{
       method:'POST',
-      headers:{'Content-Type':'application/json','x-goog-api-key':key},
-      body:JSON.stringify({contents:[{parts:[{text:'Reply with exactly: OK'}]}],
-        generationConfig:{maxOutputTokens:10}})
+      headers:{'Content-Type':'application/json','x-goog-api-key':k},
+      body:JSON.stringify({
+        contents:[{parts:[{text:'Reply with exactly: OK'}]}],
+        generationConfig:{maxOutputTokens:10}
+      })
     });
-    if(res.ok){setSt('gemini-key-st','ok','✅ Connection successful! Key is valid.');}
+    if(res.ok){setSt('gemini-key-st','ok',`✅ Connection successful! Key is valid for ${m}.`);}
     else{const d=await res.json();setSt('gemini-key-st','err','❌ API error: '+(d?.error?.message||res.status));}
   }catch(e){setSt('gemini-key-st','err','❌ Network error: '+e.message);}
 };
@@ -3828,8 +3987,12 @@ window.toggleAiGenPanel=function(){
   const open=p.style.display==='none';
   p.style.display=open?'':'none';
   if(open){
+    const prov=getAiProvider();
+    const key=prov==='gemini'?getGeminiKey():getClaudeKey();
     const noKey=el('ai-nokey-warn');
-    if(noKey) noKey.style.display=getGeminiKey()?'none':'';
+    if(noKey) noKey.style.display=key?'none':'';
+    if(el('ai-model-in-panel')) el('ai-model-in-panel').value=getGeminiModel();
+    syncAiModelBadge();
     // Pre-fill location from wiz-0 fields
     aiGenLocation={
       prog:(el('aq-prog')?.value||'').trim(),
@@ -3852,6 +4015,20 @@ window.aiSrcTab=function(tab){
   el('ai-tab-pdf').style.cssText=tab==='pdf'?'background:var(--acc);color:#fff;border:none;flex:1':'flex:1';
 };
 
+window.updateAiTextStats=function(){
+  const src=(el('ai-source-text')?.value||'').trim();
+  const stats=el('ai-text-stats');
+  if(stats){
+    const words=src?src.split(/\s+/).length:0;
+    stats.textContent=`${src.length.toLocaleString()} characters · ${words.toLocaleString()} words`;
+  }
+};
+
+window.togglePdfPreviewText=function(){
+  aiSrcTab('text');
+  el('ai-source-text')?.focus();
+};
+
 // ── PDF handling ─────────────────────────────────────────────
 window.aiPdfDrop=function(e){
   e.preventDefault();
@@ -3867,9 +4044,8 @@ window.aiPdfSelected=function(input){
 
 async function aiLoadPdf(file){
   const status=el('ai-pdf-status');
-  if(status) status.textContent='Reading PDF\u2026';
+  if(status) status.textContent='Reading PDF…';
   try{
-    // Load PDF.js from CDN if not already loaded
     if(!window.pdfjsLib){
       await new Promise((res,rej)=>{
         const s=document.createElement('script');
@@ -3888,25 +4064,64 @@ async function aiLoadPdf(file){
       text+=content.items.map(it=>it.str).join(' ')+'\n';
     }
     text=text.trim().replace(/\s{3,}/g,' ');
-    if(status) status.textContent=`\u2705 Extracted ${pdf.numPages} page(s), ${text.length} characters.`;
-    // Put extracted text in hidden store for generation
+    const words=text?text.split(/\s+/).length:0;
+    
+    if(text.length < 50){
+      if(status) status.textContent=`⚠️ Extracted ${pdf.numPages} page(s), but only ${text.length} characters found. This PDF may be a scanned document (image-only).`;
+    } else {
+      if(status) status.textContent=`✅ Extracted ${pdf.numPages} page(s), ${text.length.toLocaleString()} characters, ~${words.toLocaleString()} words.`;
+    }
+    
     el('ai-source-text').value=text;
-    el('ai-pdf-drop').innerHTML='<div style="font-size:22px">\u2705</div><div style="font-size:13px;color:var(--grn)">'+file.name+' loaded</div>';
+    updateAiTextStats();
+    
+    const prevBox=el('ai-pdf-preview-box');
+    const prevTxt=el('ai-pdf-preview-text');
+    if(prevBox&&prevTxt){
+      prevTxt.textContent=text.substring(0,600)+(text.length>600?'…':'');
+      prevBox.style.display='';
+    }
+    
+    el('ai-pdf-drop').innerHTML='<div style="font-size:22px">✅</div><div style="font-size:13px;color:var(--grn);font-weight:600">'+file.name+' loaded</div><div style="font-size:11px;color:var(--m)">'+pdf.numPages+' page(s) · '+words.toLocaleString()+' words</div>';
   }catch(e){
-    if(status) status.textContent='\u274c Failed to read PDF: '+e.message;
+    if(status) status.textContent='❌ Failed to read PDF: '+e.message;
+  }
+}
+
+function parseAiJsonResponse(rawText){
+  if(!rawText) throw new Error('AI returned empty response');
+  let str=rawText.trim();
+  str=str.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```$/,'').trim();
+  try{
+    return JSON.parse(str);
+  }catch(e){
+    const firstB=str.indexOf('[');
+    const lastB=str.lastIndexOf(']');
+    if(firstB!==-1 && lastB>firstB){
+      const candidate=str.substring(firstB, lastB+1);
+      try{ return JSON.parse(candidate); }catch(e2){
+        const fixed=candidate.replace(/,\s*([\]}])/g,'$1');
+        return JSON.parse(fixed);
+      }
+    }
+    throw new Error('AI response could not be parsed as valid question JSON. Please try again.');
   }
 }
 
 // ── Core generation ──────────────────────────────────────────
 window.runAiGenerate=async function(){
-  const key=getGeminiKey();
-  if(!key){setSt('ai-gen-st','err','\u274c No Gemini API key. Go to Settings to add one.');return;}
+  const prov=getAiProvider();
+  const key=prov==='gemini'?getGeminiKey():getClaudeKey();
+  if(!key){setSt('ai-gen-st','err',`❌ No ${prov==='gemini'?'Gemini':'Claude'} API key. Go to Settings to add one.`);return;}
+  
   const src=(el('ai-source-text')?.value||'').trim();
-  if(src.length<80){setSt('ai-gen-st','err','Please provide more source text (at least a paragraph).');return;}
+  if(src.length<80){setSt('ai-gen-st','err','Please provide more source text (at least a paragraph or PDF).');return;}
+  
   const qtype=el('ai-qtype')?.value||'mcq';
-  const maxq=Math.min(20,Math.max(1,parseInt(el('ai-maxq')?.value||'10')));
+  const maxq=Math.min(25,Math.max(1,parseInt(el('ai-maxq')?.value||'10')));
   const bloom=el('ai-bloom')?.value||'mixed';
   const diff=el('ai-diff')?.value||'mixed';
+  const selectedModel=el('ai-model-in-panel')?.value||getGeminiModel();
 
   const bloomInstr=bloom==='mixed'?
     'Choose the most appropriate Bloom\'s Taxonomy level for each question based on what the source supports.':
@@ -3918,6 +4133,7 @@ window.runAiGenerate=async function(){
     'Generate a mix of MCQ and True/False questions as appropriate.':
     qtype==='tf'?'Generate only True/False questions.':'Generate only MCQ questions with 4 options each.';
 
+  // Allow high context (up to 200,000 chars ~ 40k words) for Gemini Pro/Flash
   const prompt=`You are an expert medical/science educator. Generate up to ${maxq} high-quality quiz questions from the source text below.
 
 RULES:
@@ -3953,29 +4169,50 @@ Return ONLY a valid JSON array, no markdown, no preamble. Format:
 ]
 
 SOURCE TEXT:
-${src.substring(0,12000)}`;
+${src.substring(0,200000)}`;
 
   const btn=el('ai-gen-btn');
-  if(btn){btn.disabled=true;btn.textContent='\u23f3 Generating\u2026';}
-  setSt('ai-gen-st','info','Sending to Gemini\u2026');
+  if(btn){btn.disabled=true;btn.textContent=`⏳ Generating with ${selectedModel}…`;}
+  setSt('ai-gen-st','info',`Sending request to ${prov==='gemini'?selectedModel:'Claude'}…`);
 
   try{
-    const res=await fetch(GEMINI_ENDPOINT,{
-      method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':key},
-      body:JSON.stringify({
-        contents:[{parts:[{text:prompt}]}],
-        generationConfig:{maxOutputTokens:8192,temperature:0.3}
-      })
-    });
-    const data=await res.json();
-    if(!res.ok) throw new Error(data?.error?.message||'API error '+res.status);
-    let raw=data?.candidates?.[0]?.content?.parts?.[0]?.text||'';
-    // Strip markdown fences if present
-    raw=raw.replace(/^```json\s*/i,'').replace(/^```\s*/,'').replace(/```$/,'').trim();
-    let qs;
-    try{qs=JSON.parse(raw);}catch(e){throw new Error('AI returned invalid JSON. Try again or reduce source length.');}
+    let raw='';
+    if(prov==='claude'){
+      const res=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'x-api-key':key,
+          'anthropic-version':'2023-06-01',
+          'anthropic-dangerous-direct-browser-access':'true'
+        },
+        body:JSON.stringify({
+          model:'claude-3-5-haiku-20241022',
+          max_tokens:4096,
+          messages:[{role:'user',content:prompt}]
+        })
+      });
+      const data=await res.json();
+      if(!res.ok) throw new Error(data?.error?.message||'Claude API error '+res.status);
+      raw=data?.content?.[0]?.text||'';
+    } else {
+      const endpoint=getGeminiEndpoint(selectedModel);
+      const res=await fetch(endpoint,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-goog-api-key':key},
+        body:JSON.stringify({
+          contents:[{parts:[{text:prompt}]}],
+          generationConfig:{maxOutputTokens:8192,temperature:0.3}
+        })
+      });
+      const data=await res.json();
+      if(!res.ok) throw new Error(data?.error?.message||'Gemini API error '+res.status);
+      raw=data?.candidates?.[0]?.content?.parts?.[0]?.text||'';
+    }
+
+    const qs=parseAiJsonResponse(raw);
     if(!Array.isArray(qs)||!qs.length) throw new Error('No questions returned. Source may be too short or ambiguous.');
-    // Validate and clean each question
+    
     _aiGeneratedQs=qs.filter(q=>q.question&&q.type).map((q,i)=>({
       ...q,
       _idx:i,
@@ -3986,12 +4223,12 @@ ${src.substring(0,12000)}`;
       topic:aiGenLocation.topic||wizData.topic||'',
       testid:aiGenLocation.testid||wizData.testid||''
     }));
-    setSt('ai-gen-st','ok','\u2705 '+_aiGeneratedQs.length+' question(s) generated. Review below.');
+    setSt('ai-gen-st','ok',`✅ ${_aiGeneratedQs.length} question(s) generated using ${selectedModel}. Review below.`);
     renderAiCards();
   }catch(e){
-    setSt('ai-gen-st','err','\u274c '+e.message);
+    setSt('ai-gen-st','err','❌ '+e.message);
   }finally{
-    if(btn){btn.disabled=false;btn.textContent='\u2728 Generate Questions';}
+    if(btn){btn.disabled=false;btn.textContent='✨ Generate & Tag Questions';}
   }
 };
 
@@ -7110,10 +7347,125 @@ function renderTeachingStrategy(an,results,qs){
     if(fastWrong.length) insights.push(`<b>${fastWrong.length}</b> question${fastWrong.length>1?'s':''} answered quickly but mostly incorrectly \u2014 encourage students to read questions carefully before selecting.`);
   }
   if(!insights.length) insights.push('Not enough data for strategy insights. Add Bloom\'s tags and run more sessions with confidence rating for richer feedback.');
-  return `<div class="card an-sect"><h4>📋 Teaching Strategy Summary</h4>`
+
+  const telemetry={
+    totalStudents:results.length,
+    meanScore:meanScore,
+    blooms:blooms,
+    confMatrix:confMatrix,
+    lowDiCount:weakDI.length,
+    fastWrongCount:perQ.filter(pq=>pq.avgTimeWrong!==null&&pq.avgTimeWrong<8&&pq.pctCorrect<50).length
+  };
+  window._lastResultsTelemetry=telemetry;
+  const telEnc=encodeURIComponent(JSON.stringify(telemetry));
+
+  return `<div class="card an-sect">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+      <h4 style="margin:0">📋 Teaching Strategy & Performance Analytics</h4>
+      <button class="btn btn-sm" id="ai-an-btn" onclick="runAiResultsAnalysis('${telEnc}')"
+        style="background:linear-gradient(135deg,#4f46e5,#7c3aed);color:#fff;border:none;font-size:12px;font-weight:600;padding:6px 12px;border-radius:8px">
+        ✨ Generate AI Performance Evaluation (Gemini Pro)
+      </button>
+    </div>
+    <div class="st" id="ai-an-st" style="margin-bottom:10px"></div>
+    <div id="ai-an-result-box" style="display:none;margin-bottom:14px"></div>
+    `
     +insights.map(s=>`<div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;padding:10px 12px;background:rgba(108,99,255,.06);border-radius:8px;line-height:1.6;font-size:13px"><span style="font-size:16px;flex-shrink:0">💡</span><div>${s}</div></div>`).join('')
     +`</div>`;
 }
+
+window.runAiResultsAnalysis=async function(anJsonStr){
+  const prov=getAiProvider();
+  const key=prov==='gemini'?getGeminiKey():getClaudeKey();
+  if(!key){
+    setSt('ai-an-st','err',`❌ No ${prov==='gemini'?'Gemini':'Claude'} API key found. Please configure your key in Settings.`);
+    return;
+  }
+  
+  const model=getGeminiModel();
+  const btn=el('ai-an-btn');
+  const box=el('ai-an-result-box');
+  const st=el('ai-an-st');
+  
+  if(btn){btn.disabled=true;btn.textContent=`⏳ Generating AI Evaluation (${model})…`;}
+  if(st) setSt('ai-an-st','info',`Analyzing class performance metrics with ${model}…`);
+
+  try{
+    let telemetry;
+    try{ telemetry=JSON.parse(decodeURIComponent(anJsonStr)); }catch(e){ telemetry=window._lastResultsTelemetry||{}; }
+
+    const prompt=`You are an expert medical and higher-education assessment consultant. Analyze the following class test session performance data and write an executive, highly actionable diagnostic report for the course instructor.
+
+CLASS TELEMETRY DATA:
+- Total Students Tested: ${telemetry.totalStudents||0}
+- Class Mean Score: ${telemetry.meanScore||0}%
+- Bloom's Taxonomy Performance: ${JSON.stringify(telemetry.blooms||{})}
+- Student Confidence vs Accuracy (Sure/Unsure/Guessing): ${JSON.stringify(telemetry.confMatrix||{})}
+- Question Discrimination Outliers (D < 0.2): ${telemetry.lowDiCount||0} questions
+- Fast-Wrong Questions (<8s response, <50% accuracy): ${telemetry.fastWrongCount||0} questions
+
+INSTRUCTIONS:
+Provide a clear, professional evaluation structured into the following 4 sections using HTML tags (use <h4>, <ul>, <li>, <b>, <p>, <div>):
+
+1. 📊 <b>Executive Class Mastery Summary</b>: Concise evaluation of overall student understanding and test performance.
+2. 🧠 <b>Cognitive & Conceptual Gap Analysis</b>: Specific breakdown of weak Bloom's levels (e.g. Recall vs Analysis) and problem areas.
+3. 🎯 <b>Metacognitive & Test-Taking Behavior</b>: Insights on student confidence vs actual accuracy (overconfidence, guessing, rushing).
+4. 💡 <b>Actionable Teaching Recommendations</b>: 3 to 4 concrete instructional strategies for the next class session.
+
+Keep the tone professional, encouraging, and focused on learning outcomes. Output HTML directly (no markdown code blocks).`;
+
+    let rawText='';
+    if(prov==='claude'){
+      const res=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'x-api-key':key,
+          'anthropic-version':'2023-06-01',
+          'anthropic-dangerous-direct-browser-access':'true'
+        },
+        body:JSON.stringify({
+          model:'claude-3-5-haiku-20241022',
+          max_tokens:2048,
+          messages:[{role:'user',content:prompt}]
+        })
+      });
+      const data=await res.json();
+      if(!res.ok) throw new Error(data?.error?.message||'Claude API error '+res.status);
+      rawText=data?.content?.[0]?.text||'';
+    } else {
+      const endpoint=getGeminiEndpoint(model);
+      const res=await fetch(endpoint,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-goog-api-key':key},
+        body:JSON.stringify({
+          contents:[{parts:[{text:prompt}]}],
+          generationConfig:{maxOutputTokens:4096,temperature:0.3}
+        })
+      });
+      const data=await res.json();
+      if(!res.ok) throw new Error(data?.error?.message||'Gemini API error '+res.status);
+      rawText=data?.candidates?.[0]?.content?.parts?.[0]?.text||'';
+    }
+
+    rawText=rawText.replace(/^```html\s*/i,'').replace(/^```\s*/,'').replace(/```$/,'').trim();
+    if(box){
+      box.innerHTML=`<div style="margin-top:14px;padding:16px;background:rgba(79,70,229,.06);border:1px solid rgba(79,70,229,.2);border-radius:12px;line-height:1.7;font-size:13px;color:var(--txt)">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;border-bottom:1px solid rgba(79,70,229,.15);padding-bottom:8px">
+          <span style="font-weight:700;color:var(--acc);font-size:14px">🤖 Gemini Pro Performance Evaluation Report</span>
+          <span style="font-size:11px;color:var(--m);background:rgba(79,70,229,.1);padding:2px 8px;border-radius:10px">${model}</span>
+        </div>
+        ${rawText}
+      </div>`;
+      box.style.display='';
+    }
+    if(st) setSt('ai-an-st','ok','✅ AI Performance Analysis generated successfully!');
+  }catch(e){
+    if(st) setSt('ai-an-st','err','❌ Analysis failed: '+e.message);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='✨ Re-generate AI Evaluation (Gemini Pro)';}
+  }
+};
 
 /* ═══════════════════════════════════════════
    BLOOM LEGEND SHOW ON CONTEXT SWITCH
