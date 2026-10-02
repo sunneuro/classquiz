@@ -991,6 +991,21 @@ tr:hover td{background:var(--s2)}
           <input type="file" id="ai-pdf-file" accept=".pdf" style="display:none" onchange="aiPdfSelected(this)"/>
           <div id="ai-pdf-status" style="font-size:12px;color:var(--m);margin-top:8px;text-align:center"></div>
           
+          <!-- PDF Thumbnail Selection -->
+          <div id="ai-pdf-thumbnails-container" style="display:none;margin-top:12px;padding:12px;background:var(--s2);border-radius:8px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+              <div>
+                <span style="font-size:12px;font-weight:600;color:var(--txt)">Select Pages to Process</span>
+                <div style="font-size:11px;color:var(--m2);margin-top:2px" id="ai-pdf-thumb-stats">0 pages selected</div>
+              </div>
+              <div style="display:flex;gap:6px">
+                <button class="btn btn-ghost btn-sm" onclick="aiPdfSelectAll(true)" style="font-size:11px;padding:2px 8px">Select All</button>
+                <button class="btn btn-ghost btn-sm" onclick="aiPdfSelectAll(false)" style="font-size:11px;padding:2px 8px">Clear</button>
+              </div>
+            </div>
+            <div id="ai-pdf-thumbnails" style="display:flex;gap:10px;overflow-x:auto;padding-bottom:8px"></div>
+          </div>
+          
           <!-- Extracted PDF preview toggle -->
           <div id="ai-pdf-preview-box" style="display:none;margin-top:10px;padding:10px;background:var(--s2);border-radius:8px">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
@@ -4085,6 +4100,7 @@ async function aiLoadPdf(file){
     }
     const buf=await file.arrayBuffer();
     const pdf=await window.pdfjsLib.getDocument({data:buf}).promise;
+    _lastPdfDoc=pdf; // save for manual Vision Mode
     let text='';
     for(let i=1;i<=pdf.numPages;i++){
       const page=await pdf.getPage(i);
@@ -4093,65 +4109,180 @@ async function aiLoadPdf(file){
     }
     text=text.trim().replace(/\s{3,}/g,' ');
     const words=text?text.split(/\s+/).length:0;
-    
-    if(text.length < 50){
-      if(status) status.textContent=`⚠️ Extracted ${pdf.numPages} page(s), but only ${text.length} characters found. This PDF may be a scanned document (image-only).`;
-    } else {
-      if(status) status.textContent=`✅ Extracted ${pdf.numPages} page(s), ${text.length.toLocaleString()} characters, ~${words.toLocaleString()} words.`;
-    }
-    
+
+    // Always default to Vision Mode for PDFs to preserve diagrams/figures.
+    // We still extract text for the preview box, but Gemini will get the images.
     el('ai-source-text').value=text;
     updateAiTextStats();
-    
+
     const prevBox=el('ai-pdf-preview-box');
     const prevTxt=el('ai-pdf-preview-text');
     if(prevBox&&prevTxt){
       prevTxt.textContent=text.substring(0,600)+(text.length>600?'…':'');
       prevBox.style.display='';
     }
-    
-    el('ai-pdf-drop').innerHTML='<div style="font-size:22px">✅</div><div style="font-size:13px;color:var(--grn);font-weight:600">'+file.name+' loaded</div><div style="font-size:11px;color:var(--m)">'+pdf.numPages+' page(s) · '+words.toLocaleString()+' words</div>';
 
-    // If very little text extracted, auto-switch to Vision Mode
-    if(text.length < 50){
-      if(status) status.textContent='📷 Image-based PDF detected — switching to Vision Mode (Gemini reads pages as images)…';
-      await aiRenderPdfForVision(file, pdf, status);
-    }
+    el('ai-pdf-drop').innerHTML='<div style="font-size:22px">✅</div>'
+      +'<div style="font-size:13px;color:var(--grn);font-weight:600">'+file.name+' loaded</div>'
+      +'<div style="font-size:11px;color:var(--m)">'+pdf.numPages+' page(s) · '+words.toLocaleString()+' words</div>';
+
+    // Auto Vision Mode unconditionally
+    if(status) status.textContent=`📷 Rendering ${pdf.numPages} page(s) for Vision Mode (best for biology diagrams)…`;
+    await aiRenderPdfForVision(file, pdf, status);
+
   }catch(e){
     if(status) status.textContent='❌ Failed to read PDF: '+e.message;
   }
 }
 
-// ── PDF Vision Mode: render pages → base64 JPEG ──────────────
-let _aiPdfImages=[]; // stores {mimeType,data} for each page
+// ── PDF Vision Mode & Thumbnails ──────────────
+let _lastPdfDoc=null; // keep reference for thumbnail rendering
+let _aiPdfSelectedPages = new Set(); // tracks which page numbers (1-indexed) are selected
 
 async function aiRenderPdfForVision(file, pdfDoc, statusEl){
-  _aiPdfImages=[];
-  const MAX_PAGES=15;
-  const pages=Math.min(pdfDoc.numPages, MAX_PAGES);
-  if(statusEl) statusEl.textContent=`📷 Vision Mode: rendering ${pages} page(s) as images…`;
-
-  for(let i=1;i<=pages;i++){
-    const page=await pdfDoc.getPage(i);
-    const viewport=page.getViewport({scale:1.5});
-    const canvas=document.createElement('canvas');
-    canvas.width=viewport.width;
-    canvas.height=viewport.height;
-    const ctx=canvas.getContext('2d');
-    await page.render({canvasContext:ctx,viewport}).promise;
-    const b64=canvas.toDataURL('image/jpeg',0.85).split(',')[1];
-    _aiPdfImages.push({mimeType:'image/jpeg',data:b64});
+  _lastPdfDoc = pdfDoc;
+  _aiPdfSelectedPages.clear();
+  
+  if(statusEl) statusEl.textContent=`📷 Loading thumbnails for ${pdfDoc.numPages} page(s)…`;
+  
+  const thumbContainer = el('ai-pdf-thumbnails-container');
+  const thumbDiv = el('ai-pdf-thumbnails');
+  if(!thumbContainer || !thumbDiv) return;
+  
+  thumbDiv.innerHTML = '';
+  thumbContainer.style.display = '';
+  
+  // For huge textbooks, cap thumbnails at 50 to avoid crashing browser memory
+  const MAX_THUMBS = Math.min(pdfDoc.numPages, 50);
+  
+  for(let i=1; i<=MAX_THUMBS; i++){
+    // Default select all (up to 15, free tier limit)
+    if(i <= 15) _aiPdfSelectedPages.add(i);
+    
+    const page = await pdfDoc.getPage(i);
+    // Render a small thumbnail (scale 0.3)
+    const viewport = page.getViewport({scale:0.3});
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    await page.render({canvasContext:ctx, viewport}).promise;
+    
+    // Create UI wrapper
+    const wrapper = document.createElement('div');
+    const isSelected = _aiPdfSelectedPages.has(i);
+    wrapper.style.cssText = `position:relative; cursor:pointer; flex-shrink:0; transition:all 0.1s; border:3px solid ${isSelected?'var(--acc)':'transparent'}; border-radius:4px; overflow:hidden`;
+    wrapper.title = `Page ${i}`;
+    wrapper.onclick = () => aiPdfToggleSelect(i, wrapper);
+    
+    canvas.style.display = 'block';
+    canvas.style.width = '80px';
+    canvas.style.height = 'auto';
+    wrapper.appendChild(canvas);
+    
+    // Page number badge
+    const badge = document.createElement('div');
+    badge.className = 'thumb-badge';
+    badge.style.cssText = `position:absolute; bottom:0; left:0; right:0; background:rgba(0,0,0,0.7); color:#fff; font-size:10px; text-align:center; padding:2px 0`;
+    badge.textContent = `Pg ${i}`;
+    wrapper.appendChild(badge);
+    
+    // Checkmark overlay
+    const check = document.createElement('div');
+    check.className = 'thumb-check';
+    check.style.cssText = `position:absolute; top:2px; right:2px; background:var(--acc); color:#fff; width:16px; height:16px; border-radius:50%; font-size:10px; display:${isSelected?'flex':'none'}; align-items:center; justify-content:center; font-weight:bold`;
+    check.innerHTML = '✓';
+    wrapper.appendChild(check);
+    
+    thumbDiv.appendChild(wrapper);
   }
-
-  const skipped=pdfDoc.numPages-pages;
-  if(statusEl) statusEl.textContent=
-    `📷 Vision Mode ready: ${pages} page(s) rendered as images`+
-    (skipped>0?` (${skipped} page(s) skipped — 15-page limit)`:'')+'.'
-    +' Click Generate to let Gemini read them.';
-
-  // Clear the textarea — generation will use images, not text
-  if(el('ai-source-text')) el('ai-source-text').value='__VISION_MODE__';
+  
+  updateAiPdfStats();
+  
+  if(pdfDoc.numPages > 50){
+    const msg = document.createElement('div');
+    msg.style.cssText = 'font-size:11px; color:var(--m2); padding:20px 10px; white-space:normal; width:120px; flex-shrink:0';
+    msg.textContent = `Showing first 50 pages of ${pdfDoc.numPages} to save memory.`;
+    thumbDiv.appendChild(msg);
+  }
+  
+  if(statusEl) statusEl.textContent = `✅ Ready! Select specific pages to process, then click Generate.`;
+  if(el('ai-source-text')) el('ai-source-text').value = '__VISION_MODE__';
 }
+
+window.aiPdfToggleSelect = function(pageNum, wrapperNode){
+  if(_aiPdfSelectedPages.has(pageNum)){
+    _aiPdfSelectedPages.delete(pageNum);
+    wrapperNode.style.borderColor = 'transparent';
+    wrapperNode.querySelector('.thumb-check').style.display = 'none';
+  } else {
+    if(_aiPdfSelectedPages.size >= 15){
+      setSt('ai-gen-st','err','Maximum 15 pages allowed per generation (Gemini Free Tier limit).');
+      return;
+    }
+    _aiPdfSelectedPages.add(pageNum);
+    wrapperNode.style.borderColor = 'var(--acc)';
+    wrapperNode.querySelector('.thumb-check').style.display = 'flex';
+  }
+  updateAiPdfStats();
+};
+
+window.aiPdfSelectAll = function(select){
+  const thumbDiv = el('ai-pdf-thumbnails');
+  if(!thumbDiv) return;
+  
+  _aiPdfSelectedPages.clear();
+  
+  Array.from(thumbDiv.children).forEach((wrapper, idx) => {
+    if(!wrapper.title) return; // skip the 'showing first 50' message
+    const pageNum = idx + 1;
+    
+    if(select && _aiPdfSelectedPages.size < 15){
+      _aiPdfSelectedPages.add(pageNum);
+      wrapper.style.borderColor = 'var(--acc)';
+      wrapper.querySelector('.thumb-check').style.display = 'flex';
+    } else {
+      wrapper.style.borderColor = 'transparent';
+      wrapper.querySelector('.thumb-check').style.display = 'none';
+    }
+  });
+  
+  if(select && thumbDiv.children.length > 15){
+    setSt('ai-gen-st','info','Selected first 15 pages (maximum allowed per generation).');
+  }
+  
+  updateAiPdfStats();
+};
+
+function updateAiPdfStats(){
+  const stats = el('ai-pdf-thumb-stats');
+  if(stats){
+    stats.textContent = `${_aiPdfSelectedPages.size} page(s) selected`;
+    stats.style.color = _aiPdfSelectedPages.size === 0 ? 'var(--err)' : 'var(--m2)';
+  }
+}
+
+// Generates full-res base64 images ONLY for the selected pages right before sending to Gemini
+async function getAiPdfSelectedImagesForGeneration(){
+  if(!_lastPdfDoc || _aiPdfSelectedPages.size === 0) return [];
+  
+  const images = [];
+  const sortedPages = Array.from(_aiPdfSelectedPages).sort((a,b)=>a-b);
+  
+  for(const pageNum of sortedPages){
+    const page = await _lastPdfDoc.getPage(pageNum);
+    const viewport = page.getViewport({scale:1.5}); // High-res for AI reading
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    await page.render({canvasContext:ctx, viewport}).promise;
+    const b64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+    images.push({mimeType:'image/jpeg', data:b64});
+  }
+  return images;
+}
+
 
 // ── Word Doc handling (mammoth.js) ────────────────────────────
 window.aiDocxDrop=function(e){
@@ -4234,9 +4365,13 @@ window.runAiGenerate=async function(){
   const key=prov==='gemini'?getGeminiKey():getClaudeKey();
   if(!key){setSt('ai-gen-st','err',`❌ No ${prov==='gemini'?'Gemini':'Claude'} API key. Go to Settings to add one.`);return;}
   
-  const visionMode=_aiPdfImages.length>0;
-  const src=(el('ai-source-text')?.value||'').trim();
-  if(!visionMode && src.length<80){setSt('ai-gen-st','err','Please provide more source text (at least a paragraph or PDF).');return;}
+  const images = await getAiPdfSelectedImagesForGeneration();
+  const visionMode = images.length > 0;
+  const src = (el('ai-source-text')?.value||'').trim();
+  if(!visionMode && src.length<80){
+    setSt('ai-gen-st','err','Please provide more source text (at least a paragraph) or select PDF pages.');
+    return;
+  }
   
   const qtype=el('ai-qtype')?.value||'mcq';
   const maxq=Math.min(25,Math.max(1,parseInt(el('ai-maxq')?.value||'10')));
@@ -4323,7 +4458,7 @@ ${src.substring(0,200000)}`;
         prompt.replace(/SOURCE TEXT:[\s\S]*$/,'SOURCE TEXT:\n[See attached page images — read all pages to generate questions]'):
         prompt}];
       if(visionMode){
-        _aiPdfImages.forEach(img=>parts.push({inlineData:img}));
+        images.forEach(img=>parts.push({inlineData:img}));
       }
       const res=await fetch(endpoint,{
         method:'POST',
@@ -4336,8 +4471,6 @@ ${src.substring(0,200000)}`;
       const data=await res.json();
       if(!res.ok) throw new Error(data?.error?.message||'Gemini API error '+res.status);
       raw=data?.candidates?.[0]?.content?.parts?.[0]?.text||'';
-      // Reset images after use so next generate doesn't re-use stale pages
-      if(visionMode) _aiPdfImages=[];
     }
 
     const qs=parseAiJsonResponse(raw);
