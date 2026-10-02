@@ -956,7 +956,7 @@ tr:hover td{background:var(--s2)}
           <button class="btn btn-ghost btn-sm" onclick="show('s-teacher-settings');loadGeminiKeyUI()" style="font-size:11px;padding:2px 8px">⚙️ Settings</button>
         </div>
         <p style="font-size:12px;color:var(--m);margin-bottom:14px;line-height:1.6">
-          Paste notes/text or upload a PDF. The AI will extract content, formulate high-quality questions, and auto-tag Bloom's Taxonomy & Difficulty levels.
+          Paste notes/text or upload a <strong>PDF</strong> or <strong>Word doc (.docx)</strong>. If your document contains images/screenshots of formulae or diagrams, upload as PDF — the AI will read them visually. The AI will extract content, formulate high-quality questions, and auto-tag Bloom’s Taxonomy &amp; Difficulty levels.
         </p>
 
         <!-- Source input tabs -->
@@ -965,6 +965,8 @@ tr:hover td{background:var(--s2)}
             style="background:var(--acc);color:#fff;border:none;flex:1">📝 Paste Text</button>
           <button class="btn btn-ghost btn-sm" id="ai-tab-pdf" onclick="aiSrcTab('pdf')"
             style="flex:1">📄 Upload PDF</button>
+          <button class="btn btn-ghost btn-sm" id="ai-tab-docx" onclick="aiSrcTab('docx')"
+            style="flex:1">📘 Word Doc</button>
         </div>
 
         <!-- Text input -->
@@ -996,6 +998,29 @@ tr:hover td{background:var(--s2)}
               <button class="btn btn-ghost btn-sm" onclick="togglePdfPreviewText()" style="font-size:11px;padding:2px 6px">✏️ Edit Extracted Text</button>
             </div>
             <div id="ai-pdf-preview-text" style="font-size:12px;color:var(--m);max-height:100px;overflow-y:auto;white-space:pre-wrap;font-family:monospace;background:var(--bg);padding:8px;border-radius:4px"></div>
+          </div>
+        </div>
+
+        <!-- Word Doc input -->
+        <div id="ai-src-docx" style="display:none">
+          <div id="ai-docx-drop"
+            style="border:2px dashed var(--b2);border-radius:10px;padding:28px;text-align:center;cursor:pointer;transition:border-color .2s"
+            onclick="el('ai-docx-file').click()"
+            ondragover="event.preventDefault();this.style.borderColor='var(--acc)'"
+            ondragleave="this.style.borderColor='var(--b2)'"
+            ondrop="aiDocxDrop(event)">
+            <div style="font-size:28px;margin-bottom:8px">📘</div>
+            <div style="font-size:13px;color:var(--m)">Click or drag a Word document (.docx) here</div>
+            <div style="font-size:11px;color:var(--m2);margin-top:4px">Text extracted locally — no upload needed. Works with typed notes &amp; tables.</div>
+          </div>
+          <input type="file" id="ai-docx-file" accept=".docx" style="display:none" onchange="aiDocxSelected(this)"/>
+          <div id="ai-docx-status" style="font-size:12px;color:var(--m);margin-top:8px;text-align:center"></div>
+          <div id="ai-docx-preview-box" style="display:none;margin-top:10px;padding:10px;background:var(--s2);border-radius:8px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <span style="font-size:11px;font-weight:600;color:var(--txt)">📘 Extracted Word Doc Preview</span>
+              <button class="btn btn-ghost btn-sm" onclick="aiSrcTab('text');el('ai-source-text')?.focus()" style="font-size:11px;padding:2px 6px">✏️ Edit Text</button>
+            </div>
+            <div id="ai-docx-preview-text" style="font-size:12px;color:var(--m);max-height:100px;overflow-y:auto;white-space:pre-wrap;font-family:monospace;background:var(--bg);padding:8px;border-radius:4px"></div>
           </div>
         </div>
 
@@ -4007,10 +4032,15 @@ let _aiGeneratedQs=[];
 window.aiSrcTab=function(tab){
   el('ai-src-text').style.display=tab==='text'?'':'none';
   el('ai-src-pdf').style.display=tab==='pdf'?'':'none';
-  el('ai-tab-text').style.cssText=tab==='text'?'background:var(--acc);color:#fff;border:none;flex:1':'flex:1';
-  el('ai-tab-text').className=tab==='text'?'btn btn-sm':'btn btn-ghost btn-sm';
-  el('ai-tab-pdf').className=tab==='pdf'?'btn btn-sm':'btn btn-ghost btn-sm';
-  el('ai-tab-pdf').style.cssText=tab==='pdf'?'background:var(--acc);color:#fff;border:none;flex:1':'flex:1';
+  if(el('ai-src-docx')) el('ai-src-docx').style.display=tab==='docx'?'':'none';
+  // Style all three tabs
+  ['text','pdf','docx'].forEach(t=>{
+    const btn=el('ai-tab-'+t);
+    if(!btn) return;
+    const active=t===tab;
+    btn.className=active?'btn btn-sm':'btn btn-ghost btn-sm';
+    btn.style.cssText=active?'background:var(--acc);color:#fff;border:none;flex:1':'flex:1';
+  });
 };
 
 window.updateAiTextStats=function(){
@@ -4081,10 +4111,102 @@ async function aiLoadPdf(file){
     }
     
     el('ai-pdf-drop').innerHTML='<div style="font-size:22px">✅</div><div style="font-size:13px;color:var(--grn);font-weight:600">'+file.name+' loaded</div><div style="font-size:11px;color:var(--m)">'+pdf.numPages+' page(s) · '+words.toLocaleString()+' words</div>';
+
+    // If very little text extracted, auto-switch to Vision Mode
+    if(text.length < 50){
+      if(status) status.textContent='📷 Image-based PDF detected — switching to Vision Mode (Gemini reads pages as images)…';
+      await aiRenderPdfForVision(file, pdf, status);
+    }
   }catch(e){
     if(status) status.textContent='❌ Failed to read PDF: '+e.message;
   }
 }
+
+// ── PDF Vision Mode: render pages → base64 JPEG ──────────────
+let _aiPdfImages=[]; // stores {mimeType,data} for each page
+
+async function aiRenderPdfForVision(file, pdfDoc, statusEl){
+  _aiPdfImages=[];
+  const MAX_PAGES=15;
+  const pages=Math.min(pdfDoc.numPages, MAX_PAGES);
+  if(statusEl) statusEl.textContent=`📷 Vision Mode: rendering ${pages} page(s) as images…`;
+
+  for(let i=1;i<=pages;i++){
+    const page=await pdfDoc.getPage(i);
+    const viewport=page.getViewport({scale:1.5});
+    const canvas=document.createElement('canvas');
+    canvas.width=viewport.width;
+    canvas.height=viewport.height;
+    const ctx=canvas.getContext('2d');
+    await page.render({canvasContext:ctx,viewport}).promise;
+    const b64=canvas.toDataURL('image/jpeg',0.85).split(',')[1];
+    _aiPdfImages.push({mimeType:'image/jpeg',data:b64});
+  }
+
+  const skipped=pdfDoc.numPages-pages;
+  if(statusEl) statusEl.textContent=
+    `📷 Vision Mode ready: ${pages} page(s) rendered as images`+
+    (skipped>0?` (${skipped} page(s) skipped — 15-page limit)`:'')+'.'
+    +' Click Generate to let Gemini read them.';
+
+  // Clear the textarea — generation will use images, not text
+  if(el('ai-source-text')) el('ai-source-text').value='__VISION_MODE__';
+}
+
+// ── Word Doc handling (mammoth.js) ────────────────────────────
+window.aiDocxDrop=function(e){
+  e.preventDefault();
+  el('ai-docx-drop').style.borderColor='var(--b2)';
+  const file=e.dataTransfer?.files?.[0];
+  if(file&&(file.name.endsWith('.docx')||file.type.includes('wordprocessingml'))) aiLoadDocx(file);
+  else setSt('ai-gen-st','err','Please drop a .docx Word document.');
+};
+window.aiDocxSelected=function(input){
+  const file=input.files?.[0];
+  if(file) aiLoadDocx(file);
+};
+
+async function aiLoadDocx(file){
+  const status=el('ai-docx-status');
+  if(status) status.textContent='Reading Word document…';
+  try{
+    // Load mammoth.js on demand
+    if(!window.mammoth){
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdn.jsdelivr.net/npm/mammoth@1.8.0/mammoth.browser.min.js';
+        s.onload=res; s.onerror=rej; document.head.appendChild(s);
+      });
+    }
+    const buf=await file.arrayBuffer();
+    const result=await window.mammoth.extractRawText({arrayBuffer:buf});
+    let text=(result.value||'').trim().replace(/\s{3,}/g,' ');
+    const words=text?text.split(/\s+/).length:0;
+
+    if(text.length<30){
+      if(status) status.textContent='⚠️ Very little text extracted. This file may contain mostly images — try uploading as PDF instead.';
+    } else {
+      if(status) status.textContent=`✅ Extracted ${text.length.toLocaleString()} characters, ~${words.toLocaleString()} words from ${file.name}.`;
+    }
+
+    // Put text into the shared source textarea
+    if(el('ai-source-text')) el('ai-source-text').value=text;
+    updateAiTextStats();
+
+    // Show preview
+    const prevBox=el('ai-docx-preview-box');
+    const prevTxt=el('ai-docx-preview-text');
+    if(prevBox&&prevTxt){
+      prevTxt.textContent=text.substring(0,600)+(text.length>600?'…':'');
+      prevBox.style.display='';
+    }
+
+    el('ai-docx-drop').innerHTML='<div style="font-size:22px">✅</div><div style="font-size:13px;color:var(--grn);font-weight:600">'+file.name+' loaded</div><div style="font-size:11px;color:var(--m)">'+words.toLocaleString()+' words extracted</div>';
+  }catch(e){
+    if(status) status.textContent='❌ Failed to read Word doc: '+e.message;
+  }
+}
+
 
 function parseAiJsonResponse(rawText){
   if(!rawText) throw new Error('AI returned empty response');
@@ -4112,8 +4234,9 @@ window.runAiGenerate=async function(){
   const key=prov==='gemini'?getGeminiKey():getClaudeKey();
   if(!key){setSt('ai-gen-st','err',`❌ No ${prov==='gemini'?'Gemini':'Claude'} API key. Go to Settings to add one.`);return;}
   
+  const visionMode=_aiPdfImages.length>0;
   const src=(el('ai-source-text')?.value||'').trim();
-  if(src.length<80){setSt('ai-gen-st','err','Please provide more source text (at least a paragraph or PDF).');return;}
+  if(!visionMode && src.length<80){setSt('ai-gen-st','err','Please provide more source text (at least a paragraph or PDF).');return;}
   
   const qtype=el('ai-qtype')?.value||'mcq';
   const maxq=Math.min(25,Math.max(1,parseInt(el('ai-maxq')?.value||'10')));
@@ -4195,17 +4318,26 @@ ${src.substring(0,200000)}`;
       raw=data?.content?.[0]?.text||'';
     } else {
       const endpoint=getGeminiEndpoint(selectedModel);
+      // Build parts: always include prompt text; add images if Vision Mode
+      const parts=[{text:visionMode?
+        prompt.replace(/SOURCE TEXT:[\s\S]*$/,'SOURCE TEXT:\n[See attached page images — read all pages to generate questions]'):
+        prompt}];
+      if(visionMode){
+        _aiPdfImages.forEach(img=>parts.push({inlineData:img}));
+      }
       const res=await fetch(endpoint,{
         method:'POST',
         headers:{'Content-Type':'application/json','x-goog-api-key':key},
         body:JSON.stringify({
-          contents:[{parts:[{text:prompt}]}],
+          contents:[{parts}],
           generationConfig:{maxOutputTokens:8192,temperature:0.3}
         })
       });
       const data=await res.json();
       if(!res.ok) throw new Error(data?.error?.message||'Gemini API error '+res.status);
       raw=data?.candidates?.[0]?.content?.parts?.[0]?.text||'';
+      // Reset images after use so next generate doesn't re-use stale pages
+      if(visionMode) _aiPdfImages=[];
     }
 
     const qs=parseAiJsonResponse(raw);
