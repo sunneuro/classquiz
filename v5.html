@@ -911,22 +911,22 @@ tr:hover td{background:var(--s2)}
       <h2>Step 1 — Where does this question belong?</h2>
       <label>Programme <span class="req">*</span></label>
       <div class="ac-wrap">
-        <input type="text" id="aq-prog" placeholder="e.g. MBBS Year 1" autocomplete="off" oninput="acFilter('prog')" onfocus="acShow('prog')" onblur="acHide('prog',300)"/>
+        <input type="text" id="aq-prog" placeholder="e.g. MBBS Year 1" autocomplete="off" oninput="acFilter(\'prog\'); saveOBESession();" onfocus="acShow('prog')" onblur="acHide('prog',300)"/>
         <div class="ac-drop" id="ac-prog"></div>
       </div>
       <label>Course ID <span class="req">*</span></label>
       <div class="ac-wrap">
-        <input type="text" id="aq-cid" placeholder="e.g. ANAT-101" autocomplete="off" oninput="acFilter('cid')" onfocus="acShow('cid')" onblur="acHide('cid',300)"/>
+        <input type="text" id="aq-cid" placeholder="e.g. ANAT-101" autocomplete="off" oninput="acFilter(\'cid\'); saveOBESession();" onfocus="acShow('cid')" onblur="acHide('cid',300)"/>
         <div class="ac-drop" id="ac-cid"></div>
       </div>
       <label>Subject Name <span class="req">*</span></label>
       <div class="ac-wrap">
-        <input type="text" id="aq-subj" placeholder="e.g. Anatomy" autocomplete="off" oninput="acFilter('subj')" onfocus="acShow('subj')" onblur="acHide('subj',300)"/>
+        <input type="text" id="aq-subj" placeholder="e.g. Anatomy" autocomplete="off" oninput="acFilter(\'subj\'); saveOBESession();" onfocus="acShow('subj')" onblur="acHide('subj',300)"/>
         <div class="ac-drop" id="ac-subj"></div>
       </div>
       <label>Unit/Topic <span class="req">*</span></label>
       <div class="ac-wrap">
-        <input type="text" id="aq-topic" placeholder="e.g. Upper Limb" autocomplete="off" oninput="acFilter('topic')" onfocus="acShow('topic')" onblur="acHide('topic',300)"/>
+        <input type="text" id="aq-topic" placeholder="e.g. Upper Limb" autocomplete="off" oninput="acFilter(\'topic\'); saveOBESession();" onfocus="acShow('topic')" onblur="acHide('topic',300)"/>
         <div class="ac-drop" id="ac-topic"></div>
       </div>
       <label>Test ID/Comment</label>
@@ -950,16 +950,16 @@ tr:hover td{background:var(--s2)}
       <h2>Define Program Outcomes (POs & PSOs)</h2>
       <p style="font-size:13px;color:var(--m);margin-bottom:20px">Define the broad Program Outcomes for this degree/program. The AI needs these robust descriptions to accurately map your Course Outcomes to them later.</p>
       
-      <div id="po-list">
+      <div id="po-list-wrap"><div id="po-list">
         <!-- PO Items injected here -->
       </div>
 
-      <div style="background:var(--s2);padding:16px;border-radius:12px;border:1px dashed var(--b2);margin-top:20px">
+      </div><div style="background:var(--s2);padding:16px;border-radius:12px;border:1px dashed var(--b2);margin-top:20px">
         <label>Add New PO or PSO</label>
         <div class="row" style="align-items:flex-start; flex-wrap:wrap">
-          <input type="text" id="new-po-id" placeholder="e.g. PO3 or PSO1" style="width:140px;margin-bottom:0"/>
           <input type="text" id="new-po-desc" placeholder="Outcome description..." style="flex:1;min-width:250px;margin-bottom:0"/>
-          <button class="btn btn-pri" onclick="addPO()">Add PO</button>
+          <button class="btn btn-pri" id="btn-add-po" onclick="addPO('PO')">Add PO-1</button>
+          <button class="btn btn-pri" id="btn-add-pso" onclick="addPO('PSO')" style="background:var(--acc);border:none;">Add PSO-1</button>
         </div>
       </div>
     </div>
@@ -968,19 +968,21 @@ tr:hover td{background:var(--s2)}
   <!-- SCREEN 2: SUBJECT SETUP (COs) -->
   <div id="s-subject" class="obe-tab-pane" style="min-height:auto;padding:0">
     <div class="card">
-      <h2>Define Course Outcomes (COs)</h2>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <h2 style="margin-bottom:0;">Define Course Outcomes (COs)</h2>
+        <button class="btn btn-ghost btn-sm" onclick="toggleList('co-list-wrap', this)">Hide List</button>
+      </div>
       <p style="font-size:13px;color:var(--m);margin-bottom:20px">Define the specific learning outcomes for this subject. These will be mapped to POs and attached to questions.</p>
       
-      <div id="co-list">
+      <div id="co-list-wrap"><div id="co-list">
         <!-- CO Items injected here -->
       </div>
 
-      <div style="background:var(--s2);padding:16px;border-radius:12px;border:1px dashed var(--b2);margin-top:20px">
+      </div><div style="background:var(--s2);padding:16px;border-radius:12px;border:1px dashed var(--b2);margin-top:20px">
         <label>Add New Course Outcome</label>
         <div class="row" style="align-items:flex-start; flex-wrap:wrap">
-          <input type="text" id="new-co-id" placeholder="e.g. CO1" style="width:140px;margin-bottom:0"/>
           <input type="text" id="new-co-desc" placeholder="Outcome description..." style="flex:1;min-width:250px;margin-bottom:0"/>
-          <button class="btn btn-pri" onclick="addCO()">Add CO</button>
+          <button class="btn btn-pri" id="btn-add-co" onclick="addCO()">Add CO-1</button>
         </div>
       </div>
     </div>
@@ -9156,19 +9158,8 @@ bootstrap();
 
 // --- OBE JS ---
 // Mock Data for POs
-let pos = [
-  { id: 'PO1', desc: 'Biotechnology Knowledge and Problem Analysis: Demonstrate advanced knowledge of mathematics, life sciences...' },
-  { id: 'PO2', desc: 'Design and Development of Biotechnology Solutions: Design solutions and develop system components...' },
-  { id: 'PO3', desc: 'Investigation and Research in Complex Biotechnology Problems...' },
-  { id: 'PSO1', desc: 'Use integrated knowledge of molecular biology, genetic engineering...' }
-];
-
-// Mock Data for COs
-let cos = [
-  { id: 'CO1', desc: 'Discuss the structural organization of cells, membrane composition.' },
-  { id: 'CO2', desc: 'Describe transport across membranes, vesicular trafficking.' },
-  { id: 'CO3', desc: 'Evaluate the regulation of the cell cycle, programmed cell death.' }
-];
+let pos = [];
+let cos = [];
 
 let matrixData = {};
 let aiGeneratedState = {}; // Used for QC comparison
@@ -9181,7 +9172,95 @@ function switchObeTab(id, event) {
   document.getElementById(id).classList.add('active');
   if(event) event.target.classList.add('active');
 
-  if(id === 's-po') renderPOList();
+  if(id === 's-po') 
+// --- OBE Persistence & Utilities ---
+
+function getObeNextId(type) {
+  const list = (type === 'PO' || type === 'PSO') ? pos : cos;
+  const prefix = type + '-';
+  let i = 1;
+  while(list.find(x => x.id === prefix + i || x.id === type + i)) i++;
+  return prefix + i;
+}
+
+function updateObeNextId() {
+  const poBtn = document.getElementById('btn-add-po');
+  if(poBtn) poBtn.innerText = 'Add ' + getObeNextId('PO');
+  
+  const psoBtn = document.getElementById('btn-add-pso');
+  if(psoBtn) psoBtn.innerText = 'Add ' + getObeNextId('PSO');
+  
+  const coBtn = document.getElementById('btn-add-co');
+  if(coBtn) coBtn.innerText = 'Add ' + getObeNextId('CO');
+}
+
+function saveOBESession() {
+  const session = {
+    prog: document.getElementById('aq-prog')?.value || '',
+    cid: document.getElementById('aq-cid')?.value || '',
+    subj: document.getElementById('aq-subj')?.value || '',
+    topic: document.getElementById('aq-topic')?.value || '',
+    pos: pos,
+    cos: cos,
+    matrixData: matrixData
+  };
+  localStorage.setItem('obe_session', JSON.stringify(session));
+}
+
+function loadOBESession() {
+  const str = localStorage.getItem('obe_session');
+  if (str) {
+    try {
+      const session = JSON.parse(str);
+      if (session.prog && document.getElementById('aq-prog')) document.getElementById('aq-prog').value = session.prog;
+      if (session.cid && document.getElementById('aq-cid')) document.getElementById('aq-cid').value = session.cid;
+      if (session.subj && document.getElementById('aq-subj')) document.getElementById('aq-subj').value = session.subj;
+      if (session.topic && document.getElementById('aq-topic')) document.getElementById('aq-topic').value = session.topic;
+      if (session.pos) pos = session.pos;
+      if (session.cos) cos = session.cos;
+      if (session.matrixData) matrixData = session.matrixData;
+    } catch(e) {}
+  }
+}
+
+function toggleList(wrapId, btn) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  if (wrap.style.display === 'none') {
+    wrap.style.display = 'block';
+    btn.innerText = 'Hide List';
+  } else {
+    wrap.style.display = 'none';
+    btn.innerText = 'Show List';
+  }
+}
+
+function editPO(id) {
+  const p = pos.find(x => x.id === id);
+  if(!p) return;
+  const newDesc = prompt("Edit description for " + id + ":", p.desc);
+  if (newDesc !== null && newDesc.trim() !== '') {
+    p.desc = newDesc.trim();
+    saveOBESession();
+    renderPOList();
+  }
+}
+
+function editCO(id) {
+  const c = cos.find(x => x.id === id);
+  if(!c) return;
+  const newDesc = prompt("Edit description for " + id + ":", c.desc);
+  if (newDesc !== null && newDesc.trim() !== '') {
+    c.desc = newDesc.trim();
+    saveOBESession();
+    renderCOList();
+  }
+}
+
+loadOBESession();
+renderPOList();
+renderCOList();
+
   if(id === 's-subject') renderCOList();
   if(id === 's-matrix') renderMatrix();
   if(id === 's-question') renderQuestionCOs();
@@ -9191,6 +9270,7 @@ function switchObeTab(id, event) {
 // 1. PO Setup
 function renderPOList() {
   const container = document.getElementById('po-list');
+  if(!container) return;
   container.innerHTML = '';
   pos.forEach(po => {
     container.innerHTML += `
@@ -9199,31 +9279,143 @@ function renderPOList() {
           <h4>${po.id}</h4>
           <p>${po.desc}</p>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="removePO('${po.id}')">Remove</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-sm" onclick="editPO('${po.id}')">Edit</button>
+          <button class="btn btn-ghost btn-sm" onclick="removePO('${po.id}')">Remove</button>
+        </div>
       </div>
     `;
   });
+  renderQuestionCOs();
+  updateObeNextId();
 }
 
-function addPO() {
-  const id = document.getElementById('new-po-id').value.trim();
+function addPO(type) {
   const desc = document.getElementById('new-po-desc').value.trim();
-  if(id && desc && !pos.find(p => p.id === id)) {
-    pos.push({ id, desc });
-    document.getElementById('new-po-id').value = '';
-    document.getElementById('new-po-desc').value = '';
-    renderPOList();
+  if(!desc) { alert('Please enter a description.'); return; }
+  const id = getObeNextId(type);
+  if (pos.find(p => p.id === id)) { alert('PO/PSO ID already exists!'); return; }
+  pos.push({ id, desc }); saveOBESession();
+  document.getElementById('new-po-desc').value = '';
+  renderPOList();
+}
+}
+
+function editCO(id) {
+  const c = cos.find(x => x.id === id);
+  if(!c) return;
+  const newDesc = prompt("Edit description for " + id + ":", c.desc);
+  if (newDesc !== null && newDesc.trim() !== '') {
+    c.desc = newDesc.trim();
+    saveOBESession();
+    renderCOList();
+  }
+}
+
+loadOBESession();
+renderPOList();
+renderCOList();
+
   }
 }
 
 function removePO(id) {
-  pos = pos.filter(p => p.id !== id);
-  renderPOList();
+  pos = pos.filter(p => p.id !== id); saveOBESession();
+  
+// --- OBE Persistence & Utilities ---
+
+function getObeNextId(type) {
+  const list = (type === 'PO' || type === 'PSO') ? pos : cos;
+  const prefix = type + '-';
+  let i = 1;
+  while(list.find(x => x.id === prefix + i || x.id === type + i)) i++;
+  return prefix + i;
+}
+
+function updateObeNextId() {
+  const poBtn = document.getElementById('btn-add-po');
+  if(poBtn) poBtn.innerText = 'Add ' + getObeNextId('PO');
+  
+  const psoBtn = document.getElementById('btn-add-pso');
+  if(psoBtn) psoBtn.innerText = 'Add ' + getObeNextId('PSO');
+  
+  const coBtn = document.getElementById('btn-add-co');
+  if(coBtn) coBtn.innerText = 'Add ' + getObeNextId('CO');
+}
+
+function saveOBESession() {
+  const session = {
+    prog: document.getElementById('aq-prog')?.value || '',
+    cid: document.getElementById('aq-cid')?.value || '',
+    subj: document.getElementById('aq-subj')?.value || '',
+    topic: document.getElementById('aq-topic')?.value || '',
+    pos: pos,
+    cos: cos,
+    matrixData: matrixData
+  };
+  localStorage.setItem('obe_session', JSON.stringify(session));
+}
+
+function loadOBESession() {
+  const str = localStorage.getItem('obe_session');
+  if (str) {
+    try {
+      const session = JSON.parse(str);
+      if (session.prog && document.getElementById('aq-prog')) document.getElementById('aq-prog').value = session.prog;
+      if (session.cid && document.getElementById('aq-cid')) document.getElementById('aq-cid').value = session.cid;
+      if (session.subj && document.getElementById('aq-subj')) document.getElementById('aq-subj').value = session.subj;
+      if (session.topic && document.getElementById('aq-topic')) document.getElementById('aq-topic').value = session.topic;
+      if (session.pos) pos = session.pos;
+      if (session.cos) cos = session.cos;
+      if (session.matrixData) matrixData = session.matrixData;
+    } catch(e) {}
+  }
+}
+
+function toggleList(wrapId, btn) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  if (wrap.style.display === 'none') {
+    wrap.style.display = 'block';
+    btn.innerText = 'Hide List';
+  } else {
+    wrap.style.display = 'none';
+    btn.innerText = 'Show List';
+  }
+}
+
+function editPO(id) {
+  const p = pos.find(x => x.id === id);
+  if(!p) return;
+  const newDesc = prompt("Edit description for " + id + ":", p.desc);
+  if (newDesc !== null && newDesc.trim() !== '') {
+    p.desc = newDesc.trim();
+    saveOBESession();
+    renderPOList();
+  }
+}
+
+function editCO(id) {
+  const c = cos.find(x => x.id === id);
+  if(!c) return;
+  const newDesc = prompt("Edit description for " + id + ":", c.desc);
+  if (newDesc !== null && newDesc.trim() !== '') {
+    c.desc = newDesc.trim();
+    saveOBESession();
+    renderCOList();
+  }
+}
+
+loadOBESession();
+renderPOList();
+renderCOList();
+
 }
 
 // 2. CO Setup
 function renderCOList() {
   const container = document.getElementById('co-list');
+  if(!container) return;
   container.innerHTML = '';
   cos.forEach(co => {
     container.innerHTML += `
@@ -9232,25 +9424,30 @@ function renderCOList() {
           <h4>${co.id}</h4>
           <p>${co.desc}</p>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="removeCO('${co.id}')">Remove</button>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost btn-sm" onclick="editCO('${co.id}')">Edit</button>
+          <button class="btn btn-ghost btn-sm" onclick="removeCO('${co.id}')">Remove</button>
+        </div>
       </div>
     `;
   });
+  renderQuestionCOs();
+  updateObeNextId();
 }
 
 function addCO() {
-  const id = document.getElementById('new-co-id').value.trim();
   const desc = document.getElementById('new-co-desc').value.trim();
-  if(id && desc && !cos.find(c => c.id === id)) {
-    cos.push({ id, desc });
-    document.getElementById('new-co-id').value = '';
-    document.getElementById('new-co-desc').value = '';
-    renderCOList();
-  }
+  if(!desc) { alert('Please enter a description.'); return; }
+  const id = getObeNextId('CO');
+  if (cos.find(c => c.id === id)) { alert('CO ID already exists!'); return; }
+  cos.push({ id, desc }); saveOBESession();
+  document.getElementById('new-co-desc').value = '';
+  renderCOList();
+}
 }
 
 function removeCO(id) {
-  cos = cos.filter(c => c.id !== id);
+  cos = cos.filter(c => c.id !== id); saveOBESession();
   renderCOList();
 }
 
@@ -9268,7 +9465,7 @@ function renderMatrix() {
     tbody += `<tr><td title="${co.desc}">${co.id}</td>`;
     pos.forEach(p => {
       let val = matrixData[co.id+'-'+p.id] || '';
-      tbody += `<td><input type="text" class="matrix-input" maxlength="1" value="${val}" data-key="${co.id}-${p.id}" pattern="[1-3]?" title="1, 2, or 3" oninput="this.value=this.value.replace(/[^1-3]/g,''); if(document.getElementById('qc-checkbox').checked) handleQCCheck();"/></td>`;
+      tbody += `<td><input type="text" class="matrix-input" maxlength="1" value="${val}" data-key="${co.id}-${p.id}" pattern="[1-3]?" title="1, 2, or 3" oninput="this.value=this.value.replace(/[^1-3]/g,''); if(document.getElementById('qc-checkbox').checked) handleQCCheck(); saveOBESession();"/></td>`;
     });
     tbody += `</tr>`;
   });
@@ -9483,7 +9680,95 @@ function renderCharts() {
 }
 
 // Initialize
+
+// --- OBE Persistence & Utilities ---
+
+function getObeNextId(type) {
+  const list = (type === 'PO' || type === 'PSO') ? pos : cos;
+  const prefix = type + '-';
+  let i = 1;
+  while(list.find(x => x.id === prefix + i || x.id === type + i)) i++;
+  return prefix + i;
+}
+
+function updateObeNextId() {
+  const poBtn = document.getElementById('btn-add-po');
+  if(poBtn) poBtn.innerText = 'Add ' + getObeNextId('PO');
+  
+  const psoBtn = document.getElementById('btn-add-pso');
+  if(psoBtn) psoBtn.innerText = 'Add ' + getObeNextId('PSO');
+  
+  const coBtn = document.getElementById('btn-add-co');
+  if(coBtn) coBtn.innerText = 'Add ' + getObeNextId('CO');
+}
+
+function saveOBESession() {
+  const session = {
+    prog: document.getElementById('aq-prog')?.value || '',
+    cid: document.getElementById('aq-cid')?.value || '',
+    subj: document.getElementById('aq-subj')?.value || '',
+    topic: document.getElementById('aq-topic')?.value || '',
+    pos: pos,
+    cos: cos,
+    matrixData: matrixData
+  };
+  localStorage.setItem('obe_session', JSON.stringify(session));
+}
+
+function loadOBESession() {
+  const str = localStorage.getItem('obe_session');
+  if (str) {
+    try {
+      const session = JSON.parse(str);
+      if (session.prog && document.getElementById('aq-prog')) document.getElementById('aq-prog').value = session.prog;
+      if (session.cid && document.getElementById('aq-cid')) document.getElementById('aq-cid').value = session.cid;
+      if (session.subj && document.getElementById('aq-subj')) document.getElementById('aq-subj').value = session.subj;
+      if (session.topic && document.getElementById('aq-topic')) document.getElementById('aq-topic').value = session.topic;
+      if (session.pos) pos = session.pos;
+      if (session.cos) cos = session.cos;
+      if (session.matrixData) matrixData = session.matrixData;
+    } catch(e) {}
+  }
+}
+
+function toggleList(wrapId, btn) {
+  const wrap = document.getElementById(wrapId);
+  if (!wrap) return;
+  if (wrap.style.display === 'none') {
+    wrap.style.display = 'block';
+    btn.innerText = 'Hide List';
+  } else {
+    wrap.style.display = 'none';
+    btn.innerText = 'Show List';
+  }
+}
+
+function editPO(id) {
+  const p = pos.find(x => x.id === id);
+  if(!p) return;
+  const newDesc = prompt("Edit description for " + id + ":", p.desc);
+  if (newDesc !== null && newDesc.trim() !== '') {
+    p.desc = newDesc.trim();
+    saveOBESession();
+    renderPOList();
+  }
+}
+
+function editCO(id) {
+  const c = cos.find(x => x.id === id);
+  if(!c) return;
+  const newDesc = prompt("Edit description for " + id + ":", c.desc);
+  if (newDesc !== null && newDesc.trim() !== '') {
+    c.desc = newDesc.trim();
+    saveOBESession();
+    renderCOList();
+  }
+}
+
+loadOBESession();
 renderPOList();
+renderCOList();
+
 </script>
 </body>
 </html>
