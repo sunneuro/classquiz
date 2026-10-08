@@ -461,11 +461,31 @@ tr:hover td{background:var(--s2)}
 <div class="ov" id="ov-roster-import">
   <div class="ovc" style="max-width:600px;text-align:left;max-height:90vh;overflow-y:auto">
     <div style="font-family:var(--fh);font-size:18px;font-weight:700;margin-bottom:4px">📥 Import Student Roster</div>
-    <div style="font-size:12px;color:var(--m);margin-bottom:16px;line-height:1.7">
-      Paste your student list from Excel. Ensure 4 columns in this exact order:<br>
-      <strong>Roll Number | Full Name | Email | Course IDs (comma separated)</strong>
+    
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;margin-top:16px;">
+      <div>
+        <label>Programme <span class="req">*</span></label>
+        <input type="text" id="roster-prog" placeholder="e.g. BTech" class="inp" style="width:100%" />
+      </div>
+      <div>
+        <label>Course ID <span class="req">*</span></label>
+        <input type="text" id="roster-course" placeholder="e.g. EBTY2003" class="inp" style="width:100%" />
+      </div>
+      <div>
+        <label>Subject <span class="req">*</span></label>
+        <input type="text" id="roster-subj" placeholder="e.g. Molecular Biology" class="inp" style="width:100%" />
+      </div>
+      <div>
+        <label>Year / Semester <span class="req">*</span></label>
+        <input type="text" id="roster-year" placeholder="e.g. Year 2 / Sem 3" class="inp" style="width:100%" />
+      </div>
     </div>
-    <textarea id="roster-paste-area" style="width:100%;height:200px;margin-bottom:12px;font-family:monospace;font-size:12px" placeholder="RollNo\tName\tEmail\tCourse1,Course2..."></textarea>
+
+    <div style="font-size:12px;color:var(--m);margin-bottom:8px;line-height:1.7;margin-top:10px;">
+      Paste your student list from Excel. Ensure 3 columns in this exact order:<br>
+      <strong>Roll Number | Full Name | Email</strong>
+    </div>
+    <textarea id="roster-paste-area" style="width:100%;height:150px;margin-bottom:12px;font-family:monospace;font-size:12px" placeholder="RollNo	Name	Email"></textarea>
     <div class="row" style="gap:10px;justify-content:flex-end">
       <button class="btn btn-ghost" onclick="closeOv('ov-roster-import')">Cancel</button>
       <button class="btn btn-pri" onclick="processRosterImport()">Preview & Save</button>
@@ -700,6 +720,10 @@ tr:hover td{background:var(--s2)}
         <select id="ms-prog" onchange="msFilter()"><option value="">All</option></select>
       </div>
       <div>
+        <label style="margin-top:0">Course ID</label>
+        <select id="ms-course" onchange="msFilter()"><option value="">All</option></select>
+      </div>
+      <div>
         <label style="margin-top:0">Subject</label>
         <select id="ms-subj" onchange="msFilter()"><option value="">All</option></select>
       </div>
@@ -773,13 +797,17 @@ tr:hover td{background:var(--s2)}
       <div class="card" style="padding:14px;margin-bottom:14px">
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px">
           <div>
-            <label style="margin-top:0">Programme</label>
-            <select id="ao-stu-prog" onchange="aoStudentFilter()"><option value="">All</option></select>
-          </div>
-          <div>
-            <label style="margin-top:0">Subject</label>
-            <select id="ao-stu-subj" onchange="aoStudentFilter()"><option value="">All</option></select>
-          </div>
+        <label style="margin-top:0">Programme</label>
+        <select id="bf-prog" onchange="cascadeBankFilters();renderBank()"><option value="">All</option></select>
+      </div>
+      <div>
+        <label style="margin-top:0">Course ID</label>
+        <select id="bf-course" onchange="cascadeBankFilters('course');renderBank()"><option value="">All</option></select>
+      </div>
+      <div>
+        <label style="margin-top:0">Subject</label>
+        <select id="bf-subj" onchange="cascadeBankFilters('subj');renderBank()"><option value="">All</option></select>
+      </div>
           <div>
             <label style="margin-top:0">Sort by</label>
             <select id="ao-stu-sort" onchange="aoStudentFilter()">
@@ -1322,6 +1350,10 @@ tr:hover td{background:var(--s2)}
         <select id="bf-prog" onchange="cascadeBankFilters();renderBank()"><option value="">All</option></select>
       </div>
       <div>
+        <label style="margin-top:0">Course ID</label>
+        <select id="bf-course" onchange="cascadeBankFilters('course');renderBank()"><option value="">All</option></select>
+      </div>
+      <div>
         <label style="margin-top:0">Subject</label>
         <select id="bf-subj" onchange="cascadeBankFilters('subj');renderBank()"><option value="">All</option></select>
       </div>
@@ -1755,10 +1787,18 @@ tr:hover td{background:var(--s2)}
   <!-- Universal filters -->
   <div id="results-filters" class="card" style="padding:14px">
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
-      <div><label style="margin-top:0">Programme</label>
-        <select id="rf-prog" onchange="cascadeResultFilters();renderActiveTab()"><option value="">All</option></select></div>
-      <div><label style="margin-top:0">Subject</label>
-        <select id="rf-subj" onchange="cascadeResultFilters('subj');renderActiveTab()"><option value="">All</option></select></div>
+      <div>
+        <label style="margin-top:0">Programme</label>
+        <select id="bf-prog" onchange="cascadeBankFilters();renderBank()"><option value="">All</option></select>
+      </div>
+      <div>
+        <label style="margin-top:0">Course ID</label>
+        <select id="bf-course" onchange="cascadeBankFilters('course');renderBank()"><option value="">All</option></select>
+      </div>
+      <div>
+        <label style="margin-top:0">Subject</label>
+        <select id="bf-subj" onchange="cascadeBankFilters('subj');renderBank()"><option value="">All</option></select>
+      </div>
       <div><label style="margin-top:0">Unit/Topic</label>
         <select id="rf-topic" onchange="cascadeResultFilters('topic');renderActiveTab()"><option value="">All</option></select></div>
       <div><label style="margin-top:0">Test ID/Comment</label>
@@ -3041,15 +3081,23 @@ function populateBankFilters(){
 }
 
 window.cascadeBankFilters=function(level){
-  const prog=gv('bf-prog'),subj=gv('bf-subj'),topic=gv('bf-topic');
+  const prog=gv('bf-prog'),course=gv('bf-course'),subj=gv('bf-subj'),topic=gv('bf-topic');
   let pool=allQuestions.filter(q=>!q.draft);
   if(prog) pool=pool.filter(q=>q.programmeName===prog);
+  
   if(!level||level==='prog'){
-    const subjs=[...new Set(pool.map(q=>q.courseId+'::'+q.subjectName).filter(Boolean))].sort();
-    fillSelect('bf-subj',subjs,x=>x.split('::')[0],x=>x.split('::').join(' \u2014 '));
+    const courses=[...new Set(pool.map(q=>q.courseId).filter(Boolean))].sort();
+    fillSelect('bf-course',courses);
   }
-  if(subj) pool=pool.filter(q=>q.courseId===subj);
-  if(!level||level==='prog'||level==='subj'){
+  if(course) pool=pool.filter(q=>q.courseId===course);
+
+  if(!level||level==='prog'||level==='course'){
+    const subjs=[...new Set(pool.map(q=>q.subjectName).filter(Boolean))].sort();
+    fillSelect('bf-subj',subjs);
+  }
+  if(subj) pool=pool.filter(q=>q.subjectName===subj);
+
+  if(!level||level==='prog'||level==='course'||level==='subj'){
     const topics=[...new Set(pool.map(q=>q.topicName).filter(Boolean))].sort();
     fillSelect('bf-topic',topics);
   }
@@ -3107,7 +3155,7 @@ function fillSelect(id,items,valFn,lblFn){
 }
 
 function bankFilterFn(q){
-  const prog=gv('bf-prog'),subj=gv('bf-subj'),topic=gv('bf-topic'),
+  const prog=gv('bf-prog'),course=gv('bf-course'),subj=gv('bf-subj'),topic=gv('bf-topic'),
         testid=gv('bf-testid'),type=gv('bf-type'),diff=gv('bf-diff'),
         bloom=gv('bf-bloom'),
         session_f=gv('bf-session'),
@@ -3116,7 +3164,8 @@ function bankFilterFn(q){
         dt_f=parseInt(gv('bf-date')||'0'),
         srch=(gv('bf-search')||'').toLowerCase();
   if(prog&&q.programmeName!==prog)return false;
-  if(subj&&q.courseId!==subj)return false;
+  if(course&&q.courseId!==course)return false;
+  if(subj&&q.subjectName!==subj)return false;
   if(topic&&q.topicName!==topic)return false;
   if(testid&&q.testLabel!==testid)return false;
   if(type&&q.type!==type)return false;
@@ -3358,7 +3407,8 @@ function curateFiltFn(q){
         testid=gv('cf-testid'),type=gv('cf-type'),diff=gv('cf-diff'),
         srch=(gv('cf-search')||'').toLowerCase();
   if(prog&&q.programmeName!==prog)return false;
-  if(subj&&q.courseId!==subj)return false;
+  if(course&&q.courseId!==course)return false;
+  if(subj&&q.subjectName!==subj)return false;
   if(topic&&q.topicName!==topic)return false;
   if(testid&&q.testLabel!==testid)return false;
   if(type&&q.type!==type)return false;
@@ -8378,28 +8428,84 @@ window.showRosterImport = function(){
 };
 
 window.processRosterImport = async function(){
+  const prog = el('roster-prog').value.trim();
+  const cid = el('roster-course').value.trim();
+  const subj = el('roster-subj').value.trim();
+  const year = el('roster-year').value.trim();
+
+  if(!prog || !cid || !subj || !year) return alert('Programme, Course ID, Subject, and Year/Semester are all required.');
+
   const txt = el('roster-paste-area').value.trim();
   if(!txt) return alert('Paste some data first.');
   const lines = txt.split('\n');
-  const students = [];
+  const newStudents = [];
   for(let line of lines){
     const cols = line.split('\t');
     if(cols.length >= 3){
       const roll = cols[0].trim();
-      const name = cols[1].trim();
-      const email = cols[2].trim();
-      const courses = (cols[3]||'').split(',').map(c=>c.trim()).filter(Boolean);
-      if(roll && name && email) students.push({roll, name, email, courses});
+      let name = cols[1].trim();
+      let email = cols[2].trim();
+      
+      // Auto-detect if name/email are swapped
+      if(name.includes('@') && !email.includes('@')){
+        const temp = name; name = email; email = temp;
+      }
+      
+      if(roll && name && email) {
+        newStudents.push({roll, name, email});
+      }
     }
   }
-  if(!students.length) return alert('Could not parse any valid rows. Please ensure you copied cells directly from Excel/Sheets.');
-  if(!confirm(`Found ${students.length} students. Save to roster? This will OVERWRITE your existing roster.`)) return;
+  if(!newStudents.length) return alert('Could not parse any valid rows. Please ensure you copied 3 columns directly from Excel.');
+  
+  if(!confirm(`Found ${newStudents.length} students. Merge them into your roster under ${cid}?`)) return;
   
   const ref = _fb.doc(db, 'rosters', teacher.email.replace(/[^a-zA-Z0-9]/g,'_'));
   try {
-    await _fb.setDoc(ref, { students, updatedAt: Date.now() });
-    alert('Roster saved successfully!');
+    const snap = await _fb.getDoc(ref);
+    let existing = [];
+    if(snap.exists()) existing = snap.data().students || [];
+    
+    // Map existing
+    const sMap = {};
+    existing.forEach(s => sMap[s.roll.toUpperCase()] = s);
+
+    // Merge new
+    newStudents.forEach(ns => {
+      const rollKey = ns.roll.toUpperCase();
+      if(!sMap[rollKey]) {
+        sMap[rollKey] = {
+          roll: ns.roll, name: ns.name, email: ns.email,
+          programmes: [], courseIds: [], subjects: [], years: []
+        };
+      }
+      const s = sMap[rollKey];
+      s.name = ns.name;
+      s.email = ns.email;
+
+      if(!s.programmes) s.programmes = [];
+      if(!s.courseIds) s.courseIds = [];
+      if(!s.subjects) s.subjects = [];
+      if(!s.years) s.years = [];
+
+      if(prog && !s.programmes.includes(prog)) s.programmes.push(prog);
+      if(cid && !s.courseIds.includes(cid)) s.courseIds.push(cid);
+      if(subj && !s.subjects.includes(subj)) s.subjects.push(subj);
+      if(year && !s.years.includes(year)) s.years.push(year);
+    });
+
+    const mergedStudents = Object.values(sMap);
+    await _fb.setDoc(ref, { students: mergedStudents, updatedAt: Date.now() });
+    alert('Roster updated successfully! Total students in your master roster: ' + mergedStudents.length);
     closeOv('ov-roster-import');
+    
+    // Clear inputs for next time
+    el('roster-prog').value = '';
+    el('roster-course').value = '';
+    el('roster-subj').value = '';
+    el('roster-year').value = '';
+    el('roster-paste-area').value = '';
+    
   } catch(e){
     alert('Error saving roster: ' + e.message);
   }
