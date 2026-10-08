@@ -720,6 +720,10 @@ tr:hover td{background:var(--s2)}
         <select id="ms-prog" onchange="msFilter()"><option value="">All</option></select>
       </div>
       <div>
+        <label style="margin-top:0">Year / Sem</label>
+        <select id="ms-yearsem" onchange="msFilter()"><option value="">All</option></select>
+      </div>
+      <div>
         <label style="margin-top:0">Course ID</label>
         <select id="ms-course" onchange="msFilter()"><option value="">All</option></select>
       </div>
@@ -798,11 +802,15 @@ tr:hover td{background:var(--s2)}
         <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px">
           <div>
         <label style="margin-top:0">Programme</label>
-        <select id="bf-prog" onchange="cascadeBankFilters();renderBank()"><option value="">All</option></select>
+        <select id="ms-prog" onchange="msFilter()"><option value="">All</option></select>
+      </div>
+      <div>
+        <label style="margin-top:0">Year / Sem</label>
+        <select id="ms-yearsem" onchange="msFilter()"><option value="">All</option></select>
       </div>
       <div>
         <label style="margin-top:0">Course ID</label>
-        <select id="bf-course" onchange="cascadeBankFilters('course');renderBank()"><option value="">All</option></select>
+        <select id="ms-course" onchange="msFilter()"><option value="">All</option></select>
       </div>
       <div>
         <label style="margin-top:0">Subject</label>
@@ -956,8 +964,13 @@ tr:hover td{background:var(--s2)}
       <h2>Step 1 — Where does this question belong?</h2>
       <label>Programme <span class="req">*</span></label>
       <div class="ac-wrap">
-        <input type="text" id="aq-prog" placeholder="e.g. MBBS Year 1" autocomplete="off" oninput="acFilter(\'prog\'); saveOBESession();" onfocus="acShow('prog')" onblur="acHide('prog',300)"/>
+        <input type="text" id="aq-prog" placeholder="e.g. MBBS" autocomplete="off" oninput="acFilter('prog'); saveOBESession();" onfocus="acShow('prog')" onblur="acHide('prog',300)"/>
         <div class="ac-drop" id="ac-prog"></div>
+      </div>
+      <label>Acad Year / Sem <span class="req">*</span></label>
+      <div class="ac-wrap">
+        <input type="text" id="aq-yearsem" placeholder="e.g. Year 1 / Sem 2" autocomplete="off" oninput="acFilter('yearsem'); saveOBESession();" onfocus="acShow('yearsem')" onblur="acHide('yearsem',300)"/>
+        <div class="ac-drop" id="ac-yearsem"></div>
       </div>
       <label>Course ID <span class="req">*</span></label>
       <div class="ac-wrap">
@@ -1347,11 +1360,15 @@ tr:hover td{background:var(--s2)}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px">
       <div>
         <label style="margin-top:0">Programme</label>
-        <select id="bf-prog" onchange="cascadeBankFilters();renderBank()"><option value="">All</option></select>
+        <select id="ms-prog" onchange="msFilter()"><option value="">All</option></select>
+      </div>
+      <div>
+        <label style="margin-top:0">Year / Sem</label>
+        <select id="ms-yearsem" onchange="msFilter()"><option value="">All</option></select>
       </div>
       <div>
         <label style="margin-top:0">Course ID</label>
-        <select id="bf-course" onchange="cascadeBankFilters('course');renderBank()"><option value="">All</option></select>
+        <select id="ms-course" onchange="msFilter()"><option value="">All</option></select>
       </div>
       <div>
         <label style="margin-top:0">Subject</label>
@@ -1789,11 +1806,15 @@ tr:hover td{background:var(--s2)}
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px">
       <div>
         <label style="margin-top:0">Programme</label>
-        <select id="bf-prog" onchange="cascadeBankFilters();renderBank()"><option value="">All</option></select>
+        <select id="ms-prog" onchange="msFilter()"><option value="">All</option></select>
+      </div>
+      <div>
+        <label style="margin-top:0">Year / Sem</label>
+        <select id="ms-yearsem" onchange="msFilter()"><option value="">All</option></select>
       </div>
       <div>
         <label style="margin-top:0">Course ID</label>
-        <select id="bf-course" onchange="cascadeBankFilters('course');renderBank()"><option value="">All</option></select>
+        <select id="ms-course" onchange="msFilter()"><option value="">All</option></select>
       </div>
       <div>
         <label style="margin-top:0">Subject</label>
@@ -2088,7 +2109,7 @@ let lobbyUnsubscribe=null;
 let wizStep=0;
 let wizData={prog:'',cid:'',subj:'',topic:'',testid:'',type:'mcq',diff:'medium'};
 let editQId=null;
-let acData={prog:[],cid:[],subj:[],topic:[],testid:[]};
+let acData={prog:[],yearsem:[],cid:[],subj:[],topic:[],testid:[]};
 
 /* ═══════════════════════════════════════════
    UTILS
@@ -2703,9 +2724,10 @@ async function loadAllQuestions(){
     allQuestions=[...committed,...draftQs];
     allQuestions.sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
     // Rebuild autocomplete data
-    const sets={prog:new Set(),cid:new Set(),subj:new Set(),topic:new Set(),testid:new Set()};
+    const sets={prog:new Set(),yearsem:new Set(),cid:new Set(),subj:new Set(),topic:new Set(),testid:new Set()};
     allQuestions.forEach(q=>{
       if(q.programmeName)sets.prog.add(q.programmeName);
+      if(q.yearSem)sets.yearsem.add(q.yearSem);
       if(q.courseId)sets.cid.add(q.courseId);
       if(q.subjectName)sets.subj.add(q.subjectName);
       if(q.topicName)sets.topic.add(q.topicName);
@@ -2713,6 +2735,7 @@ async function loadAllQuestions(){
     });
     acData={
       prog:[...sets.prog].sort(),
+      yearsem:[...sets.yearsem].sort(),
       cid:[...sets.cid].sort(),
       subj:[...sets.subj].sort(),
       topic:[...sets.topic].sort(),
@@ -2829,7 +2852,7 @@ window.goAddQ=function(){
     return name ? `${name}_${day}${mon}${yr}` : `${day}${mon}${yr}`;
   }
 
-  wizData={prog:'',cid:'',subj:'',topic:'',testid:autoTestId(),type:'mcq',diff:'medium'};
+  wizData={prog:'',yearsem:'',cid:'',subj:'',topic:'',testid:autoTestId(),type:'mcq',diff:'medium'};
   el('addq-count-badge').textContent='';
   ['prog','cid','subj','topic'].forEach(k=>{const i=el('aq-'+k);if(i)i.value='';});
   // Load existing drafts for this teacher
@@ -2877,13 +2900,13 @@ window.wizNext=async function(to){
         await clearDraft();
         wizData.testid=autoGenTestId(cid,topic);
         curDraft=[];
-        curDraftMeta={prog,cid,subj,topic,testid:wizData.testid};
+        curDraftMeta={prog,yearsem,cid,subj,topic,testid:wizData.testid};
       }
     }else{
       wizData.testid=autoGenTestId(cid,topic);
       curDraftId=null;
       curDraft=[];
-      curDraftMeta={prog,cid,subj,topic,testid:wizData.testid};
+      curDraftMeta={prog,yearsem,cid,subj,topic,testid:wizData.testid};
     }
     const tidInp=el('aq-testid');
     if(tidInp) tidInp.value=wizData.testid;
@@ -2896,6 +2919,7 @@ window.wizBack=function(to){showWizStep(to);};
 function renderWizLocSummary(){
   el('wiz-loc-summary').innerHTML=
     `<strong style="color:var(--txt)">${esc(wizData.prog)}</strong> › 
+     <strong style="color:var(--txt)">${esc(wizData.yearsem)}</strong> › 
      <strong style="color:var(--txt)">${esc(wizData.cid)}</strong> ${esc(wizData.subj)} › 
      <strong style="color:var(--txt)">${esc(wizData.topic)}</strong> › 
      <span style="color:var(--acc)">${esc(wizData.testid)}</span>`;
@@ -3081,23 +3105,29 @@ function populateBankFilters(){
 }
 
 window.cascadeBankFilters=function(level){
-  const prog=gv('bf-prog'),course=gv('bf-course'),subj=gv('bf-subj'),topic=gv('bf-topic');
+  const prog=gv('bf-prog'),yearsem=gv('bf-yearsem'),course=gv('bf-course'),subj=gv('bf-subj'),topic=gv('bf-topic');
   let pool=allQuestions.filter(q=>!q.draft);
   if(prog) pool=pool.filter(q=>q.programmeName===prog);
   
   if(!level||level==='prog'){
+    const yearsems=[...new Set(pool.map(q=>q.yearSem).filter(Boolean))].sort();
+    fillSelect('bf-yearsem',yearsems);
+  }
+  if(yearsem) pool=pool.filter(q=>q.yearSem===yearsem);
+
+  if(!level||level==='prog'||level==='yearsem'){
     const courses=[...new Set(pool.map(q=>q.courseId).filter(Boolean))].sort();
     fillSelect('bf-course',courses);
   }
   if(course) pool=pool.filter(q=>q.courseId===course);
 
-  if(!level||level==='prog'||level==='course'){
+  if(!level||level==='prog'||level==='yearsem'||level==='course'){
     const subjs=[...new Set(pool.map(q=>q.subjectName).filter(Boolean))].sort();
     fillSelect('bf-subj',subjs);
   }
   if(subj) pool=pool.filter(q=>q.subjectName===subj);
 
-  if(!level||level==='prog'||level==='course'||level==='subj'){
+  if(!level||level==='prog'||level==='yearsem'||level==='course'||level==='subj'){
     const topics=[...new Set(pool.map(q=>q.topicName).filter(Boolean))].sort();
     fillSelect('bf-topic',topics);
   }
@@ -3155,7 +3185,7 @@ function fillSelect(id,items,valFn,lblFn){
 }
 
 function bankFilterFn(q){
-  const prog=gv('bf-prog'),course=gv('bf-course'),subj=gv('bf-subj'),topic=gv('bf-topic'),
+  const prog=gv('bf-prog'),yearsem=gv('bf-yearsem'),course=gv('bf-course'),subj=gv('bf-subj'),topic=gv('bf-topic'),
         testid=gv('bf-testid'),type=gv('bf-type'),diff=gv('bf-diff'),
         bloom=gv('bf-bloom'),
         session_f=gv('bf-session'),
@@ -3164,6 +3194,7 @@ function bankFilterFn(q){
         dt_f=parseInt(gv('bf-date')||'0'),
         srch=(gv('bf-search')||'').toLowerCase();
   if(prog&&q.programmeName!==prog)return false;
+  if(yearsem&&q.yearSem!==yearsem)return false;
   if(course&&q.courseId!==course)return false;
   if(subj&&q.subjectName!==subj)return false;
   if(topic&&q.topicName!==topic)return false;
@@ -3407,6 +3438,7 @@ function curateFiltFn(q){
         testid=gv('cf-testid'),type=gv('cf-type'),diff=gv('cf-diff'),
         srch=(gv('cf-search')||'').toLowerCase();
   if(prog&&q.programmeName!==prog)return false;
+  if(yearsem&&q.yearSem!==yearsem)return false;
   if(course&&q.courseId!==course)return false;
   if(subj&&q.subjectName!==subj)return false;
   if(topic&&q.topicName!==topic)return false;
