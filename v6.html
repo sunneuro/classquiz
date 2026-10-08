@@ -9412,7 +9412,7 @@ function addPO(type) {
   document.getElementById('new-po-desc').value = '';
   renderPOList();
 }
-}
+
 
 function editCO(id) {
   const c = cos.find(x => x.id === id);
@@ -9428,9 +9428,6 @@ function editCO(id) {
 loadOBESession();
 renderPOList();
 renderCOList();
-
-  }
-}
 
 function removePO(id) {
   pos = pos.filter(p => p.id !== id); saveOBESession();
@@ -9557,7 +9554,7 @@ function addCO() {
   document.getElementById('new-co-desc').value = '';
   renderCOList();
 }
-}
+
 
 function removeCO(id) {
   cos = cos.filter(c => c.id !== id); saveOBESession();
