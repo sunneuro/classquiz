@@ -8380,10 +8380,10 @@ window.showRosterImport = function(){
 window.processRosterImport = async function(){
   const txt = el('roster-paste-area').value.trim();
   if(!txt) return alert('Paste some data first.');
-  const lines = txt.split('\\n');
+  const lines = txt.split('\n');
   const students = [];
   for(let line of lines){
-    const cols = line.split('\\t');
+    const cols = line.split('\t');
     if(cols.length >= 3){
       const roll = cols[0].trim();
       const name = cols[1].trim();
