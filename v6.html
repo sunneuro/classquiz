@@ -8439,27 +8439,49 @@ window.processRosterImport = async function(){
   if(!txt) return alert('Paste some data first.');
   const lines = txt.split('\n');
   const newStudents = [];
-  for(let line of lines){
+  
+  // List of public domains to block
+  const blockedDomains = ['@gmail.com', '@yahoo.com', '@hotmail.com', '@outlook.com', '@icloud.com', '@aol.com'];
+  let errorMsg = '';
+
+  for(let i=0; i<lines.length; i++){
+    const line = lines[i].trim();
+    if(!line) continue;
     const cols = line.split('\t');
     if(cols.length >= 3){
-      const roll = cols[0].trim();
+      const roll = cols[0].trim().toUpperCase();
       let name = cols[1].trim();
-      let email = cols[2].trim();
+      let email = cols[2].trim().toLowerCase();
       
       // Auto-detect if name/email are swapped
       if(name.includes('@') && !email.includes('@')){
-        const temp = name; name = email; email = temp;
+        const temp = name; name = email; email = temp.toLowerCase();
       }
       
-      if(roll && name && email) {
-        newStudents.push({roll, name, email});
+      if(!roll || !name || !email) {
+        errorMsg = `Row ${i+1} is missing data. Every row must have Roll, Name, and Email.`;
+        break;
       }
+      
+      if(blockedDomains.some(d => email.includes(d))) {
+        errorMsg = `Row ${i+1} contains a personal email (${email}). Only official university emails are allowed.`;
+        break;
+      }
+      
+      // Title Case the name (e.g., "john doe" -> "John Doe")
+      name = name.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+      
+      newStudents.push({roll, name, email});
+    } else {
+      errorMsg = `Row ${i+1} does not have 3 columns. Please copy exactly 3 columns from Excel.`;
+      break;
     }
   }
-  if(!newStudents.length) return alert('Could not parse any valid rows. Please ensure you copied 3 columns directly from Excel.');
   
-  if(!confirm(`Found ${newStudents.length} students. Merge them into your roster under ${cid}?`)) return;
+  if(errorMsg) return alert('INSPECTION FAILED:\n\n' + errorMsg + '\n\nPlease fix the Excel data and paste again.');
+  if(!newStudents.length) return alert('Could not parse any valid rows. Please ensure you copied exactly 3 columns directly from Excel.');
   
+  if(!confirm(`Inspection Passed!\n\nFound ${newStudents.length} official students. Merge them into your roster under ${cid}?`)) return;
   const ref = _fb.doc(db, 'rosters', teacher.email.replace(/[^a-zA-Z0-9]/g,'_'));
   try {
     const snap = await _fb.getDoc(ref);
