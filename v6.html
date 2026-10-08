@@ -457,6 +457,22 @@ tr:hover td{background:var(--s2)}
   </div>
 </div>
 
+<!-- ROSTER IMPORT OVERLAY -->
+<div class="ov" id="ov-roster-import">
+  <div class="ovc" style="max-width:600px;text-align:left;max-height:90vh;overflow-y:auto">
+    <div style="font-family:var(--fh);font-size:18px;font-weight:700;margin-bottom:4px">📥 Import Student Roster</div>
+    <div style="font-size:12px;color:var(--m);margin-bottom:16px;line-height:1.7">
+      Paste your student list from Excel. Ensure 4 columns in this exact order:<br>
+      <strong>Roll Number | Full Name | Email | Course IDs (comma separated)</strong>
+    </div>
+    <textarea id="roster-paste-area" style="width:100%;height:200px;margin-bottom:12px;font-family:monospace;font-size:12px" placeholder="RollNo\tName\tEmail\tCourse1,Course2..."></textarea>
+    <div class="row" style="gap:10px;justify-content:flex-end">
+      <button class="btn btn-ghost" onclick="closeOv('ov-roster-import')">Cancel</button>
+      <button class="btn btn-pri" onclick="processRosterImport()">Preview & Save</button>
+    </div>
+  </div>
+</div>
+
 <!-- PASSWORD RESET REQUEST OVERLAY -->
 <div class="ov" id="ov-pw-request">
   <div class="ovc" style="border:1px solid var(--warn);max-width:420px;text-align:left">
@@ -673,6 +689,7 @@ tr:hover td{background:var(--s2)}
     <button class="btn btn-ghost btn-sm" onclick="show('s-home')">← Home</button>
     <button class="btn btn-warn btn-sm btn-active-session" onclick="goActiveSession()" style="display:none">↩ Active Session</button>
     <h3 style="flex:1">👥 My Students</h3>
+    <button class="btn btn-ghost btn-sm" onclick="showRosterImport()">📥 Import Roster</button>
     <button class="btn btn-ghost btn-sm" onclick="msLoad()">↻ Refresh</button>
   </div>
   <!-- Filters -->
@@ -1600,27 +1617,35 @@ tr:hover td{background:var(--s2)}
     <p id="stu-session-meta" style="font-size:13px;color:var(--m)"></p>
   </div>
   <div class="card" id="stu-login-card">
-    <label>Full Name <span class="req">*</span></label>
-    <div class="ac-wrap">
-      <input type="text" id="sl-name" placeholder="Your full name" autocomplete="off" autocorrect="off" autocapitalize="words"
-        oninput="stuAcFilter('name')" onfocus="stuAcShow('name')" onblur="stuAcHide('name',300)"/>
-      <div class="ac-drop" id="sl-name-drop"></div>
+    <div id="stu-roster-mode" style="display:none;margin-bottom:16px">
+      <label>Select Your Identity <span class="req">*</span></label>
+      <select id="sl-roster-sel" onchange="applyRosterIdentity()" style="font-size:14px;padding:12px;height:auto;width:100%">
+        <option value="">-- Choose your name --</option>
+      </select>
     </div>
-    <label>Roll Number <span class="req">*</span></label>
-    <div class="ac-wrap">
-      <input type="text" id="sl-roll" placeholder="e.g. 2024-CS-045" autocomplete="off" autocapitalize="characters"
-        oninput="this.value=this.value.toUpperCase();stuAcFilter('roll')" onblur="this.value=this.value.toUpperCase();stuAcHide('roll',300)" onfocus="stuAcShow('roll')"/>
-      <div class="ac-drop" id="sl-roll-drop"></div>
+    <div id="stu-free-mode">
+      <label>Full Name <span class="req">*</span></label>
+      <div class="ac-wrap">
+        <input type="text" id="sl-name" placeholder="Your full name" autocomplete="off" autocorrect="off" autocapitalize="words"
+          oninput="stuAcFilter('name')" onfocus="stuAcShow('name')" onblur="stuAcHide('name',300)"/>
+        <div class="ac-drop" id="sl-name-drop"></div>
+      </div>
+      <label>Roll Number <span class="req">*</span></label>
+      <div class="ac-wrap">
+        <input type="text" id="sl-roll" placeholder="e.g. 2024-CS-045" autocomplete="off" autocapitalize="characters"
+          oninput="this.value=this.value.toUpperCase();stuAcFilter('roll')" onblur="this.value=this.value.toUpperCase();stuAcHide('roll',300)" onfocus="stuAcShow('roll')"/>
+        <div class="ac-drop" id="sl-roll-drop"></div>
+      </div>
+      <label>Email Address <span class="req">*</span></label>
+      <div class="ac-wrap">
+        <input type="email" id="sl-email" placeholder="student@email.com" autocomplete="off"
+          oninput="document.getElementById('sl-email-warn').style.display='none';document.getElementById('sl-email-warn').dataset.dismissed='';stuAcFilter('email')"
+          onfocus="stuAcShow('email')" onblur="stuAcHide('email',300)"/>
+        <div class="ac-drop" id="sl-email-drop"></div>
+      </div>
+      <div id="sl-email-warn" style="display:none;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);
+        border-radius:8px;padding:8px 12px;font-size:12px;color:#fbbf24;margin-top:6px"></div>
     </div>
-    <label>Email Address <span class="req">*</span></label>
-    <div class="ac-wrap">
-      <input type="email" id="sl-email" placeholder="student@email.com" autocomplete="off"
-        oninput="document.getElementById('sl-email-warn').style.display='none';document.getElementById('sl-email-warn').dataset.dismissed='';stuAcFilter('email')"
-        onfocus="stuAcShow('email')" onblur="stuAcHide('email',300)"/>
-      <div class="ac-drop" id="sl-email-drop"></div>
-    </div>
-    <div id="sl-email-warn" style="display:none;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);
-      border-radius:8px;padding:8px 12px;font-size:12px;color:#fbbf24;margin-top:6px"></div>
     <div style="margin-top:16px">
       <button class="btn btn-grn w100" onclick="stuJoin()">Join Session →</button>
     </div>
@@ -1795,7 +1820,7 @@ tr:hover td{background:var(--s2)}
     <p style="font-size:12px;color:var(--m);line-height:1.8">
       <strong style="color:var(--txt)">Performance = min(Score% + SpeedBonus, 100) × IntegrityMultiplier</strong><br>
       SpeedBonus = (min(allottedTime/timeTaken, 2.0) − 1.0) × 10 &nbsp;→&nbsp; max +10 points for finishing in half the time or less<br>
-      IntegrityMultiplier: 0 violations=1.00 &nbsp;·&nbsp; 1=0.95 &nbsp;·&nbsp; 2=0.90 &nbsp;·&nbsp; 3=0.80 &nbsp;·&nbsp; 4=0.75 &nbsp;·&nbsp; 5+=0.55
+      IntegrityMultiplier: 0-2 violations=1.00 &nbsp;·&nbsp; 3=0.80 &nbsp;·&nbsp; 4=0.75 &nbsp;·&nbsp; 5-9=0.55 &nbsp;·&nbsp; 10=Auto-Submit
     </p>
   </div>
   <div id="leaderboard-list"></div>
@@ -4823,6 +4848,45 @@ async function initStudentMode(){
     `${(qParams.qs||[]).length} questions • ${qParams.time||15} minutes`;
   el('stu-login-card').style.display='';
   el('sl-name').value='';el('sl-roll').value='';el('sl-email').value='';
+  
+  // Try to load Roster
+  if(fbReady && qParams.teacherEmail) {
+    try {
+      const rId = qParams.teacherEmail.replace(/[^a-zA-Z0-9]/g,'_');
+      const rosSnap = await _fb.getDoc(_fb.doc(db, 'rosters', rId));
+      if(rosSnap.exists()){
+        let list = rosSnap.data().students || [];
+        const cid = qParams.courseId || '';
+        if(cid){
+          list = list.filter(s => !s.courses || s.courses.length===0 || s.courses.includes(cid));
+        }
+        if(list.length > 0){
+          list.sort((a,b)=>a.name.localeCompare(b.name));
+          let html = '<option value="">-- Choose your name --</option>';
+          list.forEach((s, idx) => {
+            html += `<option value="${idx}">${esc(s.name)} (${esc(s.roll)})</option>`;
+          });
+          el('sl-roster-sel').innerHTML = html;
+          window._activeRosterList = list;
+          el('stu-roster-mode').style.display = 'block';
+          el('stu-free-mode').style.display = 'none';
+        } else {
+          el('stu-roster-mode').style.display = 'none';
+          el('stu-free-mode').style.display = 'block';
+        }
+      } else {
+        el('stu-roster-mode').style.display = 'none';
+        el('stu-free-mode').style.display = 'block';
+      }
+    } catch(e) {
+      el('stu-roster-mode').style.display = 'none';
+      el('stu-free-mode').style.display = 'block';
+    }
+  } else {
+    el('stu-roster-mode').style.display = 'none';
+    el('stu-free-mode').style.display = 'block';
+  }
+
   loadStuAcData();
   show('s-stu-login');
 }
@@ -4833,6 +4897,20 @@ function showStuError(msg){
   el('stu-login-card').style.display='none';
   show('s-stu-login');
 }
+
+window.applyRosterIdentity = function(){
+  const idx = el('sl-roster-sel').value;
+  if(idx === '') {
+    el('sl-name').value = '';
+    el('sl-roll').value = '';
+    el('sl-email').value = '';
+  } else {
+    const s = window._activeRosterList[idx];
+    el('sl-name').value = s.name;
+    el('sl-roll').value = s.roll;
+    el('sl-email').value = s.email;
+  }
+};
 
 /* ═══════════════════════════════════════════
    STUDENT LOGIN AUTOCOMPLETE
@@ -4925,9 +5003,15 @@ window.stuJoin=async function(){
   // Normalize roll to uppercase before any processing
   const rollInput=el('sl-roll'); if(rollInput) rollInput.value=(rollInput.value||'').toUpperCase();
   const name=gv('sl-name'),roll=(gv('sl-roll')||'').toUpperCase(),email=gv('sl-email');
-  if(!name){alert('Please enter your full name.');el('sl-name').focus();return;}
-  if(!roll){alert('Please enter your roll number.');el('sl-roll').focus();return;}
-  if(!email||!email.includes('@')){alert('Please enter a valid email.');el('sl-email').focus();return;}
+  if(!name || !roll || !email){
+    if(el('stu-roster-mode').style.display === 'block'){
+      alert('Please select your identity from the dropdown.');
+      return;
+    }
+    if(!name){alert('Please enter your full name.');el('sl-name').focus();return;}
+    if(!roll){alert('Please enter your roll number.');el('sl-roll').focus();return;}
+    if(!email||!email.includes('@')){alert('Please enter a valid email.');el('sl-email').focus();return;}
+  }
   var slWarn=document.getElementById('sl-email-warn');
   var slDismissed=slWarn&&slWarn.dataset.dismissed==='1';
   if(!slDismissed){
@@ -4994,12 +5078,9 @@ window.stuJoin=async function(){
       if(lobSnap.exists()){
         const lobData=lobSnap.data();
         const prog=lobData.progress;
-        // Allow reconnect for the full session window (time × 60 × 1000 ms)
-        // Any student with status=started and saved progress can resume without teacher intervention
-        const SESSION_MS=(qParams?.time||15)*60*1000;
-        const progAge=prog&&prog.ts?(Date.now()-prog.ts):Infinity;
-        if(lobData.status==='started'&&prog&&progAge<SESSION_MS){
-          showReconnectOverlay(name,roll,email,lobSnap.ref,lobData,prog,(prog.curQ||0)+1);
+        if(lobData.status==='started'){
+          const safeProg = prog || {};
+          showReconnectOverlay(name,roll,email,lobSnap.ref,lobData,safeProg,(safeProg.curQ||0)+1);
           return;
         }
         if(lobData.status==='submitted'){
@@ -5007,11 +5088,10 @@ window.stuJoin=async function(){
           return;
         }
         // Student is in lobby but no valid progress \u2014 allow them to re-enter by overwriting lobby doc
-        // (handles case where student joined but network dropped before starting)
         if(lobData.status==='joined'){
           // Fall through to normal registration below
         } else {
-          showStuError('Your previous session data has expired. Please ask your teacher to remove you from the lobby and try again.');
+          showStuError('Invalid session status. Please ask your teacher to remove you from the lobby and try again.');
           return;
         }
       }
@@ -5074,7 +5154,12 @@ function showReconnectOverlay(name,roll,email,lobRef,lobData,prog,resumeQ){
     try{confidenceMap=JSON.parse(prog.confidenceMap||'{}');}catch(e){confidenceMap={};}
     try{timingsMap=JSON.parse(prog.timingsMap||'{}');}catch(e){timingsMap={};}
     curQ=prog.curQ||0;
-    timeLeft=Math.max(0,((qParams?.time||15)*60)-(prog.timeTaken||0));
+    if(lobData.startedAt) {
+      const elapsedSecs = Math.floor((Date.now() - lobData.startedAt) / 1000);
+      timeLeft=Math.max(0,((qParams?.time||15)*60) - elapsedSecs);
+    } else {
+      timeLeft=Math.max(0,((qParams?.time||15)*60)-(prog.timeTaken||0));
+    }
     vioCount=prog.vioCount||0;
     quizQs=qParams.qs||[];
     _fb.updateDoc(lobRef,{reloginCount:(lobData.reloginCount||1)+1,status:'started'}).catch(()=>{});
@@ -5138,7 +5223,7 @@ function showTapToBegin(){
   h+='<div>🔒 &nbsp;<strong>You cannot change a previously selected answer.</strong></div>';
   h+='<div>📵 &nbsp;No negative marking but off-screen time is recorded as a <strong>violation</strong>.</div>';
   h+='<div>⚠️ &nbsp;Violations add a penalty reducing your <strong>Performance rank</strong>.</div>';
-  h+='<div>🔄 &nbsp;3rd and subsequent violations trigger a countdown and <strong>restart the session</strong>, losing your progress.</div>';
+  h+='<div>🔄 &nbsp;3rd and subsequent violations incur a <strong>score penalty</strong>. The 10th violation will auto-submit the quiz.</div>';
   h+='</div></div>';
   // Tap to begin button
   h+='<button class="btn btn-grn w100" onclick="beginQuizFromTap()" '
@@ -5172,7 +5257,7 @@ function beginQuiz(){
     // Best-effort update
     _fb.getDocs(_fb.query(_fb.collection(db,'lobby_'+qParams.sessionId),
       _fb.where('roll','==',stuRoll))).then(snap=>{
-      snap.docs.forEach(d=>_fb.updateDoc(d.ref,{status:'started'}));
+      snap.docs.forEach(d=>_fb.updateDoc(d.ref,{status:'started', startedAt: Date.now()}));
     }).catch(()=>{});
   }
 
@@ -5185,6 +5270,8 @@ function beginQuiz(){
   document.addEventListener('webkitfullscreenchange',onFS);
   document.addEventListener('keydown',onScrKey);
   document.addEventListener('contextmenu',onCtxMenu);
+  document.addEventListener('copy',onCtxMenu);
+  document.addEventListener('cut',onCtxMenu);
 
   // Listen for session end
   listenForSessionEnd();
@@ -5232,24 +5319,8 @@ function onVis(){
   if(!quizActive)return;
   if(document.hidden){
     offStart=Date.now();
-    // For V4+, start a 2-second timer for immediate restart
-    if(vioCount>=3){
-      clearTimeout(immRestartTimer);
-      immRestartTimer=setTimeout(()=>{
-        if(document.hidden&&quizActive){
-          vioCount++;
-          el('hvio').style.display='';
-          el('hvio').textContent='⚠ '+vioCount+' violations';
-          offSecs+=Math.round((Date.now()-offStart)/1000);
-          offStart=null;
-          restartVio();
-        }
-      },2000);
-    } else {
-      trigVio();
-    }
+    trigVio();
   } else {
-    clearTimeout(immRestartTimer);
     if(offStart){offSecs+=Math.round((Date.now()-offStart)/1000);offStart=null;}
   }
 }
@@ -5296,47 +5367,51 @@ function trigVio(){
   el('hvio').style.display='';
   el('hvio').textContent='⚠ '+vioCount+' violation'+(vioCount>1?'s':'');
 
-  // Escalating protocol:
-  // V1 = 20s warning, can return
-  // V2 = 15s warning, can return
-  // V3 = 10s warning then restart
-  // V4+ = handled by onVis with 2s threshold (immediate restart)
-
   let cdSecs=10, canReturn=true, title='', body='';
   if(vioCount===1){
     cdSecs=20; canReturn=true;
-    title='⚠ Warning 1 of 3 \u2014 Screen Left!';
-    body='Return within 20 seconds or the quiz will restart.';
+    title='⚠ Warning 1 of 9 \u2014 Screen Left!';
+    body='Return within 20 seconds or the quiz will auto-submit.';
   } else if(vioCount===2){
-    cdSecs=15; canReturn=true;
-    title='⚠ Warning 2 of 3 \u2014 Screen Left Again!';
-    body='Return within 15 seconds or the quiz will restart.';
+    cdSecs=20; canReturn=true;
+    title='⚠ Warning 2 of 9 \u2014 Screen Left Again!';
+    body='Return within 20 seconds or the quiz will auto-submit.';
   } else if(vioCount===3){
-    cdSecs=10; canReturn=true;
-    title='⚠ Warning 3 of 3 \u2014 Screen Left Again!';
-    body='Return within 10 seconds or the quiz will restart.';
+    cdSecs=15; canReturn=true;
+    title='⚠ Warning 3 of 9 \u2014 Screen Left!';
+    body='Return within 15 seconds or the quiz will auto-submit.';
   } else if(vioCount===4){
-    cdSecs=5; canReturn=true;  // ← FIXED: was 'True'
-    title='🚨 Warning - Quiz Restart on next exit of quiz app!';
-    body='Return within 5 seconds or the quiz will restart.';
+    cdSecs=10; canReturn=true;
+    title='🚨 Warning 4 of 9 \u2014 Screen Left!';
+    body='Return within 10 seconds or the quiz will auto-submit.';
+  } else if(vioCount>=5 && vioCount<10){
+    cdSecs=5; canReturn=true;
+    title='🚨 Repeated Violation \u2014 Screen Left!';
+    body='Return within 5 seconds or the quiz will auto-submit.';
   } else {
     cdSecs=3; canReturn=false;
-    title='🚨 Repeated Violation \u2014 Restarting!';
-    body='Violation #'+vioCount+'. Quiz restarting immediately.';
+    title='🚨 Too Many Violations \u2014 Submitting!';
+    body='Violation #'+vioCount+'. Quiz auto-submitting immediately.';
   }
 
   el('ov-vt').textContent=title;
   el('ov-vb').textContent=body;
-  el('ov-vbtn').textContent=canReturn?'Return to Quiz':'OK \u2014 Restarting…';
-  el('ov-vbtn').onclick=canReturn?retVio:restartVio;
+  el('ov-vbtn').textContent=canReturn?'Return to Quiz':'OK \u2014 Submitting\u2026';
+  el('ov-vbtn').onclick=canReturn?retVio:autoSubmitVio;
   vioCd=cdSecs; el('ov-vc').textContent=cdSecs;
   el('ov-vio').classList.add('on');
   el('ov-vio').dataset.vioQ=_vioQ;
   clearInterval(vioTimer);
   vioTimer=setInterval(()=>{
     vioCd--; el('ov-vc').textContent=vioCd;
-    if(vioCd<=0){clearInterval(vioTimer); restartVio();}
+    if(vioCd<=0){clearInterval(vioTimer); autoSubmitVio();}
   },1000);
+}
+
+function autoSubmitVio(){
+  clearInterval(vioTimer);
+  closeOv('ov-vio');
+  finishQuiz();
 }
 
 function retVio(){
@@ -5392,10 +5467,14 @@ function startProgressSave(){
 function startTmr(){
   clearInterval(timerInt);
   warnedAt5=false; warnedAt1=false;
+  const initialTimeLeft = timeLeft;
+  const tmrStartReal = Date.now();
   timerInt=setInterval(()=>{
-    timeLeft--;updTmr();
-    if(timeLeft===300&&!warnedAt5){warnedAt5=true;fireTimerWarning('\u23f0  5 minutes remaining','tw');}
-    if(timeLeft===60 &&!warnedAt1){warnedAt1=true;fireTimerWarning('\u26a0\ufe0f  1 minute remaining!','td');}
+    const elapsedNow = Math.floor((Date.now() - tmrStartReal) / 1000);
+    timeLeft = initialTimeLeft - elapsedNow;
+    updTmr();
+    if(timeLeft<=300&&!warnedAt5){warnedAt5=true;fireTimerWarning('\u23f0  5 minutes remaining','tw');}
+    if(timeLeft<=60 &&!warnedAt1){warnedAt1=true;fireTimerWarning('\u26a0\ufe0f  1 minute remaining!','td');}
     if(timeLeft<=0){clearInterval(timerInt);finishQuiz();}
   },1000);
   updTmr();
@@ -5518,38 +5597,24 @@ function renderQ(){
     html+=`<button class="btn btn-grn w100" onclick="confSub()" style="padding:14px;font-size:14px">
       Submit Quiz ✓
     </button>`;
+  } else if(!reviewMode) {
+    html+=`<button class="btn w100" onclick="skipAndLockQ()" style="padding:14px;font-size:14px;background:var(--s2);color:var(--txt);border:1px solid var(--b)">
+      🤷‍♂️ Don't Know. Move to Next Q
+    </button>`;
   } else {
     html+=`<button class="btn btn-pri w100" onclick="navQ(1)" style="padding:14px;font-size:14px">
       Next Question →
     </button>`;
   }
 
-  // Show prev hint only if not on first question
-  if(curQ > 0){
+  // Show prev hint only in review mode
+  if(reviewMode && curQ > 0){
     html+=`<div style="text-align:center;margin-top:12px">
       <button class="btn btn-ghost btn-sm" onclick="navQ(-1)"
         style="font-size:11px;opacity:0.7;padding:6px 14px">
-        ← Go Back${reviewMode?' (review only)':''}
+        ← Go Back (review only)
       </button>
     </div>`;
-  }
-
-  // Floating submit button: show on any non-last question when student has answered
-  // all attempted questions (i.e. they navigated back to a skipped one)
-  if(!last&&!reviewMode){
-    const totalAnswered=Object.keys(answers).filter(k=>answers[k]!=='').length;
-    if(totalAnswered>0){
-      html+=`<div style="margin-top:18px;padding:12px 14px;background:rgba(108,99,255,.07);
-        border:1px solid rgba(108,99,255,.2);border-radius:10px;text-align:center">
-        <div style="font-size:11px;color:var(--m);margin-bottom:8px">
-          ${totalAnswered} of ${quizQs.length} answered · ready to wrap up?
-        </div>
-        <button class="btn btn-grn" onclick="confSub()"
-          style="padding:8px 22px;font-size:13px">
-          Submit Quiz ✓
-        </button>
-      </div>`;
-    }
   }
 
   el('qbody').innerHTML=html;
@@ -5559,7 +5624,8 @@ function renderDots(){
   const dotsEl=el('q-dots');
   dotsEl.innerHTML=quizQs.map((_,i)=>{
     const cls=i===curQ?'qdot current':(answers[i]!==undefined)?'qdot answered':'qdot';
-    return`<div class="${cls}" onclick="jumpQ(${i})" id="qdot-${i}">${i+1}</div>`;
+    const clickAttr=reviewMode?`onclick="jumpQ(${i})"`:'';
+    return`<div class="${cls}" ${clickAttr} id="qdot-${i}">${i+1}</div>`;
   }).join('');
   // Update Q#/total counter
   const ctr=el('q-counter');
@@ -5577,9 +5643,21 @@ function renderDots(){
 }
 
 window.jumpQ=function(i){
-  if(!reviewMode&&questionStartTime) timingsMap[curQ]=Math.round((Date.now()-questionStartTime)/1000);
+  if(!reviewMode)return;
+  if(questionStartTime) timingsMap[curQ]=Math.round((Date.now()-questionStartTime)/1000);
   if(answers[curQ]!==undefined) lockedAnswers[curQ]=true;
   curQ=i;renderQ();renderDots();
+};
+
+window.skipAndLockQ=function(){
+  if(reviewMode)return;
+  lockedAnswers[curQ]=true;
+  if(questionStartTime) timingsMap[curQ]=Math.round((Date.now()-questionStartTime)/1000);
+  if(curQ<quizQs.length-1){
+    curQ++;
+    questionStartTime=Date.now();
+  }
+  renderQ();renderDots();
 };
 window.pickOpt=function(i){
   if(reviewMode)return;
@@ -5644,6 +5722,8 @@ window.finishQuiz=async function(){
   document.removeEventListener('webkitfullscreenchange',onFS);
   document.removeEventListener('keydown',onScrKey);
   document.removeEventListener('contextmenu',onCtxMenu);
+  document.removeEventListener('copy',onCtxMenu);
+  document.removeEventListener('cut',onCtxMenu);
   exitFS();reviewMode=true;
 
   if(!stuRoll||!stuRoll.trim()){
@@ -6489,7 +6569,7 @@ function calcPerformance(pct, timeTakenSecs, totalTimeSecs, violations){
   
   // Integrity multiplier
   const v = violations || 0;
-  const multiplier = v===0?1.00 : v===1?0.95 : v===2?0.90 : v===3?0.80 : v===4?0.75 : 0.55;
+  const multiplier = (v===0 || v===1 || v===2) ? 1.00 : (v===3) ? 0.80 : (v===4) ? 0.75 : 0.55;
   
   // Final score
   const base = Math.min(score + speedBonus, 100);
@@ -8292,6 +8372,39 @@ window.goManageStudents = async function(){
   await msLoad();
 };
 
+window.showRosterImport = function(){
+  el('roster-paste-area').value = '';
+  showOv('ov-roster-import');
+};
+
+window.processRosterImport = async function(){
+  const txt = el('roster-paste-area').value.trim();
+  if(!txt) return alert('Paste some data first.');
+  const lines = txt.split('\\n');
+  const students = [];
+  for(let line of lines){
+    const cols = line.split('\\t');
+    if(cols.length >= 3){
+      const roll = cols[0].trim();
+      const name = cols[1].trim();
+      const email = cols[2].trim();
+      const courses = (cols[3]||'').split(',').map(c=>c.trim()).filter(Boolean);
+      if(roll && name && email) students.push({roll, name, email, courses});
+    }
+  }
+  if(!students.length) return alert('Could not parse any valid rows. Please ensure you copied cells directly from Excel/Sheets.');
+  if(!confirm(`Found ${students.length} students. Save to roster? This will OVERWRITE your existing roster.`)) return;
+  
+  const ref = _fb.doc(db, 'rosters', teacher.email.replace(/[^a-zA-Z0-9]/g,'_'));
+  try {
+    await _fb.setDoc(ref, { students, updatedAt: Date.now() });
+    alert('Roster saved successfully!');
+    closeOv('ov-roster-import');
+  } catch(e){
+    alert('Error saving roster: ' + e.message);
+  }
+};
+
 window.msLoad = async function(){
   el('ms-student-list').innerHTML = '<div style="font-size:13px;color:var(--m)">Loading…</div>';
   setSt('ms-st','','');
@@ -9299,6 +9412,7 @@ function addPO(type) {
   document.getElementById('new-po-desc').value = '';
   renderPOList();
 }
+}
 
 function editCO(id) {
   const c = cos.find(x => x.id === id);
@@ -9315,6 +9429,8 @@ loadOBESession();
 renderPOList();
 renderCOList();
 
+  }
+}
 
 function removePO(id) {
   pos = pos.filter(p => p.id !== id); saveOBESession();
@@ -9440,6 +9556,7 @@ function addCO() {
   cos.push({ id, desc }); saveOBESession();
   document.getElementById('new-co-desc').value = '';
   renderCOList();
+}
 }
 
 function removeCO(id) {
