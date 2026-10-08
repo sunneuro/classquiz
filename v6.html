@@ -6569,7 +6569,7 @@ function calcPerformance(pct, timeTakenSecs, totalTimeSecs, violations){
   
   // Integrity multiplier
   const v = violations || 0;
-  const multiplier = (v===0 || v===1 || v===2) ? 1.00 : (v===3) ? 0.80 : (v===4) ? 0.75 : 0.55;
+  const multiplier = (v<=2) ? 1.00 : (v===3) ? 0.95 : (v===4) ? 0.90 : (v===5) ? 0.85 : (v===6) ? 0.80 : 0.75;
   
   // Final score
   const base = Math.min(score + speedBonus, 100);
@@ -8374,7 +8374,7 @@ window.goManageStudents = async function(){
 
 window.showRosterImport = function(){
   el('roster-paste-area').value = '';
-  showOv('ov-roster-import');
+  el('ov-roster-import').classList.add('on');
 };
 
 window.processRosterImport = async function(){
